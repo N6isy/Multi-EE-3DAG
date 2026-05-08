@@ -121,6 +121,18 @@ python MultiEEAffordance\tools\fuse_multiview_masks.py `
 - `processed/metadata/vlm_pilot_candidate_summary_v0_1.json`
 - `splits_vlm_pilot_candidates/`
 
+### `tools/run_qwen3vl_sam2_pilot.py`
+
+作用：在远程 GPU 服务器上运行 `Qwen/Qwen3-VL-8B-Instruct + SAM2`。Qwen3-VL 逐视角输出 box/point prompt，SAM2 根据 prompt 生成 2D mask。输出目录与 `build_vlm_pilot_candidates.py` 兼容。
+
+对应配置：
+
+- `configs/qwen3vl_sam2_pilot.yaml`
+
+远程运行说明：
+
+- `docs/qwen3vl_sam2_remote_setup.md`
+
 ## 5. pilot 样本选择原则
 
 优先选择满足以下条件的样本：

@@ -270,3 +270,61 @@
 - 用户在 VSCode 终端运行 `run_openai_vlm_pilot.py` 生成真实 VLM 2D masks。
 - 运行 `build_vlm_pilot_candidates.py` 生成候选 3D masks。
 - 用 `serve_review_app.py` 加载 `vlm_pilot_candidate_samples_v0_1.jsonl`，对候选 mask 进行网页复核。
+
+## 2026-05-08 +08:00
+
+### 完成内容
+
+- 明确项目后续采用“本地 Codex 改代码 + GitHub 同步 + 远程服务器实际运行”的工作流。
+- 记录远程服务器无法使用 Codex，因此所有重模型运行脚本必须能由用户在远程服务器手动执行。
+- 将该约束写入独立工作流文档，作为后续开发和部署的长期约束。
+
+### 产出文件
+
+- `docs/local_codex_remote_server_workflow.md`
+
+### 下一步
+
+- 后续补 Qwen3-VL + SAM2 pipeline 时，优先写远程服务器可执行的命令、配置文件和环境检查逻辑。
+- 本地只做代码修改、轻量 dry-run、文档维护和网页审查，不默认承担大模型实际推理。
+
+## 2026-05-08 10:41 +08:00
+
+### 完成内容
+
+- 根据远程服务器 4 张 24GB GPU 的资源情况，确定 Qwen3-VL-8B-Instruct + SAM2 的 pilot 运行策略。
+- 新增远程服务器可执行的 `Qwen3-VL + SAM2` 脚本：
+  - Qwen3-VL 逐视角读取渲染图。
+  - Qwen3-VL 输出 box / positive point / negative point。
+  - SAM2 根据这些 prompt 生成每个视角的 2D mask。
+  - 输出目录兼容已有 `build_vlm_pilot_candidates.py`。
+- 新增远程运行配置，默认使用 `Qwen/Qwen3-VL-8B-Instruct` 和 SAM2.1 large。
+- 新增远程安装与运行说明文档，明确本地 GitHub 同步、远程 pull、远程运行、结果回传复核的流程。
+- 修正 `local_codex_remote_server_workflow.md` 中旧的配置文件名。
+- 增加 `--validate-only` 模式，用于远程服务器在不加载 Qwen3-VL/SAM2 的情况下检查配置、pilot 表和多视角渲染文件。
+
+### 产出文件
+
+- `configs/qwen3vl_sam2_pilot.yaml`
+- `tools/run_qwen3vl_sam2_pilot.py`
+- `docs/qwen3vl_sam2_remote_setup.md`
+- `requirements-vlm.txt`
+- 更新 `docs/vlm_multiview_pilot_design.md`
+- 更新 `docs/local_codex_remote_server_workflow.md`
+
+### 本地轻量检查
+
+- `python -m py_compile MultiEEAffordance/tools/run_qwen3vl_sam2_pilot.py` 通过。
+- `--validate-only --limit 1` 通过，已检查 1 条 pilot 的 6 个视角渲染文件。
+
+### 远程运行建议
+
+- 优先使用 `CUDA_VISIBLE_DEVICES=1,2`，避免占用截图中已有 Python 进程的 GPU0。
+- 先运行 `--limit 1 --overwrite` 做 smoke test，再跑完整 8 条 pilot。
+- 如果 Qwen3-VL 显存不足，再扩展到 `CUDA_VISIBLE_DEVICES=1,2,3` 或降低渲染图分辨率。
+
+### 下一步
+
+- 将本地代码提交并推送到 GitHub。
+- 在远程服务器 `git pull` 后按 `docs/qwen3vl_sam2_remote_setup.md` 安装环境并运行 1 条 pilot smoke test。
+- smoke test 成功后运行完整 8 条 pilot，并回投融合生成候选 3D mask。

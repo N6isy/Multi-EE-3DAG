@@ -1,0 +1,14 @@
+# Install PyTorch separately for the server CUDA version, for example:
+#   python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+#
+# SAM2 is installed separately from facebookresearch/sam2:
+#   git clone https://github.com/facebookresearch/sam2.git external/sam2
+#   cd external/sam2 && python -m pip install -e .
+
+git+https://github.com/huggingface/transformers
+accelerate
+pillow
+numpy
+pyyaml
+matplotlib
+opencv-python

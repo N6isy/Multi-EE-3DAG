@@ -1,0 +1,57 @@
+version: v0.1
+
+# This config is intended for the remote GPU server. The project workflow is:
+# local Codex edits -> GitHub push -> remote server git pull -> run this config.
+
+pilot:
+  pilot_csv: processed/metadata/vlm_pilot_samples_v0_1.csv
+  renders_root: processed/vlm_pilot/renders
+  output_mask_root: processed/vlm_pilot/vlm_2d_masks
+  output_response_root: processed/vlm_pilot/qwen3vl_sam2_responses
+  views:
+    - front
+    - back
+    - left
+    - right
+    - top
+    - iso
+  image_size: 384
+
+qwen3vl:
+  model_id: Qwen/Qwen3-VL-8B-Instruct
+  # Recommended remote launch:
+  # CUDA_VISIBLE_DEVICES=1,2 python ...
+  # With that launch, "auto" can shard or place the model on the visible GPUs.
+  device_map: auto
+  dtype: auto
+  attn_implementation: null
+  max_new_tokens: 512
+  temperature: 0.0
+  top_p: 1.0
+  min_pixels: null
+  max_pixels: null
+
+sam2:
+  # Option A: local checkpoint cloned from facebookresearch/sam2.
+  checkpoint: external/sam2/checkpoints/sam2.1_hiera_large.pt
+  model_cfg: configs/sam2.1/sam2.1_hiera_l.yaml
+  # Option B: use Hugging Face loading instead of checkpoint/model_cfg.
+  # hf_model_id: facebook/sam2.1-hiera-large
+  hf_model_id: null
+  device: cuda:0
+  dtype: bfloat16
+  multimask_output: true
+
+segmentation:
+  # Qwen3-VL provides boxes/points. SAM2 turns those prompts into pixel masks.
+  max_boxes_per_view: 3
+  max_positive_points_per_view: 8
+  max_negative_points_per_view: 8
+  min_box_area: 16
+  choose_mask_by: score
+  save_prompt_overlay: false
+
+runtime:
+  seed: 0
+  overwrite: false
+  dry_run: false
