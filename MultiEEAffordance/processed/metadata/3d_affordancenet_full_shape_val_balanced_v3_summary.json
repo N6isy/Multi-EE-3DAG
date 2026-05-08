@@ -1,0 +1,62 @@
+{
+  "zip": "MultiEEAffordance\\raw\\3d_affordancenet\\full-shape.zip",
+  "source_split": "val",
+  "target_split": "val",
+  "objects_loaded": 2285,
+  "objects_converted": 46,
+  "samples_written": 61,
+  "tasks": {
+    "open_pull": 13,
+    "press_push": 6,
+    "pick_up": 21,
+    "lift_carry": 21
+  },
+  "categories": {
+    "Door": 2,
+    "Clock": 2,
+    "Dishwasher": 2,
+    "Earphone": 2,
+    "Vase": 2,
+    "Knife": 2,
+    "Bowl": 2,
+    "Bag": 2,
+    "Faucet": 2,
+    "Scissors": 2,
+    "Display": 2,
+    "Chair": 2,
+    "Bottle": 2,
+    "Microwave": 2,
+    "StorageFurniture": 2,
+    "Refrigerator": 2,
+    "Mug": 2,
+    "Keyboard": 2,
+    "Table": 2,
+    "Bed": 2,
+    "Hat": 2,
+    "Laptop": 2,
+    "TrashCan": 2
+  },
+  "feasible_counts_by_task": {
+    "pick_up": {
+      "gripper": 15,
+      "dexterous_hand": 15,
+      "suction": 6
+    },
+    "lift_carry": {
+      "gripper": 15,
+      "dexterous_hand": 15,
+      "suction": 6
+    },
+    "open_pull": {
+      "gripper": 11,
+      "suction": 4,
+      "hook": 6,
+      "dexterous_hand": 11
+    },
+    "press_push": {
+      "suction": 2,
+      "dexterous_hand": 4
+    }
+  },
+  "manifest": "MultiEEAffordance\\manifests\\3d_affordancenet_full_shape_val_balanced_v3_manifest.jsonl"
+}

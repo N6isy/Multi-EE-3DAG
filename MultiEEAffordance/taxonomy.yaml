@@ -1,0 +1,285 @@
+dataset:
+  name: Multi-EE Affordance Dataset
+  version: "0.1"
+  level: object
+  task_formulation: "P, q -> [M_gripper, M_suction, M_hook, M_dexterous_hand]"
+  point_cloud:
+    preferred_shape: "[N, 6]"
+    allowed_shapes:
+      - "[N, 3]"
+      - "[N, 6]"
+    channels:
+      - x
+      - y
+      - z
+      - nx
+      - ny
+      - nz
+  mask:
+    shape: "[N, 4]"
+    dtype: uint8
+    executor_order:
+      - gripper
+      - suction
+      - hook
+      - dexterous_hand
+    channel_semantics:
+      0: gripper
+      1: suction
+      2: hook
+      3: dexterous_hand
+
+executors:
+  gripper:
+    display_name: two_finger_gripper
+    positive_regions:
+      - handle_outer_surface
+      - object_sides
+      - slender_handle
+      - graspable_edge
+      - original_grasp_or_hold_affordance
+    negative_regions:
+      - large_flat_surface_center
+      - hole_interior
+      - very_small_button
+      - tiny_unstable_structure
+      - suction_only_flat_plane
+  suction:
+    display_name: suction_cup
+    positive_regions:
+      - smooth_large_surface
+      - low_curvature_region
+      - normal_consistent_region
+      - flat_panel
+      - box_top
+      - cabinet_door_panel
+      - drawer_front_panel
+      - plate_center
+    negative_regions:
+      - hole
+      - edge
+      - thin_rod
+      - high_curvature_region
+      - rough_or_perforated_surface
+      - handle
+      - pull_ring
+      - slender_handle
+  hook:
+    display_name: hook_end_effector
+    positive_regions:
+      - handle_inner_hole
+      - pull_ring
+      - hole_boundary
+      - carrying_handle
+      - hangable_structure
+      - pan_handle_hole
+      - scissors_ring
+      - bag_handle
+    negative_regions:
+      - plain_surface
+      - no_hole_surface
+      - button
+      - smooth_non_hangable_region
+      - suction_only_flat_plane
+  dexterous_hand:
+    display_name: dexterous_hand
+    positive_regions:
+      - handle
+      - cup_body
+      - bottle_body
+      - stem
+      - knob
+      - button
+      - switch
+      - multi_finger_enclosure_region
+      - stable_grasp_or_precision_operation_region
+    negative_regions:
+      - unstable_smooth_large_plane
+      - too_small_unmanipulable_region
+      - suction_only_flat_plane
+      - ordinary_surface_without_task_meaning
+    definition_note: "Do not label every touchable surface as positive. The positive area must support stable human-like grasping, pressing, or precise manipulation for the current task."
+
+tasks:
+  pick_up:
+    display_name: pick up
+    canonical_instruction: "Pick up the object."
+    typical_positive_executors:
+      - gripper
+      - suction
+      - hook
+      - dexterous_hand
+    source_affordance_aliases:
+      - grasp
+      - hold
+      - lift
+  lift_carry:
+    display_name: lift and carry
+    canonical_instruction: "Lift and carry the object."
+    typical_positive_executors:
+      - gripper
+      - suction
+      - hook
+      - dexterous_hand
+    source_affordance_aliases:
+      - lift
+      - carry
+      - hold
+      - support
+  open_pull:
+    display_name: open or pull
+    canonical_instruction: "Open or pull the articulated part."
+    typical_positive_executors:
+      - gripper
+      - hook
+      - dexterous_hand
+    source_affordance_aliases:
+      - pull
+      - open
+      - handle
+  press_push:
+    display_name: press or push
+    canonical_instruction: "Press or push the target part."
+    typical_positive_executors:
+      - suction
+      - dexterous_hand
+    source_affordance_aliases:
+      - press
+      - push
+      - button
+
+source_datasets:
+  - 3d_affordancenet
+  - partnet_mobility
+  - shapenet
+  - objaverse
+  - manual
+
+quality_flags:
+  weak:
+    meaning: generated from existing labels, part annotations, and geometry rules
+  checked:
+    meaning: visually inspected and obvious errors removed
+  verified:
+    meaning: manually verified or refined as a reliable evaluation sample
+
+splits:
+  - train
+  - val
+  - test
+  - contrast_test
+
+label_sources:
+  - existing_affordance_mask
+  - part_annotation
+  - geometry_rule
+  - manual_refinement
+  - mixed
+  - unavailable
+
+negative_reasons:
+  - not_task_relevant
+  - no_graspable_region
+  - no_flat_suction_surface
+  - no_hookable_structure
+  - too_small_or_unstable
+  - high_curvature_or_edge
+  - hole_or_perforated_surface
+  - suction_only_flat_plane
+  - ordinary_surface_without_operation_meaning
+  - missing_candidate_label
+
+region_to_executor_priors:
+  handle:
+    pick_up:
+      - gripper
+      - hook
+      - dexterous_hand
+    lift_carry:
+      - gripper
+      - hook
+      - dexterous_hand
+    open_pull:
+      - gripper
+      - hook
+      - dexterous_hand
+  outer_handle:
+    pick_up:
+      - gripper
+      - dexterous_hand
+    lift_carry:
+      - gripper
+      - dexterous_hand
+    open_pull:
+      - gripper
+      - dexterous_hand
+  inner_hole:
+    pick_up:
+      - hook
+    lift_carry:
+      - hook
+    open_pull:
+      - hook
+  ring:
+    pick_up:
+      - hook
+      - dexterous_hand
+    lift_carry:
+      - hook
+      - dexterous_hand
+    open_pull:
+      - hook
+      - dexterous_hand
+  flat_panel:
+    pick_up:
+      - suction
+    lift_carry:
+      - suction
+    open_pull:
+      - suction
+    press_push:
+      - suction
+  smooth_surface:
+    pick_up:
+      - suction
+    lift_carry:
+      - suction
+    press_push:
+      - suction
+  edge:
+    pick_up:
+      - gripper
+    lift_carry:
+      - gripper
+  body:
+    pick_up:
+      - gripper
+      - dexterous_hand
+    lift_carry:
+      - gripper
+      - dexterous_hand
+  stem:
+    pick_up:
+      - gripper
+      - dexterous_hand
+    lift_carry:
+      - gripper
+      - dexterous_hand
+  knob:
+    open_pull:
+      - gripper
+      - dexterous_hand
+    press_push:
+      - dexterous_hand
+  button:
+    press_push:
+      - dexterous_hand
+  switch:
+    press_push:
+      - dexterous_hand
+
+notes:
+  weak_label_policy:
+    - "Use existing affordance masks, part annotations, geometry rules, and manually curated tables."
+    - "Large language models may help normalize part names or document rules, but must not be the final point-wise mask generator."
+    - "Scene-level pipelines are out of scope for v0.1."

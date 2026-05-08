@@ -1,0 +1,128 @@
+{
+  "input_samples": 61,
+  "checked_samples": 45,
+  "rejected_samples": 16,
+  "refine_queue_rows": 66,
+  "output_samples": "processed/metadata/samples_checked_v0_1.jsonl",
+  "output_mask_dir": "processed/masks_checked_v0_1",
+  "output_split_dir": "splits_checked_v0_1",
+  "refine_queue": "processed/metadata/refine_queue_v0_1.csv",
+  "rejected_samples_path": "processed/metadata/rejected_samples_v0_1.csv",
+  "counters": {
+    "review_status": {
+      "needs_fix": 36,
+      "reject": 16,
+      "checked": 9
+    },
+    "keep_sample": {
+      "yes": 45,
+      "no": 16
+    },
+    "quality_after_review": {
+      "weak": 51,
+      "checked": 9,
+      "verified": 1
+    },
+    "sample_issue_type": {
+      "none": 45,
+      "ambiguous_object": 3,
+      "task_mismatch": 13
+    },
+    "rule_error": {
+      "其他": 169,
+      "过标：弱规则生成区域过大": 7,
+      "错区：弱规则标到错误部位": 8,
+      "漏标：弱规则没有生成应有正样本": 38,
+      "缺少几何规则：需要法向/曲率/面积约束": 2,
+      "待精修：当前弱标签需要人工或规则修正": 11,
+      "执行器不匹配：物理可行性规则不足": 9
+    }
+  },
+  "executor_decisions": {
+    "gripper": {
+      "keep": 30,
+      "add_missing": 5,
+      "<empty>": 15,
+      "refine": 9,
+      "disable": 1,
+      "not_applicable": 1
+    },
+    "suction": {
+      "refine": 7,
+      "<empty>": 14,
+      "add_missing": 9,
+      "keep": 28,
+      "disable": 3
+    },
+    "hook": {
+      "keep": 25,
+      "<empty>": 16,
+      "refine": 2,
+      "add_missing": 15,
+      "disable": 3
+    },
+    "dexterous_hand": {
+      "keep": 27,
+      "refine": 13,
+      "<empty>": 14,
+      "add_missing": 5,
+      "disable": 2
+    }
+  },
+  "executor_issues": {
+    "gripper": {
+      "none": 30,
+      "missing_positive": 5,
+      "<empty>": 15,
+      "over_label": 1,
+      "wrong_region": 4,
+      "under_label": 3,
+      "needs_geometry_rule": 1,
+      "executor_mismatch": 2
+    },
+    "suction": {
+      "over_label": 5,
+      "wrong_region": 1,
+      "<empty>": 14,
+      "missing_positive": 7,
+      "none": 28,
+      "needs_geometry_rule": 3,
+      "executor_mismatch": 3
+    },
+    "hook": {
+      "none": 25,
+      "<empty>": 16,
+      "needs_geometry_rule": 2,
+      "missing_positive": 15,
+      "wrong_region": 1,
+      "executor_mismatch": 2
+    },
+    "dexterous_hand": {
+      "none": 27,
+      "missing_positive": 6,
+      "<empty>": 14,
+      "over_label": 1,
+      "wrong_region": 2,
+      "under_label": 8,
+      "needs_geometry_rule": 1,
+      "executor_mismatch": 2
+    }
+  },
+  "task_keep": {
+    "open_pull": {
+      "yes": 8,
+      "no": 5
+    },
+    "press_push": {
+      "yes": 6
+    },
+    "pick_up": {
+      "yes": 15,
+      "no": 6
+    },
+    "lift_carry": {
+      "yes": 16,
+      "no": 5
+    }
+  }
+}
