@@ -20,6 +20,8 @@ from typing import Any
 
 import numpy as np
 
+from path_utils import resolve_portable_path
+
 
 EXECUTOR_DEFINITIONS = {
     "gripper": (
@@ -257,7 +259,10 @@ def main() -> int:
         pilot_id = row["pilot_id"]
         manifest_path = renders_root / sample_id / "view_manifest.json"
         manifest = read_manifest(manifest_path)
-        views = {entry["view"]: Path(entry["render_path"]) for entry in manifest["views"]}
+        views = {
+            entry["view"]: resolve_portable_path(root, entry["render_path"], manifest_path.parent)
+            for entry in manifest["views"]
+        }
         view_images = [(view, views[view]) for view in VIEW_ORDER]
         prompt = build_prompt(row, manifest)
 

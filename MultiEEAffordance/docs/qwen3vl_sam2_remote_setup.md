@@ -94,6 +94,15 @@ python MultiEEAffordance/tools/run_qwen3vl_sam2_pilot.py \
   --validate-only
 ```
 
+如果这里报出类似 `D:\VSCode\...front_render.png` 的路径错误，说明旧 `view_manifest.json` 仍然保存了本地 Windows 绝对路径。先运行：
+
+```bash
+python MultiEEAffordance/tools/normalize_render_manifests.py \
+  --dataset-root MultiEEAffordance
+```
+
+再重新运行 `--validate-only`。新版本的 `render_multiview.py` 会默认写入相对路径，读取脚本也会自动兼容旧 Windows 绝对路径。
+
 运行 1 条样本做 smoke test：
 
 ```bash

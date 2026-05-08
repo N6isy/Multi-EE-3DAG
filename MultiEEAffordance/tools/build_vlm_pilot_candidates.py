@@ -18,6 +18,8 @@ from typing import Any
 
 import numpy as np
 
+from path_utils import resolve_portable_path
+
 
 EXECUTOR_ORDER = ["gripper", "suction", "hook", "dexterous_hand"]
 VIEW_ORDER = ["front", "back", "left", "right", "top", "iso"]
@@ -135,7 +137,14 @@ def load_2d_mask(mask_dir: Path, view: str, shape: tuple[int, int]) -> np.ndarra
     return (mask > 0).astype(np.uint8)
 
 
-def project_masks(manifest: dict[str, Any], mask_dir: Path, executor: str, output_npz: Path) -> dict[str, Any]:
+def project_masks(
+    manifest: dict[str, Any],
+    manifest_dir: Path,
+    dataset_root: Path,
+    mask_dir: Path,
+    executor: str,
+    output_npz: Path,
+) -> dict[str, Any]:
     num_points = int(manifest["num_points"])
     votes = np.zeros((num_points, len(EXECUTOR_ORDER)), dtype=np.float32)
     visible = np.zeros((num_points,), dtype=np.float32)
@@ -145,7 +154,8 @@ def project_masks(manifest: dict[str, Any], mask_dir: Path, executor: str, outpu
     view_entries = {entry["view"]: entry for entry in manifest["views"]}
     for view in VIEW_ORDER:
         entry = view_entries[view]
-        index_map = np.load(entry["point_index_path"])
+        index_path = resolve_portable_path(dataset_root, entry["point_index_path"], manifest_dir)
+        index_map = np.load(index_path)
         mask_2d = load_2d_mask(mask_dir, view, index_map.shape)
         valid = index_map >= 0
         point_ids = index_map[valid]
@@ -210,9 +220,10 @@ def main() -> int:
                 raise ValueError(f"Invalid checked mask shape {checked_mask.shape}: {checked_mask_path}")
             masks_by_sample[sample_id] = checked_mask.astype(np.uint8).copy()
 
-        manifest = load_manifest(renders_root / sample_id / "view_manifest.json")
+        manifest_path = renders_root / sample_id / "view_manifest.json"
+        manifest = load_manifest(manifest_path)
         projected_npz = projected_root / f"{pilot_id}_{executor}_votes.npz"
-        projection_stats = project_masks(manifest, mask_dir, executor, projected_npz)
+        projection_stats = project_masks(manifest, manifest_path.parent, root, mask_dir, executor, projected_npz)
         data = np.load(projected_npz, allow_pickle=True)
         scores = data["scores"]
         visible = data["visible"]

@@ -328,3 +328,36 @@
 - 将本地代码提交并推送到 GitHub。
 - 在远程服务器 `git pull` 后按 `docs/qwen3vl_sam2_remote_setup.md` 安装环境并运行 1 条 pilot smoke test。
 - smoke test 成功后运行完整 8 条 pilot，并回投融合生成候选 3D mask。
+
+## 2026-05-08 路径兼容修复
+
+### 完成内容
+
+- 修复远程服务器运行 `run_qwen3vl_sam2_pilot.py --validate-only` 时读取到本地 Windows 绝对路径的问题。
+- 新增通用路径工具 `path_utils.py`，支持相对路径、当前系统绝对路径和旧 manifest 中的 Windows 绝对路径。
+- 修改 `render_multiview.py`，后续新生成的 `view_manifest.json` 默认写相对路径。
+- 修改 Qwen3-VL+SAM2、OpenAI VLM、2D 回投、候选融合脚本，使其读取旧 manifest 时自动做跨机器路径映射。
+- 新增 `normalize_render_manifests.py`，可批量把已有 render manifest 改成相对路径。
+- 已将当前 7 个 pilot render manifest 从 `D:\VSCode\...` 改成 `processed/...` 相对路径。
+
+### 产出文件
+
+- `tools/path_utils.py`
+- `tools/normalize_render_manifests.py`
+- 更新 `tools/render_multiview.py`
+- 更新 `tools/run_qwen3vl_sam2_pilot.py`
+- 更新 `tools/run_openai_vlm_pilot.py`
+- 更新 `tools/project_2d_masks_to_3d.py`
+- 更新 `tools/build_vlm_pilot_candidates.py`
+- 更新 `docs/qwen3vl_sam2_remote_setup.md`
+- 重写 `docs/local_codex_remote_server_workflow.md`，明确路径约束和 GitHub/远程运行流程。
+
+### 本地检查
+
+- `run_qwen3vl_sam2_pilot.py --validate-only --limit 1` 通过。
+- `normalize_render_manifests.py --dry-run` 显示当前 7 个 manifest 已无待修改路径。
+
+### 下一步
+
+- 本地将修复提交并推送到 GitHub。
+- 远程服务器 `git pull` 后重新运行 `--validate-only`。

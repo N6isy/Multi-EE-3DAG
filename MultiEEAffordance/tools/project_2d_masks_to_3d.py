@@ -21,12 +21,15 @@ from typing import Any
 
 import numpy as np
 
+from path_utils import resolve_portable_path
+
 
 EXECUTOR_ORDER = ["gripper", "suction", "hook", "dexterous_hand"]
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Project 2D masks back to 3D point votes.")
+    parser.add_argument("--dataset-root", default=None, help="Dataset root. Optional but recommended on remote servers.")
     parser.add_argument("--view-manifest", required=True, help="Path to view_manifest.json from render_multiview.py.")
     parser.add_argument("--mask-dir", required=True, help="Directory containing VLM 2D masks by view name.")
     parser.add_argument("--output", required=True, help="Output .npz path for per-point votes.")
@@ -38,6 +41,13 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--positive-threshold", type=float, default=0.5, help="2D mask threshold.")
     return parser.parse_args()
+
+
+def infer_dataset_root(manifest_path: Path) -> Path:
+    for parent in manifest_path.resolve().parents:
+        if parent.name == "MultiEEAffordance":
+            return parent
+    return Path(".").resolve()
 
 
 def load_manifest(path: Path) -> dict[str, Any]:
@@ -84,12 +94,12 @@ def ensure_mask_channels(mask: np.ndarray, executor: str | None) -> np.ndarray:
     raise ValueError(f"Expected mask shape [H,W] or [H,W,4], got {mask.shape}")
 
 
-def infer_num_points(manifest: dict[str, Any], views: list[dict[str, Any]]) -> int:
+def infer_num_points(manifest: dict[str, Any], views: list[dict[str, Any]], root: Path, manifest_dir: Path) -> int:
     if manifest.get("num_points"):
         return int(manifest["num_points"])
     max_index = -1
     for view in views:
-        index_map = np.load(view["point_index_path"])
+        index_map = np.load(resolve_portable_path(root, view["point_index_path"], manifest_dir))
         if index_map.size:
             max_index = max(max_index, int(index_map.max()))
     if max_index < 0:
@@ -99,19 +109,22 @@ def infer_num_points(manifest: dict[str, Any], views: list[dict[str, Any]]) -> i
 
 def main() -> int:
     args = parse_args()
-    manifest = load_manifest(Path(args.view_manifest))
+    manifest_path = Path(args.view_manifest)
+    manifest = load_manifest(manifest_path)
+    root = Path(args.dataset_root).resolve() if args.dataset_root else infer_dataset_root(manifest_path)
+    manifest_dir = manifest_path.parent
     views = manifest.get("views", [])
     if not views:
         raise ValueError("Manifest has no views.")
 
-    num_points = infer_num_points(manifest, views)
+    num_points = infer_num_points(manifest, views, root, manifest_dir)
     votes = np.zeros((num_points, len(EXECUTOR_ORDER)), dtype=np.float32)
     visible = np.zeros((num_points,), dtype=np.float32)
 
     mask_dir = Path(args.mask_dir)
     for view in views:
         name = view["view"]
-        index_map = np.load(view["point_index_path"])
+        index_map = np.load(resolve_portable_path(root, view["point_index_path"], manifest_dir))
         mask = ensure_mask_channels(load_mask(mask_dir / name), args.executor)
         if mask.shape[:2] != index_map.shape:
             raise ValueError(f"Mask shape {mask.shape[:2]} does not match index map {index_map.shape}: {name}")

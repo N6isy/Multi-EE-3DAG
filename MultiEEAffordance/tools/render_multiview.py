@@ -19,6 +19,8 @@ from typing import Any
 
 import numpy as np
 
+from path_utils import relative_to_dataset
+
 
 DEFAULT_VIEWS = ["front", "back", "left", "right", "top", "iso"]
 
@@ -244,7 +246,7 @@ def main() -> int:
         "object_category": sample.get("object_category", ""),
         "task": sample.get("task", ""),
         "task_instruction": sample.get("task_instruction", ""),
-        "point_cloud_path": str(points_path),
+        "point_cloud_path": relative_to_dataset(root, points_path),
         "num_points": int(points_xyz.shape[0]),
         "image_size": args.image_size,
         "views": [],
@@ -261,9 +263,9 @@ def main() -> int:
         manifest["views"].append(
             {
                 "view": view,
-                "point_index_path": str(index_path),
-                "depth_path": str(depth_path),
-                "render_path": str(png_path) if png_written else "",
+                "point_index_path": relative_to_dataset(root, index_path),
+                "depth_path": relative_to_dataset(root, depth_path),
+                "render_path": relative_to_dataset(root, png_path) if png_written else "",
             }
         )
 

@@ -25,6 +25,8 @@ from typing import Any
 import numpy as np
 from PIL import Image, ImageDraw
 
+from path_utils import resolve_portable_path
+
 
 EXECUTOR_DEFINITIONS = {
     "gripper": (
@@ -483,7 +485,7 @@ def main() -> int:
             for view in views:
                 if view not in manifest_views:
                     raise KeyError(f"View {view} missing from manifest for {sample_id}")
-                image_path = Path(manifest_views[view].get("render_path", ""))
+                image_path = resolve_portable_path(root, manifest_views[view].get("render_path", ""), renders_root / sample_id)
                 if not image_path.exists():
                     raise FileNotFoundError(f"Render image not found: {image_path}")
                 checked_views += 1
@@ -510,7 +512,7 @@ def main() -> int:
         for view in views:
             if view not in manifest_views:
                 raise KeyError(f"View {view} missing from manifest for {sample_id}")
-            image_path = Path(manifest_views[view]["render_path"])
+            image_path = resolve_portable_path(root, manifest_views[view]["render_path"], renders_root / sample_id)
             npy_path = mask_dir / f"{view}.npy"
             png_path = mask_dir / f"{view}.png"
             response_path = pilot_response_dir / f"{view}_qwen3vl.json"
