@@ -30,12 +30,10 @@ env/
 *.rar
 *.7z
 *.pkl
-*.npy
 *.npz
 *.ply
 *.obj
 *.pt
-*.pth
 *.ckpt
 *.safetensors
 
