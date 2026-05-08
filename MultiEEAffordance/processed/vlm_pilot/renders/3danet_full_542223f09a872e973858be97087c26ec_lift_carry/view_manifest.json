@@ -1,0 +1,48 @@
+{
+  "sample_id": "3danet_full_542223f09a872e973858be97087c26ec_lift_carry",
+  "object_id": "3danet_full_542223f09a872e973858be97087c26ec",
+  "object_category": "Bottle",
+  "task": "lift_carry",
+  "task_instruction": "Lift and carry the object.",
+  "point_cloud_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\points\\3d_affordancenet_full_shape_val_balanced_v3\\3danet_full_542223f09a872e973858be97087c26ec.npy",
+  "num_points": 2048,
+  "image_size": 384,
+  "views": [
+    {
+      "view": "front",
+      "point_index_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_542223f09a872e973858be97087c26ec_lift_carry\\front_point_index.npy",
+      "depth_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_542223f09a872e973858be97087c26ec_lift_carry\\front_depth.npy",
+      "render_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_542223f09a872e973858be97087c26ec_lift_carry\\front_render.png"
+    },
+    {
+      "view": "back",
+      "point_index_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_542223f09a872e973858be97087c26ec_lift_carry\\back_point_index.npy",
+      "depth_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_542223f09a872e973858be97087c26ec_lift_carry\\back_depth.npy",
+      "render_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_542223f09a872e973858be97087c26ec_lift_carry\\back_render.png"
+    },
+    {
+      "view": "left",
+      "point_index_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_542223f09a872e973858be97087c26ec_lift_carry\\left_point_index.npy",
+      "depth_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_542223f09a872e973858be97087c26ec_lift_carry\\left_depth.npy",
+      "render_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_542223f09a872e973858be97087c26ec_lift_carry\\left_render.png"
+    },
+    {
+      "view": "right",
+      "point_index_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_542223f09a872e973858be97087c26ec_lift_carry\\right_point_index.npy",
+      "depth_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_542223f09a872e973858be97087c26ec_lift_carry\\right_depth.npy",
+      "render_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_542223f09a872e973858be97087c26ec_lift_carry\\right_render.png"
+    },
+    {
+      "view": "top",
+      "point_index_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_542223f09a872e973858be97087c26ec_lift_carry\\top_point_index.npy",
+      "depth_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_542223f09a872e973858be97087c26ec_lift_carry\\top_depth.npy",
+      "render_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_542223f09a872e973858be97087c26ec_lift_carry\\top_render.png"
+    },
+    {
+      "view": "iso",
+      "point_index_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_542223f09a872e973858be97087c26ec_lift_carry\\iso_point_index.npy",
+      "depth_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_542223f09a872e973858be97087c26ec_lift_carry\\iso_depth.npy",
+      "render_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_542223f09a872e973858be97087c26ec_lift_carry\\iso_render.png"
+    }
+  ]
+}

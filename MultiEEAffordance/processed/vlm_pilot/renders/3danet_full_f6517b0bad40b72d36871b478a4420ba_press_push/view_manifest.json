@@ -1,0 +1,48 @@
+{
+  "sample_id": "3danet_full_f6517b0bad40b72d36871b478a4420ba_press_push",
+  "object_id": "3danet_full_f6517b0bad40b72d36871b478a4420ba",
+  "object_category": "Keyboard",
+  "task": "press_push",
+  "task_instruction": "Press or push the target part.",
+  "point_cloud_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\points\\3d_affordancenet_full_shape_val_balanced_v3\\3danet_full_f6517b0bad40b72d36871b478a4420ba.npy",
+  "num_points": 2048,
+  "image_size": 384,
+  "views": [
+    {
+      "view": "front",
+      "point_index_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_f6517b0bad40b72d36871b478a4420ba_press_push\\front_point_index.npy",
+      "depth_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_f6517b0bad40b72d36871b478a4420ba_press_push\\front_depth.npy",
+      "render_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_f6517b0bad40b72d36871b478a4420ba_press_push\\front_render.png"
+    },
+    {
+      "view": "back",
+      "point_index_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_f6517b0bad40b72d36871b478a4420ba_press_push\\back_point_index.npy",
+      "depth_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_f6517b0bad40b72d36871b478a4420ba_press_push\\back_depth.npy",
+      "render_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_f6517b0bad40b72d36871b478a4420ba_press_push\\back_render.png"
+    },
+    {
+      "view": "left",
+      "point_index_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_f6517b0bad40b72d36871b478a4420ba_press_push\\left_point_index.npy",
+      "depth_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_f6517b0bad40b72d36871b478a4420ba_press_push\\left_depth.npy",
+      "render_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_f6517b0bad40b72d36871b478a4420ba_press_push\\left_render.png"
+    },
+    {
+      "view": "right",
+      "point_index_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_f6517b0bad40b72d36871b478a4420ba_press_push\\right_point_index.npy",
+      "depth_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_f6517b0bad40b72d36871b478a4420ba_press_push\\right_depth.npy",
+      "render_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_f6517b0bad40b72d36871b478a4420ba_press_push\\right_render.png"
+    },
+    {
+      "view": "top",
+      "point_index_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_f6517b0bad40b72d36871b478a4420ba_press_push\\top_point_index.npy",
+      "depth_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_f6517b0bad40b72d36871b478a4420ba_press_push\\top_depth.npy",
+      "render_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_f6517b0bad40b72d36871b478a4420ba_press_push\\top_render.png"
+    },
+    {
+      "view": "iso",
+      "point_index_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_f6517b0bad40b72d36871b478a4420ba_press_push\\iso_point_index.npy",
+      "depth_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_f6517b0bad40b72d36871b478a4420ba_press_push\\iso_depth.npy",
+      "render_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_f6517b0bad40b72d36871b478a4420ba_press_push\\iso_render.png"
+    }
+  ]
+}

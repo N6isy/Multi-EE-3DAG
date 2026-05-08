@@ -1,0 +1,48 @@
+{
+  "sample_id": "3danet_full_23d8f4bc9f6ef1e79ba80f08c401fbed_open_pull",
+  "object_id": "3danet_full_23d8f4bc9f6ef1e79ba80f08c401fbed",
+  "object_category": "Door",
+  "task": "open_pull",
+  "task_instruction": "Open or pull the articulated part.",
+  "point_cloud_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\points\\3d_affordancenet_full_shape_val_balanced_v3\\3danet_full_23d8f4bc9f6ef1e79ba80f08c401fbed.npy",
+  "num_points": 2048,
+  "image_size": 384,
+  "views": [
+    {
+      "view": "front",
+      "point_index_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_23d8f4bc9f6ef1e79ba80f08c401fbed_open_pull\\front_point_index.npy",
+      "depth_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_23d8f4bc9f6ef1e79ba80f08c401fbed_open_pull\\front_depth.npy",
+      "render_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_23d8f4bc9f6ef1e79ba80f08c401fbed_open_pull\\front_render.png"
+    },
+    {
+      "view": "back",
+      "point_index_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_23d8f4bc9f6ef1e79ba80f08c401fbed_open_pull\\back_point_index.npy",
+      "depth_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_23d8f4bc9f6ef1e79ba80f08c401fbed_open_pull\\back_depth.npy",
+      "render_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_23d8f4bc9f6ef1e79ba80f08c401fbed_open_pull\\back_render.png"
+    },
+    {
+      "view": "left",
+      "point_index_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_23d8f4bc9f6ef1e79ba80f08c401fbed_open_pull\\left_point_index.npy",
+      "depth_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_23d8f4bc9f6ef1e79ba80f08c401fbed_open_pull\\left_depth.npy",
+      "render_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_23d8f4bc9f6ef1e79ba80f08c401fbed_open_pull\\left_render.png"
+    },
+    {
+      "view": "right",
+      "point_index_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_23d8f4bc9f6ef1e79ba80f08c401fbed_open_pull\\right_point_index.npy",
+      "depth_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_23d8f4bc9f6ef1e79ba80f08c401fbed_open_pull\\right_depth.npy",
+      "render_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_23d8f4bc9f6ef1e79ba80f08c401fbed_open_pull\\right_render.png"
+    },
+    {
+      "view": "top",
+      "point_index_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_23d8f4bc9f6ef1e79ba80f08c401fbed_open_pull\\top_point_index.npy",
+      "depth_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_23d8f4bc9f6ef1e79ba80f08c401fbed_open_pull\\top_depth.npy",
+      "render_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_23d8f4bc9f6ef1e79ba80f08c401fbed_open_pull\\top_render.png"
+    },
+    {
+      "view": "iso",
+      "point_index_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_23d8f4bc9f6ef1e79ba80f08c401fbed_open_pull\\iso_point_index.npy",
+      "depth_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_23d8f4bc9f6ef1e79ba80f08c401fbed_open_pull\\iso_depth.npy",
+      "render_path": "D:\\VSCode\\Multi-EE-3DAG\\MultiEEAffordance\\processed\\vlm_pilot\\renders\\3danet_full_23d8f4bc9f6ef1e79ba80f08c401fbed_open_pull\\iso_render.png"
+    }
+  ]
+}

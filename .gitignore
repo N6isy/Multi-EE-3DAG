@@ -21,16 +21,7 @@ env/
 .idea/
 
 # Raw datasets and large generated data
-MultiEEAffordance/raw/
-MultiEEAffordance/processed/points/
-MultiEEAffordance/processed/masks/
-MultiEEAffordance/processed/masks_checked_v0_1/
-MultiEEAffordance/processed/visualizations/
-MultiEEAffordance/processed/vlm_pilot/renders/
-MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/
-MultiEEAffordance/processed/vlm_pilot/projected/
-MultiEEAffordance/processed/vlm_pilot/fused_masks/
-MultiEEAffordance/processed/vlm_pilot/vlm_responses/
+
 
 # Large model/data files
 *.zip
