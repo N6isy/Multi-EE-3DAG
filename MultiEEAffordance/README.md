@@ -26,7 +26,20 @@ MultiEEAffordance/
   taxonomy.yaml
   README.md
   docs/
-    candidate_region_schema.md
+    候选区域格式说明.md
+    3D-AffordanceNet转换报告.md
+    可视化检查报告.md
+    人工审查表字段说明.md
+    v0.1人工审查总结.md
+    VLM多视角试验设计.md
+    VLM试验运行手册.md
+    Qwen3-VL+SAM2远程运行说明.md
+    Qwen3-VL+SAM2候选标注流程图.md
+    Qwen3-VL+SAM2候选标注与标注规范汇报稿.md
+    本地Codex与远程服务器工作流.md
+    项目进度日志.md
+    选题思路跟进报告.md
+    异构末端执行器标注规范.md
   manifests/
     sample_manifest_template.jsonl
   raw/
@@ -103,7 +116,7 @@ processed/candidates/
 具体格式见：
 
 ```text
-docs/candidate_region_schema.md
+docs/候选区域格式说明.md
 ```
 
 ### 4. 生成四通道弱标签 mask
@@ -232,7 +245,7 @@ python tools/build_samples_jsonl.py \
 本轮转换记录见：
 
 ```text
-docs/3d_affordancenet_conversion_report.md
+docs/3D-AffordanceNet转换报告.md
 ```
 
 ## HTML 可视化检查
@@ -258,7 +271,7 @@ processed/visualizations/html_v3/index.html
 本轮可视化环境记录见：
 
 ```text
-docs/visualization_report.md
+docs/可视化检查报告.md
 ```
 
 ## 网页人工审查

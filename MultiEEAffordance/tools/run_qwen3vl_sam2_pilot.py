@@ -233,9 +233,28 @@ Rules:
 """
 
 
-def load_qwen_model(cfg: dict[str, Any]) -> tuple[Any, Any]:
+def resolve_qwen_pretrained_source(root: Path, qwen_cfg: dict[str, Any]) -> str:
+    model_path = qwen_cfg.get("model_path")
+    if model_path:
+        path = Path(str(model_path))
+        resolved = path if path.is_absolute() else root / path
+        if not resolved.exists():
+            raise FileNotFoundError(
+                f"Qwen3-VL local model_path does not exist: {resolved}. "
+                "Download/transfer the model directory first, or use qwen3vl.model_id when the server has network access."
+            )
+        if not (resolved / "config.json").exists():
+            raise FileNotFoundError(
+                f"Qwen3-VL local model_path is missing config.json: {resolved}. "
+                "Point model_path to the Hugging Face model directory or snapshot directory that contains config.json."
+            )
+        return str(resolved)
+    return str(qwen_cfg.get("model_id", "Qwen/Qwen3-VL-8B-Instruct"))
+
+
+def load_qwen_model(cfg: dict[str, Any], root: Path) -> tuple[Any, Any]:
     qwen_cfg = cfg.get("qwen3vl", {})
-    model_id = qwen_cfg.get("model_id", "Qwen/Qwen3-VL-8B-Instruct")
+    model_source = resolve_qwen_pretrained_source(root, qwen_cfg)
     try:
         import torch
         from transformers import AutoProcessor, Qwen3VLForConditionalGeneration
@@ -247,6 +266,16 @@ def load_qwen_model(cfg: dict[str, Any]) -> tuple[Any, Any]:
     load_kwargs: dict[str, Any] = {
         "dtype": qwen_cfg.get("dtype", "auto"),
     }
+    shared_kwargs: dict[str, Any] = {}
+    if qwen_cfg.get("cache_dir"):
+        shared_kwargs["cache_dir"] = str(resolve_path(root, qwen_cfg["cache_dir"]))
+    if qwen_cfg.get("revision"):
+        shared_kwargs["revision"] = qwen_cfg["revision"]
+    if qwen_cfg.get("trust_remote_code") is not None:
+        shared_kwargs["trust_remote_code"] = bool(qwen_cfg["trust_remote_code"])
+    if qwen_cfg.get("local_files_only") is not None:
+        shared_kwargs["local_files_only"] = bool(qwen_cfg["local_files_only"])
+    load_kwargs.update(shared_kwargs)
     device_map = qwen_cfg.get("device_map", "auto")
     if isinstance(device_map, str) and device_map.startswith("cuda:"):
         load_kwargs["device_map"] = {"": device_map}
@@ -256,13 +285,27 @@ def load_qwen_model(cfg: dict[str, Any]) -> tuple[Any, Any]:
     if attn_impl:
         load_kwargs["attn_implementation"] = attn_impl
 
-    model = Qwen3VLForConditionalGeneration.from_pretrained(model_id, **load_kwargs)
-    processor_kwargs = {}
+    try:
+        model = Qwen3VLForConditionalGeneration.from_pretrained(model_source, **load_kwargs)
+    except Exception as exc:
+        raise RuntimeError(
+            "Failed to load Qwen3-VL. If the remote server cannot access Hugging Face, "
+            "download/transfer Qwen/Qwen3-VL-8B-Instruct to a local directory, set "
+            "qwen3vl.model_path to that directory, and set qwen3vl.local_files_only: true."
+        ) from exc
+
+    processor_kwargs: dict[str, Any] = dict(shared_kwargs)
     if qwen_cfg.get("min_pixels") is not None:
         processor_kwargs["min_pixels"] = int(qwen_cfg["min_pixels"])
     if qwen_cfg.get("max_pixels") is not None:
         processor_kwargs["max_pixels"] = int(qwen_cfg["max_pixels"])
-    processor = AutoProcessor.from_pretrained(model_id, **processor_kwargs)
+    try:
+        processor = AutoProcessor.from_pretrained(model_source, **processor_kwargs)
+    except Exception as exc:
+        raise RuntimeError(
+            "Failed to load Qwen3-VL processor. Make sure the local model directory contains "
+            "processor/tokenizer files and config.json, or disable local_files_only when the server has network access."
+        ) from exc
     model.eval()
     torch.cuda.empty_cache()
     return model, processor
@@ -494,7 +537,7 @@ def main() -> int:
 
     model = processor = predictor = None
     if not dry_run:
-        model, processor = load_qwen_model(cfg)
+        model, processor = load_qwen_model(cfg, root)
         predictor = load_sam2_predictor(cfg)
 
     summary: list[dict[str, Any]] = []

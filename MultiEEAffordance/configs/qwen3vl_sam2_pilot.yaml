@@ -19,6 +19,14 @@ pilot:
 
 qwen3vl:
   model_id: Qwen/Qwen3-VL-8B-Instruct
+  # If the remote server cannot access Hugging Face, download/transfer the
+  # model directory manually and use model_path instead. Relative paths are
+  # resolved from --dataset-root.
+  # model_path: external/models/Qwen3-VL-8B-Instruct
+  local_files_only: false
+  cache_dir: null
+  revision: null
+  trust_remote_code: null
   # Recommended remote launch:
   # CUDA_VISIBLE_DEVICES=1,2 python ...
   # With that launch, "auto" can shard or place the model on the visible GPUs.

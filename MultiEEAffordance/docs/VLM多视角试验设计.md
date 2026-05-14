@@ -131,7 +131,7 @@ python MultiEEAffordance\tools\fuse_multiview_masks.py `
 
 远程运行说明：
 
-- `docs/qwen3vl_sam2_remote_setup.md`
+- `docs/Qwen3-VL+SAM2远程运行说明.md`
 
 ## 5. pilot 样本选择原则
 

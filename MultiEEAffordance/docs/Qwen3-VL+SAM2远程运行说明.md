@@ -1,6 +1,6 @@
 # Qwen3-VL-8B-Instruct + SAM2 远程服务器运行说明
 
-更新时间：2026-05-08 +08:00
+更新时间：2026-05-14 +08:00
 
 本文档对应当前项目的长期工作流：本地使用 Codex 修改代码，经 GitHub 同步到远程服务器；远程服务器不能使用 Codex，只负责按文档手动运行真实大模型推理。
 
@@ -58,7 +58,66 @@ configs/sam2.1/sam2.1_hiera_l.yaml
 
 如果显存或速度有压力，可以把配置改成 `sam2.1_hiera_small.pt` 和 `sam2.1_hiera_s.yaml`。
 
-## 4. 从 GitHub 拉取项目
+## 4. 服务器无法访问 Hugging Face 时的模型准备
+
+如果运行时报：
+
+```text
+[Errno 101] Network is unreachable
+Can't load the configuration of 'Qwen/Qwen3-VL-8B-Instruct'
+```
+
+说明服务器当前不能联网访问 Hugging Face，脚本无法自动下载 Qwen3-VL。此时需要在一台能联网的机器上先下载模型，再拷贝到服务器。
+
+在可联网机器上下载：
+
+```bash
+python -m pip install -U "huggingface_hub[cli]"
+huggingface-cli download Qwen/Qwen3-VL-8B-Instruct \
+  --local-dir Qwen3-VL-8B-Instruct
+```
+
+把整个 `Qwen3-VL-8B-Instruct/` 目录传到服务器项目下，例如：
+
+```text
+/mnt/ssd/lzq/Multi-EE-3DAG/MultiEEAffordance/external/models/Qwen3-VL-8B-Instruct/
+```
+
+该目录下必须能看到：
+
+```text
+config.json
+model*.safetensors
+tokenizer / processor 相关文件
+```
+
+然后修改 `MultiEEAffordance/configs/qwen3vl_sam2_pilot.yaml`：
+
+```yaml
+qwen3vl:
+  model_id: Qwen/Qwen3-VL-8B-Instruct
+  model_path: external/models/Qwen3-VL-8B-Instruct
+  local_files_only: true
+```
+
+也可以用服务器上的绝对路径：
+
+```yaml
+qwen3vl:
+  model_path: /mnt/ssd/lzq/models/Qwen3-VL-8B-Instruct
+  local_files_only: true
+```
+
+可选：运行前设置离线环境变量，避免 `transformers` 尝试联网：
+
+```bash
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+```
+
+注意：`model_path` 可以是相对路径；相对路径会基于 `--dataset-root MultiEEAffordance` 解析。
+
+## 5. 从 GitHub 拉取项目
 
 远程服务器上：
 
@@ -77,7 +136,7 @@ git pull
 
 注意：raw 数据、点云、mask、模型权重不建议提交 GitHub。远程服务器需要另外准备这些大文件，保持目录结构与本地一致。
 
-## 5. 运行 Qwen3-VL + SAM2 pilot
+## 6. 运行 Qwen3-VL + SAM2 pilot
 
 先确认 pilot 渲染图已经存在：
 
@@ -128,7 +187,7 @@ CUDA_VISIBLE_DEVICES=1,2 python MultiEEAffordance/tools/run_qwen3vl_sam2_pilot.p
 - `processed/vlm_pilot/vlm_2d_masks/{sample_id}/{executor}/{view}.npy`
 - `processed/vlm_pilot/vlm_2d_masks/{sample_id}/{executor}/{view}.png`
 
-## 6. 回投与融合
+## 7. 回投与融合
 
 ```bash
 python MultiEEAffordance/tools/build_vlm_pilot_candidates.py \
@@ -145,7 +204,7 @@ python MultiEEAffordance/tools/build_vlm_pilot_candidates.py \
 - `processed/metadata/vlm_pilot_candidate_samples_v0_1.jsonl`
 - `processed/metadata/vlm_pilot_candidate_summary_v0_1.json`
 
-## 7. 回到本地复核
+## 8. 回到本地复核
 
 远程生成候选结果后，把以下文件/目录同步回本地：
 
@@ -174,7 +233,7 @@ python MultiEEAffordance\tools\serve_review_app.py `
 http://127.0.0.1:8766/
 ```
 
-## 8. 常见问题
+## 9. 常见问题
 
 ### Qwen3-VL 显存不足
 
