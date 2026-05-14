@@ -22,8 +22,8 @@ qwen3vl:
   # If the remote server cannot access Hugging Face, download/transfer the
   # model directory manually and use model_path instead. Relative paths are
   # resolved from --dataset-root.
-  # model_path: external/models/Qwen3-VL-8B-Instruct
-  local_files_only: false
+  model_path: external/Qwen3-VL-8B-Instruct
+  local_files_only: true
   cache_dir: null
   revision: null
   trust_remote_code: null
