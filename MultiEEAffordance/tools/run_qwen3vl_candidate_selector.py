@@ -111,6 +111,8 @@ def build_selector_prompt(
 You are selecting hook affordance candidates for a 3D object dataset.
 
 You see a rendered point-cloud view with colored candidate overlays.
+The input image may be a side-by-side panel: the left side is the full object
+view, and the right side is a zoomed crop around the most important candidate.
 The colored candidate labels are:
 {candidate_lines}
 
@@ -130,8 +132,10 @@ Decision rules:
 1. Select a candidate only if it corresponds to a handle loop, hole boundary, ring, or back-side lip that a hook can enter or catch.
 2. For lift_carry, the selected region must plausibly bear load while lifting/carrying.
 3. Reject broad upper bands, flat bag/body surfaces, ordinary silhouette edges, and contact-only regions.
-4. If the view is ambiguous but a candidate clearly highlights the visible handle/loop, select it with lower confidence.
-5. If none of the candidates are hookable in this view, return an empty selected_candidates list.
+4. Do not reject a thin handle only because it is sparse. In point-cloud renders, a real handle/loop can appear as only a small arc of colored points.
+5. Candidate A often means "above main body structure"; it is not automatically correct, but if the zoomed crop shows A on a handle/loop above the bag body, select A.
+6. If the view is ambiguous but a candidate clearly highlights the visible handle/loop, select it with lower confidence.
+7. If none of the candidates are hookable in this view, return an empty selected_candidates list.
 
 Return strict JSON only:
 {{
@@ -259,9 +263,10 @@ def run_for_row(
 
     for view_entry in overlay_manifest.get("views", []):
         view = view_entry["view"]
-        overlay_path = resolve_portable_path(root, view_entry["overlay_path"], overlay_manifest_path.parent)
+        image_value = view_entry.get("selector_path") or view_entry["overlay_path"]
+        overlay_path = resolve_portable_path(root, image_value, overlay_manifest_path.parent)
         if not overlay_path.exists():
-            raise FileNotFoundError(f"Overlay image not found: {overlay_path}")
+            raise FileNotFoundError(f"Overlay/selector image not found: {overlay_path}")
 
         if args.validate_only:
             continue
