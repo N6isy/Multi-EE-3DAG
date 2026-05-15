@@ -1,0 +1,25 @@
+{
+  "pilot_id": "vlm_pilot_001",
+  "sample_id": "3danet_full_23d8f4bc9f6ef1e79ba80f08c401fbed_open_pull",
+  "executor": "suction",
+  "view": "iso",
+  "normalized_prompt": {
+    "feasible": false,
+    "boxes": [],
+    "positive_points": [],
+    "negative_points": [],
+    "confidence": 0.0,
+    "notes": "门板表面平坦，但需排除把手和边缘，当前点云未提供足够信息定位这些区域，故暂不标注。"
+  },
+  "raw_qwen3vl_response": {
+    "view": "iso",
+    "feasible": true,
+    "confidence": 0.0,
+    "boxes": [],
+    "positive_points": [],
+    "negative_points": [],
+    "notes": "门板表面平坦，但需排除把手和边缘，当前点云未提供足够信息定位这些区域，故暂不标注。",
+    "_raw_text": "{\n  \"view\": \"iso\",\n  \"feasible\": true,\n  \"confidence\": 0.0,\n  \"boxes\": [],\n  \"positive_points\": [],\n  \"negative_points\": [],\n  \"notes\": \"门板表面平坦，但需排除把手和边缘，当前点云未提供足够信息定位这些区域，故暂不标注。\"\n}"
+  },
+  "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_23d8f4bc9f6ef1e79ba80f08c401fbed_open_pull/suction/iso.npy"
+}

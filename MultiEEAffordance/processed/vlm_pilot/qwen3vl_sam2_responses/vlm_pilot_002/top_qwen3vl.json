@@ -1,0 +1,24 @@
+{
+  "pilot_id": "vlm_pilot_002",
+  "sample_id": "3danet_full_ba66302db9cfa0147286af1ad775d13a_open_pull",
+  "executor": "hook",
+  "view": "top",
+  "normalized_prompt": {
+    "feasible": false,
+    "boxes": [],
+    "positive_points": [],
+    "negative_points": [],
+    "confidence": 0.0,
+    "notes": "top view shows internal components, no visible hookable holes or rings for hook end-effector"
+  },
+  "raw_qwen3vl_response": {
+    "view": "top",
+    "feasible": false,
+    "confidence": 0.0,
+    "boxes": [],
+    "positive_points": [],
+    "negative_points": [],
+    "notes": "top view shows internal components, no visible hookable holes or rings for hook end-effector"
+  },
+  "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_ba66302db9cfa0147286af1ad775d13a_open_pull/hook/top.npy"
+}

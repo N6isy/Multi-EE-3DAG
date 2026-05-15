@@ -1,0 +1,57 @@
+{
+  "pilot_id": "vlm_pilot_007",
+  "sample_id": "3danet_full_c34718bd10e378186c6c61abcbd83e5a_pick_up",
+  "object_category": "Mug",
+  "task": "pick_up",
+  "executor": "suction",
+  "views": [
+    {
+      "view": "front",
+      "status": "done",
+      "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_c34718bd10e378186c6c61abcbd83e5a_pick_up/suction/front.npy",
+      "positive_pixels": 0,
+      "feasible": true,
+      "confidence": 0.0
+    },
+    {
+      "view": "back",
+      "status": "done",
+      "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_c34718bd10e378186c6c61abcbd83e5a_pick_up/suction/back.npy",
+      "positive_pixels": 0,
+      "feasible": true,
+      "confidence": 0.0
+    },
+    {
+      "view": "left",
+      "status": "done",
+      "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_c34718bd10e378186c6c61abcbd83e5a_pick_up/suction/left.npy",
+      "positive_pixels": 0,
+      "feasible": true,
+      "confidence": 0.0
+    },
+    {
+      "view": "right",
+      "status": "done",
+      "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_c34718bd10e378186c6c61abcbd83e5a_pick_up/suction/right.npy",
+      "positive_pixels": 0,
+      "feasible": true,
+      "confidence": 0.0
+    },
+    {
+      "view": "top",
+      "status": "done",
+      "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_c34718bd10e378186c6c61abcbd83e5a_pick_up/suction/top.npy",
+      "positive_pixels": 0,
+      "feasible": true,
+      "confidence": 0.0
+    },
+    {
+      "view": "iso",
+      "status": "done",
+      "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_c34718bd10e378186c6c61abcbd83e5a_pick_up/suction/iso.npy",
+      "positive_pixels": 0,
+      "feasible": true,
+      "confidence": 0.0
+    }
+  ]
+}

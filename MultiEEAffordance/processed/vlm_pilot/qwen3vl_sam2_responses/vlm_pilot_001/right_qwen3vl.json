@@ -1,0 +1,25 @@
+{
+  "pilot_id": "vlm_pilot_001",
+  "sample_id": "3danet_full_23d8f4bc9f6ef1e79ba80f08c401fbed_open_pull",
+  "executor": "suction",
+  "view": "right",
+  "normalized_prompt": {
+    "feasible": false,
+    "boxes": [],
+    "positive_points": [],
+    "negative_points": [],
+    "confidence": 0.0,
+    "notes": "门板区域无足够平坦表面供吸盘使用，且需排除把手和边缘"
+  },
+  "raw_qwen3vl_response": {
+    "view": "right",
+    "feasible": true,
+    "confidence": 0.0,
+    "boxes": [],
+    "positive_points": [],
+    "negative_points": [],
+    "notes": "门板区域无足够平坦表面供吸盘使用，且需排除把手和边缘",
+    "_raw_text": "{\n  \"view\": \"right\",\n  \"feasible\": true,\n  \"confidence\": 0.0,\n  \"boxes\": [],\n  \"positive_points\": [],\n  \"negative_points\": [],\n  \"notes\": \"门板区域无足够平坦表面供吸盘使用，且需排除把手和边缘\"\n}"
+  },
+  "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_23d8f4bc9f6ef1e79ba80f08c401fbed_open_pull/suction/right.npy"
+}

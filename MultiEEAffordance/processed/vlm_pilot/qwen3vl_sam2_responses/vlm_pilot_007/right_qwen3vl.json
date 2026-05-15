@@ -1,0 +1,24 @@
+{
+  "pilot_id": "vlm_pilot_007",
+  "sample_id": "3danet_full_c34718bd10e378186c6c61abcbd83e5a_pick_up",
+  "executor": "suction",
+  "view": "right",
+  "normalized_prompt": {
+    "feasible": true,
+    "boxes": [],
+    "positive_points": [],
+    "negative_points": [],
+    "confidence": 0.0,
+    "notes": "杯身表面为高曲率区域，不满足吸盘对局部平整、低曲率表面的要求；杯把手为高曲率边缘，必须排除。"
+  },
+  "raw_qwen3vl_response": {
+    "view": "right",
+    "feasible": true,
+    "confidence": 0.0,
+    "boxes": [],
+    "positive_points": [],
+    "negative_points": [],
+    "notes": "杯身表面为高曲率区域，不满足吸盘对局部平整、低曲率表面的要求；杯把手为高曲率边缘，必须排除。"
+  },
+  "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_c34718bd10e378186c6c61abcbd83e5a_pick_up/suction/right.npy"
+}

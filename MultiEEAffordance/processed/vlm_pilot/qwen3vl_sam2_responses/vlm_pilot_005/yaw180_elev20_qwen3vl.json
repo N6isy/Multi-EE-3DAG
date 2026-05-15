@@ -1,0 +1,142 @@
+{
+  "pilot_id": "vlm_pilot_005",
+  "sample_id": "3danet_full_5afe31025e8574ea8d6e12c39b2d5023_lift_carry",
+  "executor": "hook",
+  "view": "yaw180_elev20",
+  "prompt_before_foreground_refine": {
+    "feasible": true,
+    "boxes": [
+      [
+        440,
+        60,
+        580,
+        120
+      ]
+    ],
+    "positive_points": [
+      [
+        460,
+        70
+      ],
+      [
+        480,
+        80
+      ],
+      [
+        500,
+        90
+      ],
+      [
+        520,
+        100
+      ],
+      [
+        540,
+        110
+      ],
+      [
+        470,
+        100
+      ],
+      [
+        490,
+        95
+      ],
+      [
+        510,
+        90
+      ]
+    ],
+    "negative_points": [],
+    "confidence": 0.0,
+    "notes": "Only the top handle is hookable; the rest of the bag body is not suitable for hooking. Positive points are placed on the visible handle pixels. No negative points needed as the region is clearly defined."
+  },
+  "normalized_prompt": {
+    "feasible": true,
+    "boxes": [],
+    "positive_points": [
+      [
+        448,
+        78
+      ],
+      [
+        449,
+        80
+      ],
+      [
+        466,
+        112
+      ],
+      [
+        467,
+        114
+      ],
+      [
+        538,
+        163
+      ],
+      [
+        464,
+        110
+      ]
+    ],
+    "negative_points": [],
+    "confidence": 0.0,
+    "notes": "Only the top handle is hookable; the rest of the bag body is not suitable for hooking. Positive points are placed on the visible handle pixels. No negative points needed as the region is clearly defined."
+  },
+  "raw_qwen3vl_response": {
+    "view": "yaw180_elev20",
+    "visible_object_parts": [
+      "handle"
+    ],
+    "target_region_description": "The top handle of the bag, visible as a curved arc of colored points, is the only hookable region. It is a structural protrusion designed for gripping or hanging.",
+    "feasible": true,
+    "confidence": 0.0,
+    "boxes": [
+      [
+        440,
+        60,
+        580,
+        120
+      ]
+    ],
+    "positive_points": [
+      [
+        460,
+        70
+      ],
+      [
+        480,
+        80
+      ],
+      [
+        500,
+        90
+      ],
+      [
+        520,
+        100
+      ],
+      [
+        540,
+        110
+      ],
+      [
+        470,
+        100
+      ],
+      [
+        490,
+        95
+      ],
+      [
+        510,
+        90
+      ]
+    ],
+    "negative_points": [],
+    "notes": "Only the top handle is hookable; the rest of the bag body is not suitable for hooking. Positive points are placed on the visible handle pixels. No negative points needed as the region is clearly defined.",
+    "_raw_text": "{\n  \"view\": \"yaw180_elev20\",\n  \"visible_object_parts\": [\"handle\"],\n  \"target_region_description\": \"The top handle of the bag, visible as a curved arc of colored points, is the only hookable region. It is a structural protrusion designed for gripping or hanging.\",\n  \"feasible\": true,\n  \"confidence\": 0.0,\n  \"boxes\": [[440, 60, 580, 120]],\n  \"positive_points\": [[460, 70], [480, 80], [500, 90], [520, 100], [540, 110], [470, 100], [490, 95], [510, 90]],\n  \"negative_points\": [],\n  \"notes\": \"Only the top handle is hookable; the rest of the bag body is not suitable for hooking. Positive points are placed on the visible handle pixels. No negative points needed as the region is clearly defined.\"\n}"
+  },
+  "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_5afe31025e8574ea8d6e12c39b2d5023_lift_carry/hook/yaw180_elev20.npy"
+}

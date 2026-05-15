@@ -1,0 +1,57 @@
+{
+  "pilot_id": "vlm_pilot_001",
+  "sample_id": "3danet_full_23d8f4bc9f6ef1e79ba80f08c401fbed_open_pull",
+  "object_category": "Door",
+  "task": "open_pull",
+  "executor": "suction",
+  "views": [
+    {
+      "view": "front",
+      "status": "done",
+      "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_23d8f4bc9f6ef1e79ba80f08c401fbed_open_pull/suction/front.npy",
+      "positive_pixels": 0,
+      "feasible": false,
+      "confidence": 0.0
+    },
+    {
+      "view": "back",
+      "status": "done",
+      "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_23d8f4bc9f6ef1e79ba80f08c401fbed_open_pull/suction/back.npy",
+      "positive_pixels": 0,
+      "feasible": false,
+      "confidence": 0.0
+    },
+    {
+      "view": "left",
+      "status": "done",
+      "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_23d8f4bc9f6ef1e79ba80f08c401fbed_open_pull/suction/left.npy",
+      "positive_pixels": 0,
+      "feasible": false,
+      "confidence": 0.0
+    },
+    {
+      "view": "right",
+      "status": "done",
+      "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_23d8f4bc9f6ef1e79ba80f08c401fbed_open_pull/suction/right.npy",
+      "positive_pixels": 0,
+      "feasible": false,
+      "confidence": 0.0
+    },
+    {
+      "view": "top",
+      "status": "done",
+      "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_23d8f4bc9f6ef1e79ba80f08c401fbed_open_pull/suction/top.npy",
+      "positive_pixels": 0,
+      "feasible": false,
+      "confidence": 0.0
+    },
+    {
+      "view": "iso",
+      "status": "done",
+      "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_23d8f4bc9f6ef1e79ba80f08c401fbed_open_pull/suction/iso.npy",
+      "positive_pixels": 0,
+      "feasible": false,
+      "confidence": 0.0
+    }
+  ]
+}

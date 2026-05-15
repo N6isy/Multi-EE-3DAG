@@ -1,0 +1,204 @@
+{
+  "pilot_id": "vlm_pilot_005",
+  "sample_id": "3danet_full_5afe31025e8574ea8d6e12c39b2d5023_lift_carry",
+  "executor": "hook",
+  "view": "yaw135_elev20",
+  "prompt_before_foreground_refine": {
+    "feasible": true,
+    "boxes": [
+      [
+        150,
+        100,
+        350,
+        250
+      ]
+    ],
+    "positive_points": [
+      [
+        180,
+        120
+      ],
+      [
+        220,
+        130
+      ],
+      [
+        250,
+        140
+      ],
+      [
+        280,
+        150
+      ],
+      [
+        310,
+        160
+      ],
+      [
+        330,
+        170
+      ],
+      [
+        350,
+        180
+      ],
+      [
+        370,
+        190
+      ]
+    ],
+    "negative_points": [
+      [
+        100,
+        150
+      ],
+      [
+        120,
+        200
+      ],
+      [
+        140,
+        250
+      ],
+      [
+        160,
+        300
+      ],
+      [
+        180,
+        350
+      ],
+      [
+        200,
+        400
+      ],
+      [
+        220,
+        450
+      ],
+      [
+        240,
+        500
+      ]
+    ],
+    "confidence": 0.0,
+    "notes": "Only the top handle edge is hookable; the rest of the bag surface is not mechanically catchable by a hook. Positive points are on the visible handle boundary. Negative points are on the bag body surface, which is not hookable."
+  },
+  "normalized_prompt": {
+    "feasible": true,
+    "boxes": [],
+    "positive_points": [
+      [
+        304,
+        203
+      ],
+      [
+        332,
+        186
+      ],
+      [
+        334,
+        185
+      ],
+      [
+        350,
+        180
+      ],
+      [
+        370,
+        190
+      ]
+    ],
+    "negative_points": [],
+    "confidence": 0.0,
+    "notes": "Only the top handle edge is hookable; the rest of the bag surface is not mechanically catchable by a hook. Positive points are on the visible handle boundary. Negative points are on the bag body surface, which is not hookable."
+  },
+  "raw_qwen3vl_response": {
+    "view": "yaw135_elev20",
+    "visible_object_parts": [
+      "bag handle"
+    ],
+    "target_region_description": "The top edge of the bag handle, visible as a protruding, textured band along the upper rim of the bag, is the only hookable region. It is a raised, non-smooth boundary that can catch a hook.",
+    "feasible": true,
+    "confidence": 0.0,
+    "boxes": [
+      [
+        150,
+        100,
+        350,
+        250
+      ]
+    ],
+    "positive_points": [
+      [
+        180,
+        120
+      ],
+      [
+        220,
+        130
+      ],
+      [
+        250,
+        140
+      ],
+      [
+        280,
+        150
+      ],
+      [
+        310,
+        160
+      ],
+      [
+        330,
+        170
+      ],
+      [
+        350,
+        180
+      ],
+      [
+        370,
+        190
+      ]
+    ],
+    "negative_points": [
+      [
+        100,
+        150
+      ],
+      [
+        120,
+        200
+      ],
+      [
+        140,
+        250
+      ],
+      [
+        160,
+        300
+      ],
+      [
+        180,
+        350
+      ],
+      [
+        200,
+        400
+      ],
+      [
+        220,
+        450
+      ],
+      [
+        240,
+        500
+      ]
+    ],
+    "notes": "Only the top handle edge is hookable; the rest of the bag surface is not mechanically catchable by a hook. Positive points are on the visible handle boundary. Negative points are on the bag body surface, which is not hookable.",
+    "_raw_text": "{\n  \"view\": \"yaw135_elev20\",\n  \"visible_object_parts\": [\"bag handle\"],\n  \"target_region_description\": \"The top edge of the bag handle, visible as a protruding, textured band along the upper rim of the bag, is the only hookable region. It is a raised, non-smooth boundary that can catch a hook.\",\n  \"feasible\": true,\n  \"confidence\": 0.0,\n  \"boxes\": [[150, 100, 350, 250]],\n  \"positive_points\": [[180, 120], [220, 130], [250, 140], [280, 150], [310, 160], [330, 170], [350, 180], [370, 190]],\n  \"negative_points\": [[100, 150], [120, 200], [140, 250], [160, 300], [180, 350], [200, 400], [220, 450], [240, 500]],\n  \"notes\": \"Only the top handle edge is hookable; the rest of the bag surface is not mechanically catchable by a hook. Positive points are on the visible handle boundary. Negative points are on the bag body surface, which is not hookable.\"\n}"
+  },
+  "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_5afe31025e8574ea8d6e12c39b2d5023_lift_carry/hook/yaw135_elev20.npy"
+}

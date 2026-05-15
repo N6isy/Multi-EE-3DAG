@@ -1,0 +1,79 @@
+{
+  "rows": [
+    {
+      "pilot_id": "vlm_pilot_005",
+      "sample_id": "3danet_full_5afe31025e8574ea8d6e12c39b2d5023_lift_carry",
+      "object_category": "Bag",
+      "task": "lift_carry",
+      "executor": "hook",
+      "views": [
+        {
+          "view": "yaw000_elev20",
+          "status": "done",
+          "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_5afe31025e8574ea8d6e12c39b2d5023_lift_carry/hook/yaw000_elev20.npy",
+          "positive_pixels": 121191,
+          "feasible": true,
+          "confidence": 0.0
+        },
+        {
+          "view": "yaw045_elev20",
+          "status": "done",
+          "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_5afe31025e8574ea8d6e12c39b2d5023_lift_carry/hook/yaw045_elev20.npy",
+          "positive_pixels": 289464,
+          "feasible": true,
+          "confidence": 0.0
+        },
+        {
+          "view": "yaw090_elev20",
+          "status": "done",
+          "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_5afe31025e8574ea8d6e12c39b2d5023_lift_carry/hook/yaw090_elev20.npy",
+          "positive_pixels": 345553,
+          "feasible": true,
+          "confidence": 0.0
+        },
+        {
+          "view": "yaw135_elev20",
+          "status": "done",
+          "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_5afe31025e8574ea8d6e12c39b2d5023_lift_carry/hook/yaw135_elev20.npy",
+          "positive_pixels": 317951,
+          "feasible": true,
+          "confidence": 0.0
+        },
+        {
+          "view": "yaw180_elev20",
+          "status": "done",
+          "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_5afe31025e8574ea8d6e12c39b2d5023_lift_carry/hook/yaw180_elev20.npy",
+          "positive_pixels": 77000,
+          "feasible": true,
+          "confidence": 0.0
+        },
+        {
+          "view": "yaw225_elev20",
+          "status": "done",
+          "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_5afe31025e8574ea8d6e12c39b2d5023_lift_carry/hook/yaw225_elev20.npy",
+          "positive_pixels": 264223,
+          "feasible": true,
+          "confidence": 0.0
+        },
+        {
+          "view": "yaw270_elev20",
+          "status": "done",
+          "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_5afe31025e8574ea8d6e12c39b2d5023_lift_carry/hook/yaw270_elev20.npy",
+          "positive_pixels": 385068,
+          "feasible": true,
+          "confidence": 0.0
+        },
+        {
+          "view": "yaw315_elev20",
+          "status": "done",
+          "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_5afe31025e8574ea8d6e12c39b2d5023_lift_carry/hook/yaw315_elev20.npy",
+          "positive_pixels": 423878,
+          "feasible": true,
+          "confidence": 0.0
+        }
+      ]
+    }
+  ],
+  "dry_run": false,
+  "config": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/configs/qwen3vl_sam2_pilot.yaml"
+}

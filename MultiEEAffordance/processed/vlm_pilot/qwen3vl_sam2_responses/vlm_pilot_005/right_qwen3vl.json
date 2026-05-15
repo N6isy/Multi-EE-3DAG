@@ -1,0 +1,24 @@
+{
+  "pilot_id": "vlm_pilot_005",
+  "sample_id": "3danet_full_5afe31025e8574ea8d6e12c39b2d5023_lift_carry",
+  "executor": "hook",
+  "view": "right",
+  "normalized_prompt": {
+    "feasible": true,
+    "boxes": [],
+    "positive_points": [],
+    "negative_points": [],
+    "confidence": 0.0,
+    "notes": "当前视图中未见任何可钩挂的结构，如内衬提手孔或环，无法满足hook任务需求。"
+  },
+  "raw_qwen3vl_response": {
+    "view": "right",
+    "feasible": true,
+    "confidence": 0.0,
+    "boxes": [],
+    "positive_points": [],
+    "negative_points": [],
+    "notes": "当前视图中未见任何可钩挂的结构，如内衬提手孔或环，无法满足hook任务需求。"
+  },
+  "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_5afe31025e8574ea8d6e12c39b2d5023_lift_carry/hook/right.npy"
+}

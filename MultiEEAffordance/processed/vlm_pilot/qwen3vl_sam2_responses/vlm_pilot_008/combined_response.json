@@ -1,0 +1,57 @@
+{
+  "pilot_id": "vlm_pilot_008",
+  "sample_id": "3danet_full_f6517b0bad40b72d36871b478a4420ba_press_push",
+  "object_category": "Keyboard",
+  "task": "press_push",
+  "executor": "dexterous_hand",
+  "views": [
+    {
+      "view": "front",
+      "status": "done",
+      "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_f6517b0bad40b72d36871b478a4420ba_press_push/dexterous_hand/front.npy",
+      "positive_pixels": 0,
+      "feasible": true,
+      "confidence": 0.0
+    },
+    {
+      "view": "back",
+      "status": "done",
+      "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_f6517b0bad40b72d36871b478a4420ba_press_push/dexterous_hand/back.npy",
+      "positive_pixels": 0,
+      "feasible": true,
+      "confidence": 0.0
+    },
+    {
+      "view": "left",
+      "status": "done",
+      "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_f6517b0bad40b72d36871b478a4420ba_press_push/dexterous_hand/left.npy",
+      "positive_pixels": 0,
+      "feasible": true,
+      "confidence": 0.0
+    },
+    {
+      "view": "right",
+      "status": "done",
+      "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_f6517b0bad40b72d36871b478a4420ba_press_push/dexterous_hand/right.npy",
+      "positive_pixels": 0,
+      "feasible": true,
+      "confidence": 0.0
+    },
+    {
+      "view": "top",
+      "status": "done",
+      "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_f6517b0bad40b72d36871b478a4420ba_press_push/dexterous_hand/top.npy",
+      "positive_pixels": 0,
+      "feasible": true,
+      "confidence": 0.0
+    },
+    {
+      "view": "iso",
+      "status": "done",
+      "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_f6517b0bad40b72d36871b478a4420ba_press_push/dexterous_hand/iso.npy",
+      "positive_pixels": 0,
+      "feasible": true,
+      "confidence": 0.0
+    }
+  ]
+}

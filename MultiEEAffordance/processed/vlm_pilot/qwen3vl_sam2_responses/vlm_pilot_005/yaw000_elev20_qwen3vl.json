@@ -1,0 +1,142 @@
+{
+  "pilot_id": "vlm_pilot_005",
+  "sample_id": "3danet_full_5afe31025e8574ea8d6e12c39b2d5023_lift_carry",
+  "executor": "hook",
+  "view": "yaw000_elev20",
+  "prompt_before_foreground_refine": {
+    "feasible": true,
+    "boxes": [
+      [
+        380,
+        40,
+        520,
+        120
+      ]
+    ],
+    "positive_points": [
+      [
+        400,
+        60
+      ],
+      [
+        420,
+        70
+      ],
+      [
+        440,
+        80
+      ],
+      [
+        460,
+        90
+      ],
+      [
+        480,
+        100
+      ],
+      [
+        500,
+        110
+      ],
+      [
+        450,
+        60
+      ],
+      [
+        470,
+        70
+      ]
+    ],
+    "negative_points": [],
+    "confidence": 0.0,
+    "notes": "Only the top handle ring is visible and hookable. Other bag surfaces are not suitable for hook engagement. Points are placed on the visible ring pixels."
+  },
+  "normalized_prompt": {
+    "feasible": true,
+    "boxes": [],
+    "positive_points": [
+      [
+        390,
+        66
+      ],
+      [
+        409,
+        92
+      ],
+      [
+        411,
+        94
+      ],
+      [
+        412,
+        96
+      ],
+      [
+        481,
+        161
+      ],
+      [
+        506,
+        162
+      ]
+    ],
+    "negative_points": [],
+    "confidence": 0.0,
+    "notes": "Only the top handle ring is visible and hookable. Other bag surfaces are not suitable for hook engagement. Points are placed on the visible ring pixels."
+  },
+  "raw_qwen3vl_response": {
+    "view": "yaw000_elev20",
+    "visible_object_parts": [
+      "top handle ring"
+    ],
+    "target_region_description": "The top handle ring is the only visible hookable structure; it is a circular protrusion at the top of the bag, suitable for a hook to engage.",
+    "feasible": true,
+    "confidence": 0.0,
+    "boxes": [
+      [
+        380,
+        40,
+        520,
+        120
+      ]
+    ],
+    "positive_points": [
+      [
+        400,
+        60
+      ],
+      [
+        420,
+        70
+      ],
+      [
+        440,
+        80
+      ],
+      [
+        460,
+        90
+      ],
+      [
+        480,
+        100
+      ],
+      [
+        500,
+        110
+      ],
+      [
+        450,
+        60
+      ],
+      [
+        470,
+        70
+      ]
+    ],
+    "negative_points": [],
+    "notes": "Only the top handle ring is visible and hookable. Other bag surfaces are not suitable for hook engagement. Points are placed on the visible ring pixels.",
+    "_raw_text": "{\n  \"view\": \"yaw000_elev20\",\n  \"visible_object_parts\": [\"top handle ring\"],\n  \"target_region_description\": \"The top handle ring is the only visible hookable structure; it is a circular protrusion at the top of the bag, suitable for a hook to engage.\",\n  \"feasible\": true,\n  \"confidence\": 0.0,\n  \"boxes\": [[380, 40, 520, 120]],\n  \"positive_points\": [[400, 60], [420, 70], [440, 80], [460, 90], [480, 100], [500, 110], [450, 60], [470, 70]],\n  \"negative_points\": [],\n  \"notes\": \"Only the top handle ring is visible and hookable. Other bag surfaces are not suitable for hook engagement. Points are placed on the visible ring pixels.\"\n}"
+  },
+  "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_5afe31025e8574ea8d6e12c39b2d5023_lift_carry/hook/yaw000_elev20.npy"
+}

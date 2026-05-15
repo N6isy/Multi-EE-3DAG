@@ -1,0 +1,150 @@
+{
+  "pilot_id": "vlm_pilot_005",
+  "sample_id": "3danet_full_5afe31025e8574ea8d6e12c39b2d5023_lift_carry",
+  "executor": "hook",
+  "view": "yaw090_elev20",
+  "prompt_before_foreground_refine": {
+    "feasible": true,
+    "boxes": [
+      [
+        65,
+        30,
+        767,
+        200
+      ]
+    ],
+    "positive_points": [
+      [
+        400,
+        100
+      ],
+      [
+        400,
+        150
+      ],
+      [
+        400,
+        180
+      ],
+      [
+        400,
+        200
+      ],
+      [
+        400,
+        220
+      ],
+      [
+        400,
+        240
+      ],
+      [
+        400,
+        260
+      ],
+      [
+        400,
+        280
+      ]
+    ],
+    "negative_points": [],
+    "confidence": 0.0,
+    "notes": "The top handle region is clearly visible and hookable. Positive points are placed on the visible handle pixels. No negative points needed as the region is fully usable."
+  },
+  "normalized_prompt": {
+    "feasible": true,
+    "boxes": [],
+    "positive_points": [
+      [
+        407,
+        98
+      ],
+      [
+        409,
+        148
+      ],
+      [
+        400,
+        180
+      ],
+      [
+        399,
+        199
+      ],
+      [
+        403,
+        221
+      ],
+      [
+        400,
+        239
+      ],
+      [
+        399,
+        261
+      ],
+      [
+        403,
+        274
+      ]
+    ],
+    "negative_points": [],
+    "confidence": 0.0,
+    "notes": "The top handle region is clearly visible and hookable. Positive points are placed on the visible handle pixels. No negative points needed as the region is fully usable."
+  },
+  "raw_qwen3vl_response": {
+    "view": "yaw090_elev20",
+    "visible_object_parts": [
+      "bag handle"
+    ],
+    "target_region_description": "The top curved handle region of the bag, visible as a dense cluster of cyan and blue points forming a loop-like structure suitable for hooking.",
+    "feasible": true,
+    "confidence": 0.0,
+    "boxes": [
+      [
+        65,
+        30,
+        903,
+        200
+      ]
+    ],
+    "positive_points": [
+      [
+        400,
+        100
+      ],
+      [
+        400,
+        150
+      ],
+      [
+        400,
+        180
+      ],
+      [
+        400,
+        200
+      ],
+      [
+        400,
+        220
+      ],
+      [
+        400,
+        240
+      ],
+      [
+        400,
+        260
+      ],
+      [
+        400,
+        280
+      ]
+    ],
+    "negative_points": [],
+    "notes": "The top handle region is clearly visible and hookable. Positive points are placed on the visible handle pixels. No negative points needed as the region is fully usable.",
+    "_raw_text": "{\n  \"view\": \"yaw090_elev20\",\n  \"visible_object_parts\": [\"bag handle\"],\n  \"target_region_description\": \"The top curved handle region of the bag, visible as a dense cluster of cyan and blue points forming a loop-like structure suitable for hooking.\",\n  \"feasible\": true,\n  \"confidence\": 0.0,\n  \"boxes\": [[65, 30, 903, 200]],\n  \"positive_points\": [[400, 100], [400, 150], [400, 180], [400, 200], [400, 220], [400, 240], [400, 260], [400, 280]],\n  \"negative_points\": [],\n  \"notes\": \"The top handle region is clearly visible and hookable. Positive points are placed on the visible handle pixels. No negative points needed as the region is fully usable.\"\n}"
+  },
+  "mask_path": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/vlm_pilot/vlm_2d_masks/3danet_full_5afe31025e8574ea8d6e12c39b2d5023_lift_carry/hook/yaw090_elev20.npy"
+}
