@@ -58,7 +58,16 @@ TASK_DEFINITIONS = {
     "press_push": "Press or push; buttons, switches, and pushable panels matter.",
 }
 
-DEFAULT_VIEWS = ["front", "back", "left", "right", "top", "iso"]
+DEFAULT_VIEWS = [
+    "yaw000_elev20",
+    "yaw045_elev20",
+    "yaw090_elev20",
+    "yaw135_elev20",
+    "yaw180_elev20",
+    "yaw225_elev20",
+    "yaw270_elev20",
+    "yaw315_elev20",
+]
 
 
 @dataclass
@@ -140,6 +149,13 @@ def clamp_int(value: Any, low: int, high: int) -> int | None:
     return max(low, min(high, number))
 
 
+def maybe_scaled(value: Any, scale: float) -> Any:
+    try:
+        return float(value) * scale
+    except (TypeError, ValueError):
+        return value
+
+
 def normalize_point_list(items: Any, image_size: int, max_count: int) -> list[list[int]]:
     out: list[list[int]] = []
     if isinstance(items, dict):
@@ -154,8 +170,8 @@ def normalize_point_list(items: Any, image_size: int, max_count: int) -> list[li
         if not isinstance(item, (list, tuple)) or len(item) < 2:
             continue
         scale = image_size - 1 if all(isinstance(v, (int, float)) and 0.0 <= float(v) <= 1.0 for v in item[:2]) else 1.0
-        x = clamp_int(float(item[0]) * scale, 0, image_size - 1)
-        y = clamp_int(float(item[1]) * scale, 0, image_size - 1)
+        x = clamp_int(maybe_scaled(item[0], scale), 0, image_size - 1)
+        y = clamp_int(maybe_scaled(item[1], scale), 0, image_size - 1)
         if x is not None and y is not None:
             out.append([x, y])
         if len(out) >= max_count:
@@ -180,10 +196,10 @@ def normalize_boxes(items: Any, image_size: int, max_count: int, min_area: int) 
         if not isinstance(item, (list, tuple)) or len(item) < 4:
             continue
         scale = image_size - 1 if all(isinstance(v, (int, float)) and 0.0 <= float(v) <= 1.0 for v in item[:4]) else 1.0
-        x1 = clamp_int(float(item[0]) * scale, 0, image_size - 1)
-        y1 = clamp_int(float(item[1]) * scale, 0, image_size - 1)
-        x2 = clamp_int(float(item[2]) * scale, 0, image_size - 1)
-        y2 = clamp_int(float(item[3]) * scale, 0, image_size - 1)
+        x1 = clamp_int(maybe_scaled(item[0], scale), 0, image_size - 1)
+        y1 = clamp_int(maybe_scaled(item[1], scale), 0, image_size - 1)
+        x2 = clamp_int(maybe_scaled(item[2], scale), 0, image_size - 1)
+        y2 = clamp_int(maybe_scaled(item[3], scale), 0, image_size - 1)
         if None in (x1, y1, x2, y2):
             continue
         xa, xb = sorted([int(x1), int(x2)])
@@ -214,6 +230,9 @@ def build_qwen_prompt(row: dict[str, str], view: str, image_size: int, cfg: dict
 You are helping build a research dataset for object-level 3D affordance grounding.
 You see one rendered point-cloud view of the object. Identify candidate image prompts
 for SAM2 to segment the area usable by the current end-effector and task.
+The image is a sparse rendered point cloud: colored pixels are object points, and
+the dark background is empty space. Infer object parts from the visible geometry,
+outline, protrusions, holes, handles, rings, and panel boundaries.
 
 Object category: {row['object_category']}
 Task: {task}
@@ -228,6 +247,8 @@ Pilot reason: {row.get('pilot_reason', '')}
 Return strict JSON only:
 {{
   "view": "{view}",
+  "visible_object_parts": ["part name"],
+  "target_region_description": "short description of the usable region",
   "feasible": true,
   "confidence": 0.0,
   "boxes": [[x1, y1, x2, y2]],
@@ -246,6 +267,7 @@ Rules:
 7. Be conservative. Do not mark ordinary contact surfaces as positive affordance.
 8. For hook, only mark visible hookable holes/rings/inner handle boundaries.
 9. For suction, avoid edges, handles, holes, and high-curvature regions.
+10. Use visible_object_parts and target_region_description to explain the part-level reasoning before coordinates.
 """
 
 

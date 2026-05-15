@@ -9,13 +9,15 @@ pilot:
   output_mask_root: processed/vlm_pilot/vlm_2d_masks
   output_response_root: processed/vlm_pilot/qwen3vl_sam2_responses
   views:
-    - front
-    - back
-    - left
-    - right
-    - top
-    - iso
-  image_size: 384
+    - yaw000_elev20
+    - yaw045_elev20
+    - yaw090_elev20
+    - yaw135_elev20
+    - yaw180_elev20
+    - yaw225_elev20
+    - yaw270_elev20
+    - yaw315_elev20
+  image_size: 512
 
 qwen3vl:
   model_id: Qwen/Qwen3-VL-8B-Instruct
@@ -58,7 +60,7 @@ segmentation:
   max_negative_points_per_view: 8
   min_box_area: 16
   choose_mask_by: score
-  save_prompt_overlay: false
+  save_prompt_overlay: true
 
 runtime:
   seed: 0

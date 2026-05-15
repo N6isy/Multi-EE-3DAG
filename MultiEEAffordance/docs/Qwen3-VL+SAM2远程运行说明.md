@@ -138,7 +138,31 @@ git pull
 
 ## 6. 运行 Qwen3-VL + SAM2 pilot
 
-先确认 pilot 渲染图已经存在：
+先重新生成 VLM 友好的 yaw 视角渲染。当前推荐先只验证 `vlm_pilot_005`，也就是 `Bag / lift_carry / hook`，因为 bag handle 是 hook 的典型正例。
+
+```bash
+python MultiEEAffordance/tools/render_vlm_pilot_views.py \
+  --dataset-root MultiEEAffordance \
+  --pilot-id vlm_pilot_005 \
+  --image-size 512 \
+  --point-size 4 \
+  --overwrite
+```
+
+这会生成 8 个 yaw 视角：
+
+```text
+yaw000_elev20
+yaw045_elev20
+yaw090_elev20
+yaw135_elev20
+yaw180_elev20
+yaw225_elev20
+yaw270_elev20
+yaw315_elev20
+```
+
+确认 pilot 渲染图已经存在：
 
 ```bash
 ls MultiEEAffordance/processed/vlm_pilot/renders
@@ -162,17 +186,48 @@ python MultiEEAffordance/tools/normalize_render_manifests.py \
 
 再重新运行 `--validate-only`。新版本的 `render_multiview.py` 会默认写入相对路径，读取脚本也会自动兼容旧 Windows 绝对路径。
 
-运行 1 条样本做 smoke test：
+先运行 `vlm_pilot_005` 做 smoke test：
 
 ```bash
 CUDA_VISIBLE_DEVICES=1,2 python MultiEEAffordance/tools/run_qwen3vl_sam2_pilot.py \
   --dataset-root MultiEEAffordance \
   --config configs/qwen3vl_sam2_pilot.yaml \
-  --limit 1 \
+  --pilot-id vlm_pilot_005 \
   --overwrite
 ```
 
-确认输出正常后跑完整 8 条 pilot：
+检查是否产生非空 2D mask：
+
+```bash
+python - <<'PY'
+import json
+p = "MultiEEAffordance/processed/vlm_pilot/qwen3vl_sam2_responses/run_summary.json"
+d = json.load(open(p, "r", encoding="utf-8"))
+for row in d["rows"]:
+    print(row["pilot_id"], row["sample_id"], row["executor"])
+    for view in row["views"]:
+        print(" ", view["view"], "positive_pixels=", view["positive_pixels"], "feasible=", view["feasible"])
+PY
+```
+
+同时查看 prompt overlay，确认 Qwen3-VL 给出的 box/point 是否落在合理位置：
+
+```bash
+find MultiEEAffordance/processed/vlm_pilot/qwen3vl_sam2_responses/vlm_pilot_005 \
+  -name "*_prompt_overlay.png"
+```
+
+如果 `vlm_pilot_005` 能产生非空 mask，再生成完整 8 条 pilot 的新视角渲染：
+
+```bash
+python MultiEEAffordance/tools/render_vlm_pilot_views.py \
+  --dataset-root MultiEEAffordance \
+  --image-size 512 \
+  --point-size 4 \
+  --overwrite
+```
+
+然后跑完整 8 条 pilot：
 
 ```bash
 CUDA_VISIBLE_DEVICES=1,2 python MultiEEAffordance/tools/run_qwen3vl_sam2_pilot.py \
@@ -188,6 +243,19 @@ CUDA_VISIBLE_DEVICES=1,2 python MultiEEAffordance/tools/run_qwen3vl_sam2_pilot.p
 - `processed/vlm_pilot/vlm_2d_masks/{sample_id}/{executor}/{view}.png`
 
 ## 7. 回投与融合
+
+如果只验证 `vlm_pilot_005`：
+
+```bash
+python MultiEEAffordance/tools/build_vlm_pilot_candidates.py \
+  --dataset-root MultiEEAffordance \
+  --pilot-id vlm_pilot_005 \
+  --score-threshold 0.45 \
+  --min-visible 1 \
+  --overwrite
+```
+
+如果完整 8 条都已经生成了非空候选，再全量融合：
 
 ```bash
 python MultiEEAffordance/tools/build_vlm_pilot_candidates.py \

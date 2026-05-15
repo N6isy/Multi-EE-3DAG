@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import re
 import struct
 import sys
 import zlib
@@ -22,7 +23,16 @@ import numpy as np
 from path_utils import relative_to_dataset
 
 
-DEFAULT_VIEWS = ["front", "back", "left", "right", "top", "iso"]
+DEFAULT_VIEWS = [
+    "yaw000_elev20",
+    "yaw045_elev20",
+    "yaw090_elev20",
+    "yaw135_elev20",
+    "yaw180_elev20",
+    "yaw225_elev20",
+    "yaw270_elev20",
+    "yaw315_elev20",
+]
 
 
 def parse_args() -> argparse.Namespace:
@@ -39,13 +49,13 @@ def parse_args() -> argparse.Namespace:
         default="processed/vlm_pilot/renders",
         help="Output directory relative to dataset root.",
     )
-    parser.add_argument("--image-size", type=int, default=768, help="Square render size in pixels.")
+    parser.add_argument("--image-size", type=int, default=512, help="Square render size in pixels.")
     parser.add_argument(
         "--views",
         default=",".join(DEFAULT_VIEWS),
-        help="Comma-separated view names: front,back,left,right,top,bottom,iso.",
+        help="Comma-separated view names. Supports front/back/left/right/top/bottom/iso and yawDDD_elevDD.",
     )
-    parser.add_argument("--point-size", type=int, default=2, help="Raster point radius in pixels.")
+    parser.add_argument("--point-size", type=int, default=4, help="Raster point radius in pixels.")
     parser.add_argument("--overwrite", action="store_true", help="Allow overwriting an existing sample render dir.")
     return parser.parse_args()
 
@@ -106,6 +116,11 @@ def rot_z(angle: float) -> np.ndarray:
 
 def view_rotation(name: str) -> np.ndarray:
     name = name.lower()
+    match = re.fullmatch(r"yaw(-?\d+)_elev(-?\d+)", name)
+    if match:
+        yaw = math.radians(float(match.group(1)))
+        elev = math.radians(float(match.group(2)))
+        return rot_x(-elev) @ rot_y(yaw)
     if name == "front":
         return np.eye(3, dtype=np.float32)
     if name == "back":
@@ -249,6 +264,7 @@ def main() -> int:
         "point_cloud_path": relative_to_dataset(root, points_path),
         "num_points": int(points_xyz.shape[0]),
         "image_size": args.image_size,
+        "point_size": int(args.point_size),
         "views": [],
     }
 

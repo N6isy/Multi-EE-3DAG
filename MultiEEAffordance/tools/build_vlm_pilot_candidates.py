@@ -22,7 +22,6 @@ from path_utils import resolve_portable_path
 
 
 EXECUTOR_ORDER = ["gripper", "suction", "hook", "dexterous_hand"]
-VIEW_ORDER = ["front", "back", "left", "right", "top", "iso"]
 
 
 def parse_args() -> argparse.Namespace:
@@ -75,6 +74,8 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--score-threshold", type=float, default=0.45, help="Vote score threshold.")
     parser.add_argument("--min-visible", type=int, default=1, help="Minimum visible pixels per point.")
+    parser.add_argument("--pilot-id", default=None, help="Build candidates for only one pilot id.")
+    parser.add_argument("--limit", type=int, default=None, help="Limit pilot rows before building candidates.")
     parser.add_argument("--overwrite", action="store_true", help="Overwrite existing outputs.")
     parser.add_argument("--allow-missing", action="store_true", help="Skip pilot rows whose VLM 2D masks are missing.")
     return parser.parse_args()
@@ -137,6 +138,13 @@ def load_2d_mask(mask_dir: Path, view: str, shape: tuple[int, int]) -> np.ndarra
     return (mask > 0).astype(np.uint8)
 
 
+def manifest_view_names(manifest: dict[str, Any]) -> list[str]:
+    views = [entry["view"] for entry in manifest.get("views", []) if entry.get("view")]
+    if not views:
+        raise ValueError("View manifest has no usable views.")
+    return views
+
+
 def project_masks(
     manifest: dict[str, Any],
     manifest_dir: Path,
@@ -152,7 +160,7 @@ def project_masks(
     per_view_positive: dict[str, int] = {}
 
     view_entries = {entry["view"]: entry for entry in manifest["views"]}
-    for view in VIEW_ORDER:
+    for view in manifest_view_names(manifest):
         entry = view_entries[view]
         index_path = resolve_portable_path(dataset_root, entry["point_index_path"], manifest_dir)
         index_map = np.load(index_path)
@@ -181,6 +189,12 @@ def main() -> int:
     args = parse_args()
     root = Path(args.dataset_root).resolve()
     pilot_rows = read_csv(resolve_path(root, args.pilot_csv))
+    if args.pilot_id:
+        pilot_rows = [row for row in pilot_rows if row.get("pilot_id") == args.pilot_id]
+    if args.limit is not None:
+        pilot_rows = pilot_rows[: args.limit]
+    if not pilot_rows:
+        raise ValueError("No pilot rows selected.")
     checked_samples = read_jsonl(resolve_path(root, args.samples))
     sample_by_id = {row["sample_id"]: row for row in checked_samples}
 
@@ -204,8 +218,11 @@ def main() -> int:
         if sample_id not in sample_by_id:
             raise KeyError(f"Pilot sample is not in checked samples: {sample_id}")
 
+        manifest_path = renders_root / sample_id / "view_manifest.json"
+        manifest = load_manifest(manifest_path)
+
         mask_dir = vlm_mask_root / sample_id / executor
-        required = [mask_dir / f"{view}.npy" for view in VIEW_ORDER]
+        required = [mask_dir / f"{view}.npy" for view in manifest_view_names(manifest)]
         missing = [str(path) for path in required if not path.exists()]
         if missing:
             missing_rows.append({"pilot_id": pilot_id, "sample_id": sample_id, "executor": executor, "missing": ";".join(missing)})
@@ -220,8 +237,6 @@ def main() -> int:
                 raise ValueError(f"Invalid checked mask shape {checked_mask.shape}: {checked_mask_path}")
             masks_by_sample[sample_id] = checked_mask.astype(np.uint8).copy()
 
-        manifest_path = renders_root / sample_id / "view_manifest.json"
-        manifest = load_manifest(manifest_path)
         projected_npz = projected_root / f"{pilot_id}_{executor}_votes.npz"
         projection_stats = project_masks(manifest, manifest_path.parent, root, mask_dir, executor, projected_npz)
         data = np.load(projected_npz, allow_pickle=True)
