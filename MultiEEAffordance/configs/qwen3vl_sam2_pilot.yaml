@@ -17,7 +17,7 @@ pilot:
     - yaw225_elev20
     - yaw270_elev20
     - yaw315_elev20
-  image_size: 512
+  image_size: 768
 
 qwen3vl:
   model_id: Qwen/Qwen3-VL-8B-Instruct
@@ -61,6 +61,13 @@ segmentation:
   min_box_area: 16
   choose_mask_by: score
   save_prompt_overlay: true
+  foreground_prompt_refine: true
+  max_point_snap_distance: 24
+  max_box_snap_distance: 48
+  box_padding: 4
+  min_box_foreground_pixels: 4
+  snap_negative_points: false
+  hook_prefer_points_over_boxes: true
 
 runtime:
   seed: 0

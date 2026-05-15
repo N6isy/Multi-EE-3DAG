@@ -49,13 +49,13 @@ def parse_args() -> argparse.Namespace:
         default="processed/vlm_pilot/renders",
         help="Output directory relative to dataset root.",
     )
-    parser.add_argument("--image-size", type=int, default=512, help="Square render size in pixels.")
+    parser.add_argument("--image-size", type=int, default=768, help="Square render size in pixels.")
     parser.add_argument(
         "--views",
         default=",".join(DEFAULT_VIEWS),
         help="Comma-separated view names. Supports front/back/left/right/top/bottom/iso and yawDDD_elevDD.",
     )
-    parser.add_argument("--point-size", type=int, default=4, help="Raster point radius in pixels.")
+    parser.add_argument("--point-size", type=int, default=2, help="Raster point radius in pixels.")
     parser.add_argument("--overwrite", action="store_true", help="Allow overwriting an existing sample render dir.")
     return parser.parse_args()
 

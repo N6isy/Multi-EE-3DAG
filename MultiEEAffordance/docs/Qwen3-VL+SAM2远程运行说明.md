@@ -144,8 +144,8 @@ git pull
 python MultiEEAffordance/tools/render_vlm_pilot_views.py \
   --dataset-root MultiEEAffordance \
   --pilot-id vlm_pilot_005 \
-  --image-size 512 \
-  --point-size 4 \
+  --image-size 768 \
+  --point-size 2 \
   --overwrite
 ```
 
@@ -222,8 +222,8 @@ find MultiEEAffordance/processed/vlm_pilot/qwen3vl_sam2_responses/vlm_pilot_005 
 ```bash
 python MultiEEAffordance/tools/render_vlm_pilot_views.py \
   --dataset-root MultiEEAffordance \
-  --image-size 512 \
-  --point-size 4 \
+  --image-size 768 \
+  --point-size 2 \
   --overwrite
 ```
 

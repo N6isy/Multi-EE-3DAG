@@ -260,14 +260,17 @@ Return strict JSON only:
 Rules:
 1. Coordinates are pixels in [0, {image_size - 1}]. Do not use normalized coordinates unless unavoidable.
 2. If feasible=true, provide at least one box or one positive point.
-3. Provide at most {seg_cfg.get('max_boxes_per_view', 3)} boxes.
-4. Provide at most {seg_cfg.get('max_positive_points_per_view', 8)} positive points.
-5. Provide at most {seg_cfg.get('max_negative_points_per_view', 8)} negative points.
-6. If the usable region is invisible or physically infeasible, set feasible=false and use empty boxes/points.
-7. Be conservative. Do not mark ordinary contact surfaces as positive affordance.
-8. For hook, only mark visible hookable holes/rings/inner handle boundaries.
-9. For suction, avoid edges, handles, holes, and high-curvature regions.
-10. Use visible_object_parts and target_region_description to explain the part-level reasoning before coordinates.
+3. Every box and positive point must lie on, or tightly enclose, colored object pixels. Never place them in the dark background.
+4. For handle/ring/hookable regions, points must be on the visible colored handle/ring pixels, not in the empty interior or nearby background.
+5. Keep boxes tight around the target part only. Do not include broad object body surfaces unless they are the target region.
+6. Provide at most {seg_cfg.get('max_boxes_per_view', 3)} boxes.
+7. Provide at most {seg_cfg.get('max_positive_points_per_view', 8)} positive points.
+8. Provide at most {seg_cfg.get('max_negative_points_per_view', 8)} negative points.
+9. If the usable region is invisible or physically infeasible, set feasible=false and use empty boxes/points.
+10. Be conservative. Do not mark ordinary contact surfaces as positive affordance.
+11. For hook, only mark visible hookable holes/rings/inner handle boundaries.
+12. For suction, avoid edges, handles, holes, and high-curvature regions.
+13. Use visible_object_parts and target_region_description to explain the part-level reasoning before coordinates.
 """
 
 
@@ -424,6 +427,147 @@ def normalize_qwen_output(raw: dict[str, Any], image_size: int, cfg: dict[str, A
         confidence=max(0.0, min(1.0, confidence)),
         notes=str(raw.get("notes", "")),
         raw=raw,
+    )
+
+
+def prompt_to_dict(prompt: QwenPrompt) -> dict[str, Any]:
+    return {
+        "feasible": prompt.feasible,
+        "boxes": prompt.boxes,
+        "positive_points": prompt.positive_points,
+        "negative_points": prompt.negative_points,
+        "confidence": prompt.confidence,
+        "notes": prompt.notes,
+    }
+
+
+def nearest_foreground_point(
+    point: list[int],
+    foreground: np.ndarray,
+    max_distance: int,
+) -> list[int] | None:
+    h, w = foreground.shape
+    x = max(0, min(w - 1, int(point[0])))
+    y = max(0, min(h - 1, int(point[1])))
+    if foreground[y, x]:
+        return [x, y]
+
+    radius = max(0, int(max_distance))
+    y0, y1 = max(0, y - radius), min(h - 1, y + radius)
+    x0, x1 = max(0, x - radius), min(w - 1, x + radius)
+    candidates = np.argwhere(foreground[y0 : y1 + 1, x0 : x1 + 1])
+    if candidates.size == 0:
+        return None
+    candidates[:, 0] += y0
+    candidates[:, 1] += x0
+    dist2 = (candidates[:, 1] - x) ** 2 + (candidates[:, 0] - y) ** 2
+    best_idx = int(np.argmin(dist2))
+    if float(dist2[best_idx]) > float(radius * radius):
+        return None
+    return [int(candidates[best_idx, 1]), int(candidates[best_idx, 0])]
+
+
+def refine_box_to_foreground(
+    box: list[int],
+    foreground: np.ndarray,
+    max_distance: int,
+    padding: int,
+    min_pixels: int,
+) -> list[int] | None:
+    h, w = foreground.shape
+    x1, y1, x2, y2 = box
+    x1, x2 = sorted([max(0, min(w - 1, int(x1))), max(0, min(w - 1, int(x2)))])
+    y1, y2 = sorted([max(0, min(h - 1, int(y1))), max(0, min(h - 1, int(y2)))])
+
+    ys, xs = np.where(foreground[y1 : y2 + 1, x1 : x2 + 1])
+    if len(xs) >= min_pixels:
+        xs = xs + x1
+        ys = ys + y1
+    else:
+        cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
+        radius = max(0, int(max_distance))
+        sx0, sx1 = max(0, cx - radius), min(w - 1, cx + radius)
+        sy0, sy1 = max(0, cy - radius), min(h - 1, cy + radius)
+        ys, xs = np.where(foreground[sy0 : sy1 + 1, sx0 : sx1 + 1])
+        if len(xs) < min_pixels:
+            return None
+        xs = xs + sx0
+        ys = ys + sy0
+
+    pad = max(0, int(padding))
+    rx1 = max(0, int(xs.min()) - pad)
+    ry1 = max(0, int(ys.min()) - pad)
+    rx2 = min(w - 1, int(xs.max()) + pad)
+    ry2 = min(h - 1, int(ys.max()) + pad)
+    if (rx2 - rx1) * (ry2 - ry1) <= 0:
+        return None
+    return [rx1, ry1, rx2, ry2]
+
+
+def refine_prompt_to_foreground(prompt: QwenPrompt, index_map: np.ndarray, cfg: dict[str, Any]) -> QwenPrompt:
+    seg_cfg = cfg.get("segmentation", {})
+    if not bool(seg_cfg.get("foreground_prompt_refine", True)):
+        return prompt
+
+    foreground = index_map >= 0
+    if foreground.ndim != 2 or not np.any(foreground):
+        return prompt
+
+    max_point_dist = int(seg_cfg.get("max_point_snap_distance", 24))
+    max_box_dist = int(seg_cfg.get("max_box_snap_distance", 48))
+    box_padding = int(seg_cfg.get("box_padding", 4))
+    min_box_pixels = int(seg_cfg.get("min_box_foreground_pixels", 4))
+    snap_negative = bool(seg_cfg.get("snap_negative_points", False))
+
+    boxes: list[list[int]] = []
+    for box in prompt.boxes:
+        refined = refine_box_to_foreground(box, foreground, max_box_dist, box_padding, min_box_pixels)
+        if refined is not None and refined not in boxes:
+            boxes.append(refined)
+
+    positive_points: list[list[int]] = []
+    for point in prompt.positive_points:
+        refined = nearest_foreground_point(point, foreground, max_point_dist)
+        if refined is not None and refined not in positive_points:
+            positive_points.append(refined)
+
+    negative_points: list[list[int]] = []
+    for point in prompt.negative_points:
+        if snap_negative:
+            refined = nearest_foreground_point(point, foreground, max_point_dist)
+            if refined is not None and refined not in negative_points:
+                negative_points.append(refined)
+        else:
+            x, y = int(point[0]), int(point[1])
+            if 0 <= y < foreground.shape[0] and 0 <= x < foreground.shape[1] and foreground[y, x]:
+                negative_points.append([x, y])
+
+    feasible = prompt.feasible and bool(boxes or positive_points)
+    return QwenPrompt(
+        feasible=feasible,
+        boxes=boxes,
+        positive_points=positive_points,
+        negative_points=negative_points,
+        confidence=prompt.confidence,
+        notes=prompt.notes,
+        raw=prompt.raw,
+    )
+
+
+def prefer_hook_points_over_boxes(prompt: QwenPrompt, executor: str, cfg: dict[str, Any]) -> QwenPrompt:
+    seg_cfg = cfg.get("segmentation", {})
+    if executor != "hook" or not bool(seg_cfg.get("hook_prefer_points_over_boxes", True)):
+        return prompt
+    if not prompt.positive_points:
+        return prompt
+    return QwenPrompt(
+        feasible=prompt.feasible,
+        boxes=[],
+        positive_points=prompt.positive_points,
+        negative_points=prompt.negative_points,
+        confidence=prompt.confidence,
+        notes=prompt.notes,
+        raw=prompt.raw,
     )
 
 
@@ -613,11 +757,17 @@ def main() -> int:
             if dry_run:
                 raw = {"view": view, "feasible": False, "confidence": 0.0, "boxes": [], "positive_points": [], "negative_points": [], "notes": "dry-run"}
                 prompt = normalize_qwen_output(raw, image_size, cfg)
+                prompt_before_refine = prompt_to_dict(prompt)
                 save_empty_mask(image_size, npy_path, png_path, overwrite=True)
             else:
                 text_prompt = build_qwen_prompt(row, view, image_size, cfg)
                 raw = run_qwen_for_view(model, processor, image_path, text_prompt, cfg)
                 prompt = normalize_qwen_output(raw, image_size, cfg)
+                prompt_before_refine = prompt_to_dict(prompt)
+                index_map_path = resolve_portable_path(root, manifest_views[view]["point_index_path"], renders_root / sample_id)
+                index_map = np.load(index_map_path)
+                prompt = refine_prompt_to_foreground(prompt, index_map, cfg)
+                prompt = prefer_hook_points_over_boxes(prompt, executor, cfg)
                 image_pil = Image.open(image_path).convert("RGB")
                 image_np = np.asarray(image_pil)
                 mask = sam2_segment(image_np, prompt, predictor, cfg)
@@ -632,6 +782,7 @@ def main() -> int:
                     "sample_id": sample_id,
                     "executor": executor,
                     "view": view,
+                    "prompt_before_foreground_refine": prompt_before_refine,
                     "normalized_prompt": {
                         "feasible": prompt.feasible,
                         "boxes": prompt.boxes,
