@@ -145,7 +145,8 @@ python MultiEEAffordance/tools/render_vlm_pilot_views.py \
   --dataset-root MultiEEAffordance \
   --pilot-id vlm_pilot_005 \
   --image-size 768 \
-  --point-size 2 \
+  --point-size 1 \
+  --visual-point-size 4 \
   --overwrite
 ```
 
@@ -223,7 +224,8 @@ find MultiEEAffordance/processed/vlm_pilot/qwen3vl_sam2_responses/vlm_pilot_005 
 python MultiEEAffordance/tools/render_vlm_pilot_views.py \
   --dataset-root MultiEEAffordance \
   --image-size 768 \
-  --point-size 2 \
+  --point-size 1 \
+  --visual-point-size 4 \
   --overwrite
 ```
 

@@ -62,9 +62,10 @@ segmentation:
   choose_mask_by: score
   save_prompt_overlay: true
   foreground_prompt_refine: true
-  max_point_snap_distance: 24
-  max_box_snap_distance: 48
-  box_padding: 4
+  foreground_snap_radius: 4
+  max_point_snap_distance: 72
+  max_box_snap_distance: 96
+  box_padding: 8
   min_box_foreground_pixels: 4
   snap_negative_points: false
   hook_prefer_points_over_boxes: true

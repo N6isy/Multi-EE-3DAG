@@ -467,6 +467,29 @@ def nearest_foreground_point(
     return [int(candidates[best_idx, 1]), int(candidates[best_idx, 0])]
 
 
+def dilate_bool(mask: np.ndarray, radius: int) -> np.ndarray:
+    radius = max(0, int(radius))
+    if radius <= 0:
+        return mask.astype(bool)
+    h, w = mask.shape
+    out = np.zeros((h, w), dtype=bool)
+    radius2 = radius * radius
+    for dy in range(-radius, radius + 1):
+        for dx in range(-radius, radius + 1):
+            if dx * dx + dy * dy > radius2:
+                continue
+            src_y0 = max(0, -dy)
+            src_y1 = min(h, h - dy)
+            src_x0 = max(0, -dx)
+            src_x1 = min(w, w - dx)
+            dst_y0 = max(0, dy)
+            dst_y1 = min(h, h + dy)
+            dst_x0 = max(0, dx)
+            dst_x1 = min(w, w + dx)
+            out[dst_y0:dst_y1, dst_x0:dst_x1] |= mask[src_y0:src_y1, src_x0:src_x1]
+    return out
+
+
 def refine_box_to_foreground(
     box: list[int],
     foreground: np.ndarray,
@@ -509,8 +532,8 @@ def refine_prompt_to_foreground(prompt: QwenPrompt, index_map: np.ndarray, cfg: 
     if not bool(seg_cfg.get("foreground_prompt_refine", True)):
         return prompt
 
-    foreground = index_map >= 0
-    if foreground.ndim != 2 or not np.any(foreground):
+    index_foreground = index_map >= 0
+    if index_foreground.ndim != 2 or not np.any(index_foreground):
         return prompt
 
     max_point_dist = int(seg_cfg.get("max_point_snap_distance", 24))
@@ -518,6 +541,8 @@ def refine_prompt_to_foreground(prompt: QwenPrompt, index_map: np.ndarray, cfg: 
     box_padding = int(seg_cfg.get("box_padding", 4))
     min_box_pixels = int(seg_cfg.get("min_box_foreground_pixels", 4))
     snap_negative = bool(seg_cfg.get("snap_negative_points", False))
+    snap_radius = int(seg_cfg.get("foreground_snap_radius", 0))
+    foreground = dilate_bool(index_foreground, snap_radius)
 
     boxes: list[list[int]] = []
     for box in prompt.boxes:
@@ -539,7 +564,7 @@ def refine_prompt_to_foreground(prompt: QwenPrompt, index_map: np.ndarray, cfg: 
                 negative_points.append(refined)
         else:
             x, y = int(point[0]), int(point[1])
-            if 0 <= y < foreground.shape[0] and 0 <= x < foreground.shape[1] and foreground[y, x]:
+            if 0 <= y < index_foreground.shape[0] and 0 <= x < index_foreground.shape[1] and index_foreground[y, x]:
                 negative_points.append([x, y])
 
     feasible = prompt.feasible and bool(boxes or positive_points)

@@ -55,7 +55,13 @@ def parse_args() -> argparse.Namespace:
         default=",".join(DEFAULT_VIEWS),
         help="Comma-separated view names. Supports front/back/left/right/top/bottom/iso and yawDDD_elevDD.",
     )
-    parser.add_argument("--point-size", type=int, default=2, help="Raster point radius in pixels.")
+    parser.add_argument("--point-size", type=int, default=1, help="Point-index raster radius in pixels.")
+    parser.add_argument(
+        "--visual-point-size",
+        type=int,
+        default=4,
+        help="Visual render raster radius in pixels. This can be larger than --point-size for VLM readability.",
+    )
     parser.add_argument("--overwrite", action="store_true", help="Allow overwriting an existing sample render dir.")
     return parser.parse_args()
 
@@ -159,8 +165,11 @@ def splat_pixel(
     h, w = index_map.shape
     y0, y1 = max(0, py - radius), min(h - 1, py + radius)
     x0, x1 = max(0, px - radius), min(w - 1, px + radius)
+    radius2 = radius * radius
     for yy in range(y0, y1 + 1):
         for xx in range(x0, x1 + 1):
+            if radius > 0 and (yy - py) * (yy - py) + (xx - px) * (xx - px) > radius2:
+                continue
             if depth > depth_map[yy, xx]:
                 depth_map[yy, xx] = depth
                 index_map[yy, xx] = point_index
@@ -265,22 +274,27 @@ def main() -> int:
         "num_points": int(points_xyz.shape[0]),
         "image_size": args.image_size,
         "point_size": int(args.point_size),
+        "visual_point_size": int(args.visual_point_size),
         "views": [],
     }
 
     for view in views:
         index_map, depth_map = project_view(points_xyz, view, args.image_size, max(0, args.point_size))
+        _, visual_depth_map = project_view(points_xyz, view, args.image_size, max(0, args.visual_point_size))
         index_path = sample_dir / f"{view}_point_index.npy"
         depth_path = sample_dir / f"{view}_depth.npy"
+        visual_depth_path = sample_dir / f"{view}_visual_depth.npy"
         png_path = sample_dir / f"{view}_render.png"
         np.save(index_path, index_map)
         np.save(depth_path, depth_map)
-        png_written = save_png(depth_map, png_path)
+        np.save(visual_depth_path, visual_depth_map)
+        png_written = save_png(visual_depth_map, png_path)
         manifest["views"].append(
             {
                 "view": view,
                 "point_index_path": relative_to_dataset(root, index_path),
                 "depth_path": relative_to_dataset(root, depth_path),
+                "visual_depth_path": relative_to_dataset(root, visual_depth_path),
                 "render_path": relative_to_dataset(root, png_path) if png_written else "",
             }
         )

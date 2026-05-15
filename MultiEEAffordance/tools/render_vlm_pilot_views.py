@@ -42,7 +42,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--pilot-id", default=None, help="Render only one pilot id.")
     parser.add_argument("--limit", type=int, default=None, help="Limit pilot rows before deduplication.")
     parser.add_argument("--image-size", type=int, default=768, help="Square render size.")
-    parser.add_argument("--point-size", type=int, default=2, help="Raster point radius.")
+    parser.add_argument("--point-size", type=int, default=1, help="Point-index raster radius.")
+    parser.add_argument("--visual-point-size", type=int, default=4, help="Visual render raster radius.")
     parser.add_argument("--views", default=",".join(DEFAULT_VIEWS), help="Comma-separated view names.")
     parser.add_argument("--overwrite", action="store_true", help="Overwrite existing sample render dirs.")
     return parser.parse_args()
@@ -68,6 +69,7 @@ def render_sample(
     views: list[str],
     image_size: int,
     point_size: int,
+    visual_point_size: int,
     overwrite: bool,
 ) -> dict[str, Any]:
     sample = find_sample(samples, sample_id)
@@ -89,22 +91,27 @@ def render_sample(
         "num_points": int(points_xyz.shape[0]),
         "image_size": int(image_size),
         "point_size": int(point_size),
+        "visual_point_size": int(visual_point_size),
         "views": [],
     }
 
     for view in views:
         index_map, depth_map = project_view(points_xyz, view, image_size, max(0, point_size))
+        _, visual_depth_map = project_view(points_xyz, view, image_size, max(0, visual_point_size))
         index_path = sample_dir / f"{view}_point_index.npy"
         depth_path = sample_dir / f"{view}_depth.npy"
+        visual_depth_path = sample_dir / f"{view}_visual_depth.npy"
         png_path = sample_dir / f"{view}_render.png"
         np.save(index_path, index_map)
         np.save(depth_path, depth_map)
-        save_png(depth_map, png_path)
+        np.save(visual_depth_path, visual_depth_map)
+        save_png(visual_depth_map, png_path)
         manifest["views"].append(
             {
                 "view": view,
                 "point_index_path": relative_to_dataset(root, index_path),
                 "depth_path": relative_to_dataset(root, depth_path),
+                "visual_depth_path": relative_to_dataset(root, visual_depth_path),
                 "render_path": relative_to_dataset(root, png_path),
             }
         )
@@ -142,7 +149,17 @@ def main() -> int:
         raise ValueError("At least one view is required.")
 
     rendered = [
-        render_sample(root, samples, sample_id, output_root, views, args.image_size, args.point_size, args.overwrite)
+        render_sample(
+            root,
+            samples,
+            sample_id,
+            output_root,
+            views,
+            args.image_size,
+            args.point_size,
+            args.visual_point_size,
+            args.overwrite,
+        )
         for sample_id in selected
     ]
     print(json.dumps({"rendered_samples": len(rendered), "rows": rendered}, ensure_ascii=False, indent=2))
