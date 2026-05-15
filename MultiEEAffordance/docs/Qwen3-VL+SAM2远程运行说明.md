@@ -247,10 +247,29 @@ http://127.0.0.1:8766/
 检查：
 
 ```bash
-ls external/sam2/checkpoints
+cd ~/Multi-EE-3DAG
+ls MultiEEAffordance/external/sam2/checkpoints/sam2.1_hiera_large.pt
 ```
 
-如果路径不同，修改 `configs/qwen3vl_sam2_pilot.yaml` 中的 `sam2.checkpoint`。
+`sam2.checkpoint` 支持相对路径和绝对路径。相对路径会基于 `--dataset-root MultiEEAffordance` 解析，所以默认配置：
+
+```yaml
+sam2:
+  checkpoint: external/sam2/checkpoints/sam2.1_hiera_large.pt
+```
+
+实际对应：
+
+```text
+~/Multi-EE-3DAG/MultiEEAffordance/external/sam2/checkpoints/sam2.1_hiera_large.pt
+```
+
+如果你还没拉取支持该解析逻辑的新代码，可以临时把配置改成绝对路径：
+
+```yaml
+sam2:
+  checkpoint: /home/lzq/Multi-EE-3DAG/MultiEEAffordance/external/sam2/checkpoints/sam2.1_hiera_large.pt
+```
 
 ### 输出 JSON 解析失败
 

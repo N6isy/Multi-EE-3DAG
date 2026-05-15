@@ -387,7 +387,7 @@ def normalize_qwen_output(raw: dict[str, Any], image_size: int, cfg: dict[str, A
     )
 
 
-def load_sam2_predictor(cfg: dict[str, Any]) -> Any:
+def load_sam2_predictor(cfg: dict[str, Any], root: Path) -> Any:
     sam_cfg = cfg.get("sam2", {})
     try:
         import torch
@@ -405,8 +405,15 @@ def load_sam2_predictor(cfg: dict[str, Any]) -> Any:
         model_cfg = sam_cfg.get("model_cfg")
         if not checkpoint or not model_cfg:
             raise ValueError("SAM2 requires either hf_model_id or checkpoint + model_cfg.")
+        checkpoint_path = resolve_path(root, str(checkpoint))
+        assert checkpoint_path is not None
+        if not checkpoint_path.exists():
+            raise FileNotFoundError(
+                f"SAM2 checkpoint not found: {checkpoint_path}. "
+                "Relative sam2.checkpoint paths are resolved from --dataset-root."
+            )
         predictor = SAM2ImagePredictor(
-            build_sam2(model_cfg, checkpoint, device=sam_cfg.get("device", "cuda:0"), mode="eval")
+            build_sam2(model_cfg, str(checkpoint_path), device=sam_cfg.get("device", "cuda:0"), mode="eval")
         )
     torch.cuda.empty_cache()
     return predictor
@@ -538,7 +545,7 @@ def main() -> int:
     model = processor = predictor = None
     if not dry_run:
         model, processor = load_qwen_model(cfg, root)
-        predictor = load_sam2_predictor(cfg)
+        predictor = load_sam2_predictor(cfg, root)
 
     summary: list[dict[str, Any]] = []
     for row in rows:

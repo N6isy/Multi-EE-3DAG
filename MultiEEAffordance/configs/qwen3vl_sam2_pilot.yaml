@@ -41,6 +41,7 @@ qwen3vl:
 
 sam2:
   # Option A: local checkpoint cloned from facebookresearch/sam2.
+  # Relative paths are resolved from --dataset-root.
   checkpoint: external/sam2/checkpoints/sam2.1_hiera_large.pt
   model_cfg: configs/sam2.1/sam2.1_hiera_l.yaml
   # Option B: use Hugging Face loading instead of checkpoint/model_cfg.
