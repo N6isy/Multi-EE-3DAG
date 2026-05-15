@@ -21,6 +21,13 @@ env/
 .idea/
 
 # Raw datasets and large generated data
+MultiEEAffordance/processed/vlm_pilot/hook_candidates/
+MultiEEAffordance/processed/vlm_pilot/hook_candidate_overlays/
+MultiEEAffordance/processed/vlm_pilot/hook_candidate_selection/
+MultiEEAffordance/processed/vlm_pilot/hook_candidate_masks/
+MultiEEAffordance/processed/metadata/hook_candidate_samples_v0_1.jsonl
+MultiEEAffordance/processed/metadata/hook_candidate_summary_v0_1.json
+MultiEEAffordance/splits_hook_candidates/
 
 
 # Large model/data files

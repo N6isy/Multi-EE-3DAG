@@ -303,7 +303,102 @@ python MultiEEAffordance\tools\serve_review_app.py `
 http://127.0.0.1:8766/
 ```
 
-## 9. 常见问题
+## 9. hook 几何候选路线
+
+如果 hook 通道在源数据集中没有现成 mask，尤其是 `Bag / lift_carry / hook` 这类样本，不建议继续让 Qwen3-VL 直接输出像素坐标。当前新增一条更稳的路线：
+
+```text
+多视角 point-index map
+  -> 几何规则生成 3D hook 候选 A/B/C
+  -> 渲染候选 overlay
+  -> Qwen3-VL 只选择候选标签，不输出坐标
+  -> 选中候选写回 [N,4] mask 的 hook 通道
+  -> 本地网页人工复核
+```
+
+先以 `vlm_pilot_005` 为单样本闭环：
+
+```bash
+python MultiEEAffordance/tools/render_vlm_pilot_views.py \
+  --dataset-root MultiEEAffordance \
+  --pilot-id vlm_pilot_005 \
+  --image-size 768 \
+  --point-size 1 \
+  --visual-point-size 4 \
+  --overwrite
+```
+
+生成 hook 几何候选：
+
+```bash
+python MultiEEAffordance/tools/generate_hook_candidates.py \
+  --dataset-root MultiEEAffordance \
+  --pilot-id vlm_pilot_005 \
+  --overwrite
+```
+
+渲染带候选标签的 overlay 图：
+
+```bash
+python MultiEEAffordance/tools/render_hook_candidate_overlay.py \
+  --dataset-root MultiEEAffordance \
+  --pilot-id vlm_pilot_005 \
+  --overwrite
+```
+
+运行 Qwen3-VL 候选选择。注意这里不需要 SAM2，因为 Qwen 只需要从 A/B/C 中选择：
+
+```bash
+CUDA_VISIBLE_DEVICES=1,2 python MultiEEAffordance/tools/run_qwen3vl_candidate_selector.py \
+  --dataset-root MultiEEAffordance \
+  --config configs/qwen3vl_sam2_pilot.yaml \
+  --pilot-id vlm_pilot_005 \
+  --overwrite
+```
+
+把选中的候选写回四通道 mask：
+
+```bash
+python MultiEEAffordance/tools/build_hook_candidate_mask.py \
+  --dataset-root MultiEEAffordance \
+  --pilot-id vlm_pilot_005 \
+  --overwrite
+```
+
+如果只是调试候选是否合理，可以手动指定候选，例如先把 A 写回 hook 通道：
+
+```bash
+python MultiEEAffordance/tools/build_hook_candidate_mask.py \
+  --dataset-root MultiEEAffordance \
+  --pilot-id vlm_pilot_005 \
+  --selected-candidates A \
+  --overwrite
+```
+
+检查候选样本格式：
+
+```bash
+python MultiEEAffordance/tools/check_dataset.py \
+  --dataset-root MultiEEAffordance \
+  --samples processed/metadata/hook_candidate_samples_v0_1.jsonl \
+  --split-dir splits_hook_candidates
+```
+
+本地复核该候选样本：
+
+```powershell
+python MultiEEAffordance\tools\serve_review_app.py `
+  --dataset-root MultiEEAffordance `
+  --samples processed\metadata\hook_candidate_samples_v0_1.jsonl `
+  --review-csv processed\metadata\hook_candidate_review_v0_1.csv `
+  --host 127.0.0.1 `
+  --port 8767 `
+  --max-points 4096
+```
+
+这条路线的定位是：几何规则负责提出候选，Qwen3-VL 负责候选级语义筛选，人工审查负责最终确认。候选 mask 不能直接当作 ground truth。
+
+## 10. 常见问题
 
 ### Qwen3-VL 显存不足
 
