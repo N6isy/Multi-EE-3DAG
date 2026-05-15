@@ -23,6 +23,17 @@ from render_multiview import write_png_rgb
 from run_qwen3vl_sam2_pilot import load_sam2_predictor, load_yaml
 
 
+class Florence2Grounder:
+    """Small wrapper around Florence-2 phrase grounding."""
+
+    def __init__(self, model: Any, processor: Any, device: str, torch_dtype: Any, cfg: dict[str, Any]):
+        self.model = model
+        self.processor = processor
+        self.device = device
+        self.torch_dtype = torch_dtype
+        self.cfg = cfg
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run open-vocabulary grounding + optional SAM2 segmentation.")
     parser.add_argument("--dataset-root", default=".", help="Dataset root directory.")
@@ -53,7 +64,7 @@ def parse_args() -> argparse.Namespace:
         "--backend",
         default="manual-json",
         choices=["manual-json", "grounding-dino", "florence2"],
-        help="Grounding backend. Current robust path is manual-json; other backends are explicit integration slots.",
+        help="Grounding backend. Florence-2 is wired; GroundingDINO remains an explicit integration slot.",
     )
     parser.add_argument(
         "--manual-boxes",
@@ -63,6 +74,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dry-run", action="store_true", help="Use zoom-crop boxes as placeholder boxes.")
     parser.add_argument("--run-sam2", action="store_true", help="Run SAM2 on grounded boxes.")
     parser.add_argument("--box-mask-only", action="store_true", help="Use rectangular box masks instead of SAM2 masks.")
+    parser.add_argument("--max-boxes-per-query", type=int, default=3, help="Maximum Florence-2 boxes kept per query/view.")
+    parser.add_argument("--min-box-area", type=int, default=16, help="Minimum accepted 2D box area in pixels.")
     parser.add_argument("--overwrite", action="store_true", help="Overwrite existing grounding outputs.")
     parser.add_argument("--validate-only", action="store_true", help="Validate files only.")
     return parser.parse_args()
@@ -141,6 +154,66 @@ def load_manual_boxes(path: Path | None) -> dict[str, list[dict[str, Any]]]:
     return out
 
 
+def resolve_hf_model_source(root: Path, section: dict[str, Any], default_model_id: str, name: str) -> str:
+    model_path = section.get("model_path")
+    if model_path:
+        path = Path(str(model_path))
+        resolved = path if path.is_absolute() else root / path
+        if not resolved.exists():
+            raise FileNotFoundError(
+                f"{name} local model_path does not exist: {resolved}. "
+                "Download/transfer the model directory first, or use model_id when the server has network access."
+            )
+        if not (resolved / "config.json").exists():
+            raise FileNotFoundError(f"{name} model_path is missing config.json: {resolved}")
+        return str(resolved)
+    return str(section.get("model_id", default_model_id))
+
+
+def torch_dtype_from_config(torch_module: Any, value: Any) -> Any:
+    text = str(value or "auto").lower()
+    if text in {"float16", "fp16", "half"}:
+        return torch_module.float16
+    if text in {"bfloat16", "bf16"}:
+        return torch_module.bfloat16
+    if text in {"float32", "fp32"}:
+        return torch_module.float32
+    return torch_module.float16 if torch_module.cuda.is_available() else torch_module.float32
+
+
+def load_florence2_grounder(cfg: dict[str, Any], root: Path) -> Florence2Grounder:
+    florence_cfg = cfg.get("florence2", {})
+    try:
+        import torch
+        from transformers import AutoModelForCausalLM, AutoProcessor
+    except Exception as exc:
+        raise RuntimeError(
+            "Florence-2 dependencies are missing. Install latest transformers, torch, accelerate, and pillow."
+        ) from exc
+
+    model_source = resolve_hf_model_source(root, florence_cfg, "microsoft/Florence-2-large", "Florence-2")
+    shared_kwargs: dict[str, Any] = {}
+    if florence_cfg.get("cache_dir"):
+        shared_kwargs["cache_dir"] = str(resolve_path(root, florence_cfg["cache_dir"]))
+    if florence_cfg.get("revision"):
+        shared_kwargs["revision"] = florence_cfg["revision"]
+    if florence_cfg.get("local_files_only") is not None:
+        shared_kwargs["local_files_only"] = bool(florence_cfg["local_files_only"])
+    trust_remote_code = bool(florence_cfg.get("trust_remote_code", True))
+    torch_dtype = torch_dtype_from_config(torch, florence_cfg.get("dtype", "auto"))
+    device = str(florence_cfg.get("device", "cuda:0" if torch.cuda.is_available() else "cpu"))
+
+    model = AutoModelForCausalLM.from_pretrained(
+        model_source,
+        trust_remote_code=trust_remote_code,
+        torch_dtype=torch_dtype,
+        **shared_kwargs,
+    ).to(device)
+    processor = AutoProcessor.from_pretrained(model_source, trust_remote_code=trust_remote_code, **shared_kwargs)
+    model.eval()
+    return Florence2Grounder(model=model, processor=processor, device=device, torch_dtype=torch_dtype, cfg=florence_cfg)
+
+
 def dry_run_boxes(view_entry: dict[str, Any], queries: list[str]) -> list[dict[str, Any]]:
     crop = view_entry.get("zoom_crop_bbox")
     if not crop or len(crop) < 4 or not queries:
@@ -155,7 +228,78 @@ def dry_run_boxes(view_entry: dict[str, Any], queries: list[str]) -> list[dict[s
     ]
 
 
-def boxes_from_backend(args: argparse.Namespace, row: dict[str, str], view_entry: dict[str, Any], queries: list[str]) -> list[dict[str, Any]]:
+def parse_florence_boxes(parsed: Any, task_prompt: str, query: str, image_size: tuple[int, int], max_boxes: int) -> list[dict[str, Any]]:
+    payload = parsed.get(task_prompt, parsed) if isinstance(parsed, dict) else {}
+    if not isinstance(payload, dict):
+        return []
+    bboxes = payload.get("bboxes", payload.get("boxes", []))
+    labels = payload.get("labels", [])
+    scores = payload.get("scores", [])
+    out: list[dict[str, Any]] = []
+    for idx, box in enumerate(bboxes if isinstance(bboxes, list) else []):
+        label = labels[idx] if isinstance(labels, list) and idx < len(labels) else query
+        score = scores[idx] if isinstance(scores, list) and idx < len(scores) else None
+        out.append(
+            {
+                "query": query,
+                "label": str(label),
+                "box": box,
+                "score": float(score) if isinstance(score, (int, float)) else None,
+                "source": "florence2",
+                "image_size": [int(image_size[0]), int(image_size[1])],
+            }
+        )
+        if len(out) >= max_boxes:
+            break
+    return out
+
+
+def florence2_ground_queries(grounder: Florence2Grounder, image: Image.Image, queries: list[str], args: argparse.Namespace) -> list[dict[str, Any]]:
+    import torch
+
+    task_prompt = str(grounder.cfg.get("task_prompt", "<CAPTION_TO_PHRASE_GROUNDING>"))
+    max_new_tokens = int(grounder.cfg.get("max_new_tokens", 1024))
+    num_beams = int(grounder.cfg.get("num_beams", 3))
+    boxes: list[dict[str, Any]] = []
+    width, height = image.size
+
+    for query in queries:
+        prompt = f"{task_prompt}{query}"
+        inputs = grounder.processor(text=prompt, images=image, return_tensors="pt")
+        moved: dict[str, Any] = {}
+        for key, value in inputs.items():
+            if hasattr(value, "to"):
+                moved[key] = value.to(grounder.device)
+                if key == "pixel_values" and moved[key].is_floating_point():
+                    moved[key] = moved[key].to(grounder.torch_dtype)
+            else:
+                moved[key] = value
+        with torch.inference_mode():
+            generated_ids = grounder.model.generate(
+                input_ids=moved.get("input_ids"),
+                pixel_values=moved.get("pixel_values"),
+                attention_mask=moved.get("attention_mask"),
+                max_new_tokens=max_new_tokens,
+                num_beams=num_beams,
+                do_sample=False,
+            )
+        generated_text = grounder.processor.batch_decode(generated_ids, skip_special_tokens=False)[0]
+        parsed = grounder.processor.post_process_generation(generated_text, task=task_prompt, image_size=(width, height))
+        parsed_boxes = parse_florence_boxes(parsed, task_prompt, query, (width, height), args.max_boxes_per_query)
+        for item in parsed_boxes:
+            item["raw_text"] = generated_text
+        boxes.extend(parsed_boxes)
+    return boxes
+
+
+def boxes_from_backend(
+    args: argparse.Namespace,
+    row: dict[str, str],
+    view_entry: dict[str, Any],
+    queries: list[str],
+    image: Image.Image,
+    grounder: Florence2Grounder | None,
+) -> list[dict[str, Any]]:
     if args.backend == "manual-json":
         return []
     if args.backend == "grounding-dino":
@@ -164,14 +308,13 @@ def boxes_from_backend(args: argparse.Namespace, row: dict[str, str], view_entry
             "Run with --backend manual-json and --manual-boxes, or add a server-side GroundingDINO adapter here."
         )
     if args.backend == "florence2":
-        raise RuntimeError(
-            "Florence-2 backend is not wired in this repository yet. "
-            "Run with --backend manual-json and --manual-boxes, or add a server-side Florence-2 adapter here."
-        )
+        if grounder is None:
+            raise RuntimeError("Florence-2 backend requested but the grounder was not loaded.")
+        return florence2_ground_queries(grounder, image, queries, args)
     raise ValueError(f"Unsupported backend: {args.backend}")
 
 
-def rectangular_mask(shape: tuple[int, int], boxes: list[dict[str, Any]]) -> np.ndarray:
+def rectangular_mask(shape: tuple[int, int], boxes: list[dict[str, Any]], min_area: int) -> np.ndarray:
     mask = np.zeros(shape, dtype=bool)
     h, w = shape
     for item in boxes:
@@ -179,11 +322,13 @@ def rectangular_mask(shape: tuple[int, int], boxes: list[dict[str, Any]]) -> np.
         if box is None:
             continue
         x1, y1, x2, y2 = box
+        if (x2 - x1) * (y2 - y1) < min_area:
+            continue
         mask[y1 : y2 + 1, x1 : x2 + 1] = True
     return mask
 
 
-def sam2_mask_from_boxes(image: np.ndarray, boxes: list[dict[str, Any]], predictor: Any, image_size: int) -> np.ndarray:
+def sam2_mask_from_boxes(image: np.ndarray, boxes: list[dict[str, Any]], predictor: Any, image_size: int, min_area: int) -> np.ndarray:
     import torch
 
     combined = np.zeros(image.shape[:2], dtype=bool)
@@ -194,6 +339,8 @@ def sam2_mask_from_boxes(image: np.ndarray, boxes: list[dict[str, Any]], predict
         for item in boxes:
             box = normalize_box(item.get("box"), image_size)
             if box is None:
+                continue
+            if (box[2] - box[0]) * (box[3] - box[1]) < min_area:
                 continue
             masks, scores, _ = predictor.predict(box=np.asarray(box, dtype=np.float32), multimask_output=True)
             masks = np.asarray(masks)
@@ -212,7 +359,15 @@ def save_mask_png(mask: np.ndarray, path: Path) -> None:
     write_png_rgb(path, rgb)
 
 
-def run_for_row(root: Path, args: argparse.Namespace, cfg: dict[str, Any], row: dict[str, str], manual_boxes: dict[str, list[dict[str, Any]]], predictor: Any) -> dict[str, Any]:
+def run_for_row(
+    root: Path,
+    args: argparse.Namespace,
+    cfg: dict[str, Any],
+    row: dict[str, str],
+    manual_boxes: dict[str, list[dict[str, Any]]],
+    predictor: Any,
+    grounder: Florence2Grounder | None,
+) -> dict[str, Any]:
     pilot_id = row["pilot_id"]
     sample_id = row["sample_id"]
     manifest_path = resolve_path(root, args.renders_root) / sample_id / "view_manifest.json"
@@ -232,29 +387,32 @@ def run_for_row(root: Path, args: argparse.Namespace, cfg: dict[str, Any], row: 
         if args.validate_only:
             view_results.append({"view": view, "status": "validated"})
             continue
+        image_pil = Image.open(image_path).convert("RGB")
+        image = np.asarray(image_pil)
 
         if args.dry_run:
             boxes = dry_run_boxes(entry, queries)
         elif manual_boxes.get(view):
             boxes = manual_boxes[view]
         else:
-            boxes = boxes_from_backend(args, row, entry, queries)
+            boxes = boxes_from_backend(args, row, entry, queries, image_pil, grounder)
 
-        image = np.asarray(Image.open(image_path).convert("RGB"))
         normalized_boxes: list[dict[str, Any]] = []
         for item in boxes:
             box = normalize_box(item.get("box"), image.shape[0])
             if box is None:
+                continue
+            if (box[2] - box[0]) * (box[3] - box[1]) < args.min_box_area:
                 continue
             normalized = dict(item)
             normalized["box"] = box
             normalized_boxes.append(normalized)
 
         if args.run_sam2:
-            mask = sam2_mask_from_boxes(image, normalized_boxes, predictor, image.shape[0])
+            mask = sam2_mask_from_boxes(image, normalized_boxes, predictor, image.shape[0], args.min_box_area)
             mask_source = "sam2"
         elif args.box_mask_only or args.dry_run:
-            mask = rectangular_mask(image.shape[:2], normalized_boxes)
+            mask = rectangular_mask(image.shape[:2], normalized_boxes, args.min_box_area)
             mask_source = "box_mask"
         else:
             mask = np.zeros(image.shape[:2], dtype=bool)
@@ -272,6 +430,7 @@ def run_for_row(root: Path, args: argparse.Namespace, cfg: dict[str, Any], row: 
                 "queries": queries,
                 "boxes": normalized_boxes,
                 "mask_source": mask_source,
+                "backend": args.backend,
             },
             args.overwrite,
         )
@@ -284,6 +443,7 @@ def run_for_row(root: Path, args: argparse.Namespace, cfg: dict[str, Any], row: 
                 "mask_path": relative_to_dataset(root, mask_path),
                 "positive_pixels": int(mask.sum()),
                 "mask_source": mask_source,
+                "boxes": len(normalized_boxes),
             }
         )
 
@@ -311,7 +471,10 @@ def main() -> int:
     predictor = None
     if args.run_sam2 and not args.validate_only:
         predictor = load_sam2_predictor(cfg, root)
-    outputs = [run_for_row(root, args, cfg, row, manual_boxes, predictor) for row in rows]
+    grounder = None
+    if args.backend == "florence2" and not args.validate_only and not args.dry_run:
+        grounder = load_florence2_grounder(cfg, root)
+    outputs = [run_for_row(root, args, cfg, row, manual_boxes, predictor, grounder) for row in rows]
     print(json.dumps({"rows": len(outputs), "validate_only": args.validate_only, "outputs": outputs}, indent=2, ensure_ascii=False))
     return 0
 

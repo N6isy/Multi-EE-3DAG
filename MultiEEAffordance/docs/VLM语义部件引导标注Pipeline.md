@@ -206,7 +206,25 @@ python MultiEEAffordance/tools/run_qwen3vl_part_planner.py \
   --overwrite
 ```
 
-执行 grounding + SAM2。当前骨架先支持 `manual-json` 和 `dry-run`；后续在服务器上接入 GroundingDINO / Florence-2 adapter：
+执行 grounding + SAM2。当前支持三种方式：
+
+1. `--backend florence2`：使用 Florence-2 根据 Qwen3-VL 输出的部件文本做 phrase grounding。
+2. `--backend manual-json`：读取人工或外部模型给出的 boxes JSON。
+3. `--dry-run`：使用 zoom crop box 只验证数据流，不代表真实标注质量。
+
+使用 Florence-2：
+
+```bash
+CUDA_VISIBLE_DEVICES=1,2 python MultiEEAffordance/tools/run_grounding_sam2.py \
+  --dataset-root MultiEEAffordance \
+  --config configs/qwen3vl_sam2_pilot.yaml \
+  --pilot-id vlm_pilot_005 \
+  --backend florence2 \
+  --run-sam2 \
+  --overwrite
+```
+
+如果还没有准备 Florence-2 权重，先用 dry-run 检查格式：
 
 ```bash
 python MultiEEAffordance/tools/run_grounding_sam2.py \
@@ -217,6 +235,14 @@ python MultiEEAffordance/tools/run_grounding_sam2.py \
   --box-mask-only \
   --overwrite
 ```
+
+Florence-2 离线模型目录默认读取：
+
+```text
+MultiEEAffordance/external/Florence-2-large/
+```
+
+如果服务器不能访问 Hugging Face，需要提前把 `microsoft/Florence-2-large` 下载并传到该目录，保证目录下存在 `config.json`、模型权重和 processor/tokenizer 文件。
 
 回投到 3D：
 

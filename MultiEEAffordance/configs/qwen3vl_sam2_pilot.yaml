@@ -41,6 +41,23 @@ qwen3vl:
   min_pixels: null
   max_pixels: null
 
+florence2:
+  # Optional backend for tools/run_grounding_sam2.py --backend florence2.
+  # If the remote server cannot access Hugging Face, download/transfer the
+  # model directory manually and use model_path instead. Relative paths are
+  # resolved from --dataset-root.
+  model_id: microsoft/Florence-2-large
+  model_path: external/Florence-2-large
+  local_files_only: true
+  cache_dir: null
+  revision: null
+  trust_remote_code: true
+  device: cuda:0
+  dtype: auto
+  task_prompt: "<CAPTION_TO_PHRASE_GROUNDING>"
+  max_new_tokens: 1024
+  num_beams: 3
+
 sam2:
   # Option A: local checkpoint cloned from facebookresearch/sam2.
   # Relative paths are resolved from --dataset-root.
