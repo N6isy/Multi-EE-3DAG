@@ -142,13 +142,20 @@ def clamp_int(value: Any, low: int, high: int) -> int | None:
 
 def normalize_point_list(items: Any, image_size: int, max_count: int) -> list[list[int]]:
     out: list[list[int]] = []
+    if isinstance(items, dict):
+        items = [items]
+    elif isinstance(items, (list, tuple)) and len(items) >= 2 and not isinstance(items[0], (list, tuple, dict)):
+        items = [items]
     if not isinstance(items, list):
         return out
     for item in items:
+        if isinstance(item, dict):
+            item = [item.get("x"), item.get("y")]
         if not isinstance(item, (list, tuple)) or len(item) < 2:
             continue
-        x = clamp_int(item[0], 0, image_size - 1)
-        y = clamp_int(item[1], 0, image_size - 1)
+        scale = image_size - 1 if all(isinstance(v, (int, float)) and 0.0 <= float(v) <= 1.0 for v in item[:2]) else 1.0
+        x = clamp_int(float(item[0]) * scale, 0, image_size - 1)
+        y = clamp_int(float(item[1]) * scale, 0, image_size - 1)
         if x is not None and y is not None:
             out.append([x, y])
         if len(out) >= max_count:
@@ -158,17 +165,25 @@ def normalize_point_list(items: Any, image_size: int, max_count: int) -> list[li
 
 def normalize_boxes(items: Any, image_size: int, max_count: int, min_area: int) -> list[list[int]]:
     out: list[list[int]] = []
+    if isinstance(items, dict):
+        items = [items]
+    elif isinstance(items, (list, tuple)) and len(items) >= 4 and not isinstance(items[0], (list, tuple, dict)):
+        items = [items]
     if not isinstance(items, list):
         return out
     for item in items:
         if isinstance(item, dict):
-            item = item.get("box", item.get("bbox", []))
+            if "box" in item or "bbox" in item:
+                item = item.get("box", item.get("bbox", []))
+            else:
+                item = [item.get("x1"), item.get("y1"), item.get("x2"), item.get("y2")]
         if not isinstance(item, (list, tuple)) or len(item) < 4:
             continue
-        x1 = clamp_int(item[0], 0, image_size - 1)
-        y1 = clamp_int(item[1], 0, image_size - 1)
-        x2 = clamp_int(item[2], 0, image_size - 1)
-        y2 = clamp_int(item[3], 0, image_size - 1)
+        scale = image_size - 1 if all(isinstance(v, (int, float)) and 0.0 <= float(v) <= 1.0 for v in item[:4]) else 1.0
+        x1 = clamp_int(float(item[0]) * scale, 0, image_size - 1)
+        y1 = clamp_int(float(item[1]) * scale, 0, image_size - 1)
+        x2 = clamp_int(float(item[2]) * scale, 0, image_size - 1)
+        y2 = clamp_int(float(item[3]) * scale, 0, image_size - 1)
         if None in (x1, y1, x2, y2):
             continue
         xa, xb = sorted([int(x1), int(x2)])
@@ -222,14 +237,15 @@ Return strict JSON only:
 }}
 
 Rules:
-1. Coordinates are pixels in [0, {image_size - 1}].
-2. Provide at most {seg_cfg.get('max_boxes_per_view', 3)} boxes.
-3. Provide at most {seg_cfg.get('max_positive_points_per_view', 8)} positive points.
-4. Provide at most {seg_cfg.get('max_negative_points_per_view', 8)} negative points.
-5. If the usable region is invisible or physically infeasible, set feasible=false and use empty boxes/points.
-6. Be conservative. Do not mark ordinary contact surfaces as positive affordance.
-7. For hook, only mark visible hookable holes/rings/inner handle boundaries.
-8. For suction, avoid edges, handles, holes, and high-curvature regions.
+1. Coordinates are pixels in [0, {image_size - 1}]. Do not use normalized coordinates unless unavoidable.
+2. If feasible=true, provide at least one box or one positive point.
+3. Provide at most {seg_cfg.get('max_boxes_per_view', 3)} boxes.
+4. Provide at most {seg_cfg.get('max_positive_points_per_view', 8)} positive points.
+5. Provide at most {seg_cfg.get('max_negative_points_per_view', 8)} negative points.
+6. If the usable region is invisible or physically infeasible, set feasible=false and use empty boxes/points.
+7. Be conservative. Do not mark ordinary contact surfaces as positive affordance.
+8. For hook, only mark visible hookable holes/rings/inner handle boundaries.
+9. For suction, avoid edges, handles, holes, and high-curvature regions.
 """
 
 
@@ -350,28 +366,30 @@ def run_qwen_for_view(model: Any, processor: Any, image_path: Path, prompt: str,
         generated = model.generate(**inputs, **gen_kwargs)
     trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated)]
     text = processor.batch_decode(trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-    return extract_json(text)
+    raw = extract_json(text)
+    raw["_raw_text"] = text
+    return raw
 
 
 def normalize_qwen_output(raw: dict[str, Any], image_size: int, cfg: dict[str, Any]) -> QwenPrompt:
     seg_cfg = cfg.get("segmentation", {})
     boxes = normalize_boxes(
-        raw.get("boxes", raw.get("bboxes", [])),
+        raw.get("boxes", raw.get("bboxes", raw.get("box", raw.get("bbox", [])))),
         image_size,
         int(seg_cfg.get("max_boxes_per_view", 3)),
         int(seg_cfg.get("min_box_area", 16)),
     )
     pos = normalize_point_list(
-        raw.get("positive_points", raw.get("points", [])),
+        raw.get("positive_points", raw.get("positive_point", raw.get("points", raw.get("point", [])))),
         image_size,
         int(seg_cfg.get("max_positive_points_per_view", 8)),
     )
     neg = normalize_point_list(
-        raw.get("negative_points", []),
+        raw.get("negative_points", raw.get("negative_point", [])),
         image_size,
         int(seg_cfg.get("max_negative_points_per_view", 8)),
     )
-    feasible = bool(raw.get("feasible", bool(boxes or pos)))
+    feasible = bool(raw.get("feasible", bool(boxes or pos))) and bool(boxes or pos)
     try:
         confidence = float(raw.get("confidence", 0.0))
     except (TypeError, ValueError):
