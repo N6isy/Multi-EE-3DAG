@@ -308,6 +308,54 @@ def load_florence2_config_class(model_source: str, shared_kwargs: dict[str, Any]
     return get_class_from_dynamic_module(str(config_ref), model_source, **dynamic_kwargs)
 
 
+def load_florence2_auto_class(model_source: str, shared_kwargs: dict[str, Any], auto_key: str) -> Any | None:
+    """Load a Florence-2 remote auto class without instantiating it."""
+    config_path = Path(model_source) / "config.json"
+    if not config_path.exists():
+        return None
+    with config_path.open("r", encoding="utf-8") as f:
+        config_dict = json.load(f)
+    auto_map = config_dict.get("auto_map", {})
+    class_ref = auto_map.get(auto_key) if isinstance(auto_map, dict) else None
+    if isinstance(class_ref, (list, tuple)):
+        class_ref = class_ref[0]
+    if not class_ref:
+        return None
+
+    from transformers.dynamic_module_utils import get_class_from_dynamic_module
+
+    dynamic_kwargs = {
+        key: value
+        for key, value in shared_kwargs.items()
+        if key in {"cache_dir", "revision", "local_files_only"}
+    }
+    return get_class_from_dynamic_module(str(class_ref), model_source, **dynamic_kwargs)
+
+
+def patch_florence2_model_class(model_class: Any) -> None:
+    """Patch remote Florence-2 model class attributes expected by transformers."""
+    if model_class is None:
+        return
+    # Newer transformers queries this class attribute during attention dispatch.
+    # Older Florence-2 remote-code revisions may not define it.
+    if not hasattr(model_class, "_supports_sdpa"):
+        setattr(model_class, "_supports_sdpa", False)
+    if not hasattr(model_class, "_supports_flash_attn_2"):
+        setattr(model_class, "_supports_flash_attn_2", False)
+
+
+def apply_attn_implementation(config: Any, value: str | None) -> None:
+    """Apply attention implementation to all nested config-like objects."""
+    if not value:
+        return
+    for config_obj in collect_config_objects(config):
+        for attr in ("_attn_implementation", "_attn_implementation_internal", "attn_implementation"):
+            try:
+                setattr(config_obj, attr, value)
+            except Exception:
+                continue
+
+
 def load_florence2_grounder(cfg: dict[str, Any], root: Path) -> Florence2Grounder:
     florence_cfg = cfg.get("florence2", {})
     try:
@@ -329,6 +377,10 @@ def load_florence2_grounder(cfg: dict[str, Any], root: Path) -> Florence2Grounde
     trust_remote_code = bool(florence_cfg.get("trust_remote_code", True))
     torch_dtype = torch_dtype_from_config(torch, florence_cfg.get("dtype", "auto"))
     device = str(florence_cfg.get("device", "cuda:0" if torch.cuda.is_available() else "cpu"))
+    attn_implementation = florence_cfg.get("attn_implementation", "eager")
+    if str(attn_implementation).lower() in {"", "none", "null"}:
+        attn_implementation = "eager"
+    attn_implementation = str(attn_implementation)
 
     config_class = load_florence2_config_class(model_source, shared_kwargs) if trust_remote_code else None
     if config_class is not None:
@@ -337,13 +389,18 @@ def load_florence2_grounder(cfg: dict[str, Any], root: Path) -> Florence2Grounde
     else:
         model_config = AutoConfig.from_pretrained(model_source, trust_remote_code=trust_remote_code, **shared_kwargs)
     patch_florence2_generation_config(model_config)
-    model = AutoModelForCausalLM.from_pretrained(
-        model_source,
-        config=model_config,
-        trust_remote_code=trust_remote_code,
-        torch_dtype=torch_dtype,
+    apply_attn_implementation(model_config, attn_implementation)
+    model_class = load_florence2_auto_class(model_source, shared_kwargs, "AutoModelForCausalLM") if trust_remote_code else None
+    patch_florence2_model_class(model_class)
+
+    model_kwargs = {
+        "config": model_config,
+        "trust_remote_code": trust_remote_code,
+        "torch_dtype": torch_dtype,
+        "attn_implementation": attn_implementation,
         **shared_kwargs,
-    ).to(device)
+    }
+    model = AutoModelForCausalLM.from_pretrained(model_source, **model_kwargs).to(device)
     patch_florence2_generation_config(model)
     processor = AutoProcessor.from_pretrained(model_source, trust_remote_code=trust_remote_code, **shared_kwargs)
     model.eval()

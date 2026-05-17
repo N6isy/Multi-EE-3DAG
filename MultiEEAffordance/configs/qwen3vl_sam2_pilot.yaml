@@ -54,6 +54,9 @@ florence2:
   trust_remote_code: true
   device: cuda:0
   dtype: auto
+  # Florence-2 remote code may not define _supports_sdpa for newer transformers.
+  # Use eager attention to avoid SDPA capability checks during model init.
+  attn_implementation: eager
   task_prompt: "<CAPTION_TO_PHRASE_GROUNDING>"
   max_new_tokens: 1024
   num_beams: 3
