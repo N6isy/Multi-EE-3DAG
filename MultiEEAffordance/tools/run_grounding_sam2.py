@@ -344,6 +344,44 @@ def patch_florence2_model_class(model_class: Any) -> None:
         setattr(model_class, "_supports_flash_attn_2", False)
 
 
+def patch_tokenizer_additional_special_tokens() -> None:
+    """Provide tokenizer.additional_special_tokens for Florence-2 processors.
+
+    Some Florence-2 processor revisions access `tokenizer.additional_special_tokens`
+    directly. In newer transformers/tokenizer combinations that attribute can be
+    absent even though the same information is available from the tokenizer's
+    special-token maps. A base-class property keeps the remote processor code
+    compatible without mutating the vocabulary.
+    """
+    try:
+        from transformers.tokenization_utils_base import PreTrainedTokenizerBase
+    except Exception:
+        return
+
+    if isinstance(getattr(PreTrainedTokenizerBase, "additional_special_tokens", None), property):
+        return
+
+    def get_additional_special_tokens(tokenizer: Any) -> list[Any]:
+        for attr in ("special_tokens_map_extended", "special_tokens_map"):
+            try:
+                mapping = getattr(tokenizer, attr)
+            except Exception:
+                continue
+            if isinstance(mapping, dict) and mapping.get("additional_special_tokens") is not None:
+                tokens = mapping["additional_special_tokens"]
+                return list(tokens) if isinstance(tokens, (list, tuple)) else [tokens]
+        return list(getattr(tokenizer, "_additional_special_tokens", []))
+
+    def set_additional_special_tokens(tokenizer: Any, value: Any) -> None:
+        tokenizer.__dict__["_additional_special_tokens"] = list(value or [])
+
+    setattr(
+        PreTrainedTokenizerBase,
+        "additional_special_tokens",
+        property(get_additional_special_tokens, set_additional_special_tokens),
+    )
+
+
 def apply_attn_implementation(config: Any, value: str | None) -> None:
     """Apply attention implementation to all nested config-like objects."""
     if not value:
@@ -402,6 +440,7 @@ def load_florence2_grounder(cfg: dict[str, Any], root: Path) -> Florence2Grounde
     }
     model = AutoModelForCausalLM.from_pretrained(model_source, **model_kwargs).to(device)
     patch_florence2_generation_config(model)
+    patch_tokenizer_additional_special_tokens()
     processor = AutoProcessor.from_pretrained(model_source, trust_remote_code=trust_remote_code, **shared_kwargs)
     model.eval()
     return Florence2Grounder(model=model, processor=processor, device=device, torch_dtype=torch_dtype, cfg=florence_cfg)
