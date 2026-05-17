@@ -12,6 +12,7 @@ import argparse
 import csv
 import json
 import sys
+import traceback
 from pathlib import Path
 from typing import Any
 
@@ -248,7 +249,10 @@ def patch_florence2_generation_config(target: Any) -> None:
         "begin_suppress_tokens": None,
     }
     for config in collect_config_objects(target):
+        config_class = config.__class__
         for name, value in generation_defaults.items():
+            if not hasattr(config_class, name):
+                setattr(config_class, name, value)
             ensure_attr(config, name, value)
 
 
@@ -560,4 +564,5 @@ if __name__ == "__main__":
         raise SystemExit(main())
     except Exception as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
+        traceback.print_exc()
         raise SystemExit(2)
