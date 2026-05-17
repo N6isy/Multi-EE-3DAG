@@ -35,6 +35,14 @@ class Florence2Grounder:
         self.cfg = cfg
 
 
+FLORENCE2_GENERATION_DEFAULTS = {
+    "forced_bos_token_id": None,
+    "forced_eos_token_id": None,
+    "suppress_tokens": None,
+    "begin_suppress_tokens": None,
+}
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run open-vocabulary grounding + optional SAM2 segmentation.")
     parser.add_argument("--dataset-root", default=".", help="Dataset root directory.")
@@ -242,18 +250,62 @@ def patch_florence2_generation_config(target: Any) -> None:
     has been observed on the remote server. Adding these attributes with neutral
     defaults keeps generation behavior unchanged while avoiding AttributeError.
     """
-    generation_defaults = {
-        "forced_bos_token_id": None,
-        "forced_eos_token_id": None,
-        "suppress_tokens": None,
-        "begin_suppress_tokens": None,
-    }
     for config in collect_config_objects(target):
         config_class = config.__class__
-        for name, value in generation_defaults.items():
+        for name, value in FLORENCE2_GENERATION_DEFAULTS.items():
             if not hasattr(config_class, name):
                 setattr(config_class, name, value)
             ensure_attr(config, name, value)
+
+
+def patch_florence2_config_classes(config_class: Any) -> None:
+    """Patch Florence-2 config classes before any config instance is created."""
+    module = sys.modules.get(getattr(config_class, "__module__", ""))
+    candidate_classes = [config_class]
+    if module is not None:
+        for class_name in ("Florence2Config", "Florence2LanguageConfig", "Florence2VisionConfig"):
+            candidate = getattr(module, class_name, None)
+            if candidate is not None:
+                candidate_classes.append(candidate)
+
+    seen: set[int] = set()
+    for candidate in candidate_classes:
+        if id(candidate) in seen:
+            continue
+        seen.add(id(candidate))
+        for name, value in FLORENCE2_GENERATION_DEFAULTS.items():
+            if not hasattr(candidate, name):
+                setattr(candidate, name, value)
+
+
+def load_florence2_config_class(model_source: str, shared_kwargs: dict[str, Any]) -> Any | None:
+    """Load the remote Florence-2 config class without instantiating it.
+
+    `AutoConfig.from_pretrained` instantiates Florence2LanguageConfig internally.
+    Some Florence-2 remote-code revisions access `self.forced_bos_token_id`
+    before PretrainedConfig has populated it. Loading the class first lets us
+    add neutral class defaults before the first instance is created.
+    """
+    config_path = Path(model_source) / "config.json"
+    if not config_path.exists():
+        return None
+    with config_path.open("r", encoding="utf-8") as f:
+        config_dict = json.load(f)
+    auto_map = config_dict.get("auto_map", {})
+    config_ref = auto_map.get("AutoConfig") if isinstance(auto_map, dict) else None
+    if isinstance(config_ref, (list, tuple)):
+        config_ref = config_ref[0]
+    if not config_ref:
+        return None
+
+    from transformers.dynamic_module_utils import get_class_from_dynamic_module
+
+    dynamic_kwargs = {
+        key: value
+        for key, value in shared_kwargs.items()
+        if key in {"cache_dir", "revision", "local_files_only"}
+    }
+    return get_class_from_dynamic_module(str(config_ref), model_source, **dynamic_kwargs)
 
 
 def load_florence2_grounder(cfg: dict[str, Any], root: Path) -> Florence2Grounder:
@@ -278,7 +330,12 @@ def load_florence2_grounder(cfg: dict[str, Any], root: Path) -> Florence2Grounde
     torch_dtype = torch_dtype_from_config(torch, florence_cfg.get("dtype", "auto"))
     device = str(florence_cfg.get("device", "cuda:0" if torch.cuda.is_available() else "cpu"))
 
-    model_config = AutoConfig.from_pretrained(model_source, trust_remote_code=trust_remote_code, **shared_kwargs)
+    config_class = load_florence2_config_class(model_source, shared_kwargs) if trust_remote_code else None
+    if config_class is not None:
+        patch_florence2_config_classes(config_class)
+        model_config = config_class.from_pretrained(model_source, **shared_kwargs)
+    else:
+        model_config = AutoConfig.from_pretrained(model_source, trust_remote_code=trust_remote_code, **shared_kwargs)
     patch_florence2_generation_config(model_config)
     model = AutoModelForCausalLM.from_pretrained(
         model_source,
