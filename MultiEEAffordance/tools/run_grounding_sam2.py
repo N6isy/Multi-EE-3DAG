@@ -181,6 +181,57 @@ def torch_dtype_from_config(torch_module: Any, value: Any) -> Any:
     return torch_module.float16 if torch_module.cuda.is_available() else torch_module.float32
 
 
+def ensure_attr(obj: Any, name: str, value: Any) -> None:
+    """Set a missing config attribute without overwriting existing values."""
+    if obj is None:
+        return
+    try:
+        getattr(obj, name)
+    except AttributeError:
+        setattr(obj, name, value)
+
+
+def patch_florence2_generation_config(model: Any) -> None:
+    """Patch Florence-2 config fields required by some transformers versions.
+
+    Some Florence-2 checkpoints / remote-code combinations expose
+    Florence2LanguageConfig without every generation attribute expected by newer
+    transformers generation utilities. The missing `forced_bos_token_id` field
+    has been observed on the remote server. Adding these attributes with neutral
+    defaults keeps generation behavior unchanged while avoiding AttributeError.
+    """
+    generation_defaults = {
+        "forced_bos_token_id": None,
+        "forced_eos_token_id": None,
+        "suppress_tokens": None,
+        "begin_suppress_tokens": None,
+    }
+    configs: list[Any] = []
+    for attr in ("config", "generation_config"):
+        value = getattr(model, attr, None)
+        if value is not None:
+            configs.append(value)
+    model_config = getattr(model, "config", None)
+    for attr in ("text_config", "language_config", "decoder", "decoder_config"):
+        value = getattr(model_config, attr, None) if model_config is not None else None
+        if value is not None:
+            configs.append(value)
+    language_model = getattr(model, "language_model", None)
+    if language_model is not None:
+        for attr in ("config", "generation_config"):
+            value = getattr(language_model, attr, None)
+            if value is not None:
+                configs.append(value)
+
+    seen: set[int] = set()
+    for config in configs:
+        if id(config) in seen:
+            continue
+        seen.add(id(config))
+        for name, value in generation_defaults.items():
+            ensure_attr(config, name, value)
+
+
 def load_florence2_grounder(cfg: dict[str, Any], root: Path) -> Florence2Grounder:
     florence_cfg = cfg.get("florence2", {})
     try:
@@ -209,6 +260,7 @@ def load_florence2_grounder(cfg: dict[str, Any], root: Path) -> Florence2Grounde
         torch_dtype=torch_dtype,
         **shared_kwargs,
     ).to(device)
+    patch_florence2_generation_config(model)
     processor = AutoProcessor.from_pretrained(model_source, trust_remote_code=trust_remote_code, **shared_kwargs)
     model.eval()
     return Florence2Grounder(model=model, processor=processor, device=device, torch_dtype=torch_dtype, cfg=florence_cfg)
