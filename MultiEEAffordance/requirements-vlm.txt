@@ -12,3 +12,5 @@ numpy
 pyyaml
 matplotlib
 opencv-python
+einops
+timm

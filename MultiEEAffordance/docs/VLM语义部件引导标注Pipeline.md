@@ -244,6 +244,24 @@ MultiEEAffordance/external/Florence-2-large/
 
 如果服务器不能访问 Hugging Face，需要提前把 `microsoft/Florence-2-large` 下载并传到该目录，保证目录下存在 `config.json`、模型权重和 processor/tokenizer 文件。
 
+Florence-2 的 remote modeling code 还依赖 `einops` 和 `timm`。如果服务器报：
+
+```text
+This modeling file requires the following packages that were not found in your environment: einops, timm
+```
+
+则在当前虚拟环境中安装：
+
+```bash
+python -m pip install einops timm
+```
+
+或重新安装项目 VLM 依赖：
+
+```bash
+python -m pip install -r MultiEEAffordance/requirements-vlm.txt
+```
+
 回投到 3D：
 
 ```bash
