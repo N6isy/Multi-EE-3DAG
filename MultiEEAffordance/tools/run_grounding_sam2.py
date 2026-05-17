@@ -187,11 +187,52 @@ def ensure_attr(obj: Any, name: str, value: Any) -> None:
         return
     try:
         getattr(obj, name)
-    except AttributeError:
+    except Exception:
         setattr(obj, name, value)
 
 
-def patch_florence2_generation_config(model: Any) -> None:
+def collect_config_objects(obj: Any, max_depth: int = 3) -> list[Any]:
+    """Collect config-like objects nested inside a model or config tree."""
+    out: list[Any] = []
+    seen: set[int] = set()
+
+    def visit(value: Any, depth: int) -> None:
+        if value is None or depth > max_depth:
+            return
+        value_id = id(value)
+        if value_id in seen:
+            return
+        seen.add(value_id)
+
+        class_name = value.__class__.__name__.lower()
+        is_config_like = "config" in class_name or hasattr(value, "to_dict")
+        if is_config_like:
+            out.append(value)
+
+        for attr in (
+            "config",
+            "generation_config",
+            "text_config",
+            "language_config",
+            "vision_config",
+            "decoder",
+            "decoder_config",
+            "encoder",
+            "encoder_config",
+            "language_model",
+            "model",
+        ):
+            try:
+                child = getattr(value, attr)
+            except Exception:
+                continue
+            visit(child, depth + 1)
+
+    visit(obj, 0)
+    return out
+
+
+def patch_florence2_generation_config(target: Any) -> None:
     """Patch Florence-2 config fields required by some transformers versions.
 
     Some Florence-2 checkpoints / remote-code combinations expose
@@ -206,28 +247,7 @@ def patch_florence2_generation_config(model: Any) -> None:
         "suppress_tokens": None,
         "begin_suppress_tokens": None,
     }
-    configs: list[Any] = []
-    for attr in ("config", "generation_config"):
-        value = getattr(model, attr, None)
-        if value is not None:
-            configs.append(value)
-    model_config = getattr(model, "config", None)
-    for attr in ("text_config", "language_config", "decoder", "decoder_config"):
-        value = getattr(model_config, attr, None) if model_config is not None else None
-        if value is not None:
-            configs.append(value)
-    language_model = getattr(model, "language_model", None)
-    if language_model is not None:
-        for attr in ("config", "generation_config"):
-            value = getattr(language_model, attr, None)
-            if value is not None:
-                configs.append(value)
-
-    seen: set[int] = set()
-    for config in configs:
-        if id(config) in seen:
-            continue
-        seen.add(id(config))
+    for config in collect_config_objects(target):
         for name, value in generation_defaults.items():
             ensure_attr(config, name, value)
 
@@ -236,7 +256,7 @@ def load_florence2_grounder(cfg: dict[str, Any], root: Path) -> Florence2Grounde
     florence_cfg = cfg.get("florence2", {})
     try:
         import torch
-        from transformers import AutoModelForCausalLM, AutoProcessor
+        from transformers import AutoConfig, AutoModelForCausalLM, AutoProcessor
     except Exception as exc:
         raise RuntimeError(
             "Florence-2 dependencies are missing. Install latest transformers, torch, accelerate, and pillow."
@@ -254,8 +274,11 @@ def load_florence2_grounder(cfg: dict[str, Any], root: Path) -> Florence2Grounde
     torch_dtype = torch_dtype_from_config(torch, florence_cfg.get("dtype", "auto"))
     device = str(florence_cfg.get("device", "cuda:0" if torch.cuda.is_available() else "cpu"))
 
+    model_config = AutoConfig.from_pretrained(model_source, trust_remote_code=trust_remote_code, **shared_kwargs)
+    patch_florence2_generation_config(model_config)
     model = AutoModelForCausalLM.from_pretrained(
         model_source,
+        config=model_config,
         trust_remote_code=trust_remote_code,
         torch_dtype=torch_dtype,
         **shared_kwargs,
@@ -327,6 +350,7 @@ def florence2_ground_queries(grounder: Florence2Grounder, image: Image.Image, qu
             else:
                 moved[key] = value
         with torch.inference_mode():
+            patch_florence2_generation_config(grounder.model)
             generated_ids = grounder.model.generate(
                 input_ids=moved.get("input_ids"),
                 pixel_values=moved.get("pixel_values"),
