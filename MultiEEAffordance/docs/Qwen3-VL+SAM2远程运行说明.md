@@ -30,6 +30,25 @@ python -m pip install -r MultiEEAffordance/requirements-vlm.txt
 - Qwen3-VL 官方模型卡建议使用最新源码版 `transformers`。
 - 服务器驱动显示 CUDA Version 12.0，通常可以运行 PyTorch cu121 wheel；如果远程报 CUDA/driver 不兼容，再改为服务器管理员推荐的 PyTorch 版本。
 - Florence-2 的 remote modeling code 需要 `einops` 和 `timm`，已写入 `requirements-vlm.txt`。如果是旧环境，可以直接补装：`python -m pip install einops timm`。
+- 如果服务器无法访问 GitHub，不要使用 `git+https://github.com/huggingface/transformers` 形式安装；当前 `requirements-vlm.txt` 已改为从 PyPI 安装 `transformers`。
+- 如果为了排查 Florence-2 权重完整性而设置 `florence2.use_safetensors: false`，新版 `transformers` 要求 torch 至少为 2.6 才允许加载 `.bin` 权重。当前服务器驱动显示 CUDA Version 12.0 时，优先建议使用 PyTorch 2.6.0 + cu118 wheel：
+
+```bash
+python -m pip install --upgrade --force-reinstall \
+  torch==2.6.0 torchvision==0.21.0 torchaudio==2.6.0 \
+  --index-url https://download.pytorch.org/whl/cu118
+```
+
+检查：
+
+```bash
+python - <<'PY'
+import torch
+print("torch:", torch.__version__)
+print("cuda runtime:", torch.version.cuda)
+print("cuda available:", torch.cuda.is_available())
+PY
+```
 
 ## 3. 安装 SAM2
 

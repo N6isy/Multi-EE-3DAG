@@ -5,7 +5,7 @@
 #   git clone https://github.com/facebookresearch/sam2.git external/sam2
 #   cd external/sam2 && python -m pip install -e .
 
-git+https://github.com/huggingface/transformers
+transformers
 accelerate
 pillow
 numpy
