@@ -476,6 +476,125 @@ def dry_run_boxes(view_entry: dict[str, Any], queries: list[str]) -> list[dict[s
     ]
 
 
+def box_area(box: list[int]) -> int:
+    return max(0, int(box[2]) - int(box[0])) * max(0, int(box[3]) - int(box[1]))
+
+
+def intersect_boxes(a: list[int], b: list[int]) -> list[int] | None:
+    x1 = max(int(a[0]), int(b[0]))
+    y1 = max(int(a[1]), int(b[1]))
+    x2 = min(int(a[2]), int(b[2]))
+    y2 = min(int(a[3]), int(b[3]))
+    if x2 <= x1 or y2 <= y1:
+        return None
+    return [x1, y1, x2, y2]
+
+
+def deduplicate_boxes(boxes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    seen: set[tuple[int, int, int, int, str]] = set()
+    for item in boxes:
+        box = item.get("box")
+        if not isinstance(box, list) or len(box) < 4:
+            continue
+        key = (int(box[0]), int(box[1]), int(box[2]), int(box[3]), str(item.get("query", "")))
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(item)
+    return out
+
+
+def refine_grounding_boxes(
+    boxes: list[dict[str, Any]],
+    view_entry: dict[str, Any],
+    queries: list[str],
+    image_shape: tuple[int, ...],
+    cfg: dict[str, Any],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    refine_cfg = cfg.get("grounding_refine", {})
+    if not bool(refine_cfg.get("enabled", False)):
+        return boxes, []
+
+    image_size = int(min(image_shape[0], image_shape[1]))
+    image_area = float(max(1, image_shape[0] * image_shape[1]))
+    max_area_ratio = float(refine_cfg.get("max_box_area_ratio", 1.0))
+    clip_to_zoom = bool(refine_cfg.get("clip_large_boxes_to_zoom_crop", False))
+    fallback_to_zoom = bool(refine_cfg.get("fallback_to_zoom_crop", False))
+    reject_exact_labels = {
+        str(label).strip().lower()
+        for label in refine_cfg.get("reject_exact_labels", [])
+        if str(label).strip()
+    }
+    zoom_box = normalize_box(view_entry.get("zoom_crop_bbox"), image_size)
+
+    refined: list[dict[str, Any]] = []
+    notes: list[dict[str, Any]] = []
+    for item in boxes:
+        box = normalize_box(item.get("box"), image_size)
+        if box is None:
+            notes.append({"action": "drop_invalid_box", "item": item})
+            continue
+        label = str(item.get("label", "")).strip().lower()
+        area_ratio = box_area(box) / image_area
+        reject_by_label = label in reject_exact_labels
+        too_large = area_ratio > max_area_ratio
+        if (too_large or reject_by_label) and clip_to_zoom and zoom_box is not None:
+            clipped = intersect_boxes(box, zoom_box)
+            if clipped is not None:
+                new_item = dict(item)
+                new_item["box_before_refine"] = box
+                new_item["box"] = clipped
+                new_item["refine_action"] = "clip_to_zoom_crop"
+                new_item["refine_reason"] = {
+                    "too_large": bool(too_large),
+                    "area_ratio": float(area_ratio),
+                    "reject_by_label": bool(reject_by_label),
+                    "zoom_crop_bbox": zoom_box,
+                }
+                refined.append(new_item)
+                notes.append(
+                    {
+                        "action": "clip_to_zoom_crop",
+                        "label": label,
+                        "box_before_refine": box,
+                        "box_after_refine": clipped,
+                        "area_ratio": float(area_ratio),
+                    }
+                )
+                continue
+        if too_large or reject_by_label:
+            notes.append(
+                {
+                    "action": "drop_box",
+                    "label": label,
+                    "box": box,
+                    "area_ratio": float(area_ratio),
+                    "too_large": bool(too_large),
+                    "reject_by_label": bool(reject_by_label),
+                }
+            )
+            continue
+        new_item = dict(item)
+        new_item["box"] = box
+        refined.append(new_item)
+
+    refined = deduplicate_boxes(refined)
+    if not refined and fallback_to_zoom and zoom_box is not None:
+        refined.append(
+            {
+                "query": queries[0] if queries else "",
+                "label": "zoom_crop_fallback",
+                "box": zoom_box,
+                "score": 0.0,
+                "source": "zoom_crop_fallback",
+                "refine_action": "fallback_to_zoom_crop",
+            }
+        )
+        notes.append({"action": "fallback_to_zoom_crop", "box": zoom_box})
+    return refined, notes
+
+
 def parse_florence_boxes(parsed: Any, task_prompt: str, query: str, image_size: tuple[int, int], max_boxes: int) -> list[dict[str, Any]]:
     payload = parsed.get(task_prompt, parsed) if isinstance(parsed, dict) else {}
     if not isinstance(payload, dict):
@@ -656,6 +775,8 @@ def run_for_row(
             boxes = manual_boxes[view]
         else:
             boxes = boxes_from_backend(args, row, entry, queries, image_pil, grounder)
+        raw_boxes = [dict(item) for item in boxes]
+        boxes, refine_notes = refine_grounding_boxes(boxes, entry, queries, image.shape, cfg)
         diagnostics = getattr(grounder, "last_diagnostics", []) if grounder is not None else []
 
         normalized_boxes: list[dict[str, Any]] = []
@@ -689,6 +810,8 @@ def run_for_row(
                 "sample_id": sample_id,
                 "view": view,
                 "queries": queries,
+                "raw_boxes": raw_boxes,
+                "refine_notes": refine_notes,
                 "boxes": normalized_boxes,
                 "diagnostics": diagnostics,
                 "mask_source": mask_source,

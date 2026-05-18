@@ -97,6 +97,20 @@ segmentation:
   snap_negative_points: false
   hook_prefer_points_over_boxes: true
 
+grounding_refine:
+  # Florence-2 may ground "bag handle" to the whole bag on sparse point renders.
+  # For pilot candidate generation, constrain overly large boxes to the
+  # upper/target zoom crop computed during rendering.
+  enabled: true
+  max_box_area_ratio: 0.18
+  clip_large_boxes_to_zoom_crop: true
+  fallback_to_zoom_crop: true
+  reject_exact_labels:
+    - bag
+    - bag body
+    - object
+    - whole object
+
 runtime:
   seed: 0
   overwrite: false
