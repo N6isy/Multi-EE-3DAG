@@ -60,6 +60,9 @@ florence2:
   task_prompt: "<CAPTION_TO_PHRASE_GROUNDING>"
   max_new_tokens: 1024
   num_beams: 3
+  # Newer transformers may pass EncoderDecoderCache objects that older
+  # Florence-2 remote code cannot index. Disable cache for compatibility.
+  use_cache: false
 
 sam2:
   # Option A: local checkpoint cloned from facebookresearch/sam2.

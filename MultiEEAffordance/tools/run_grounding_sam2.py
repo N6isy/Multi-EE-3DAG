@@ -394,6 +394,15 @@ def apply_attn_implementation(config: Any, value: str | None) -> None:
                 continue
 
 
+def apply_use_cache(config: Any, value: bool) -> None:
+    """Apply use_cache to all nested config-like objects."""
+    for config_obj in collect_config_objects(config):
+        try:
+            setattr(config_obj, "use_cache", value)
+        except Exception:
+            continue
+
+
 def load_florence2_grounder(cfg: dict[str, Any], root: Path) -> Florence2Grounder:
     florence_cfg = cfg.get("florence2", {})
     try:
@@ -419,6 +428,7 @@ def load_florence2_grounder(cfg: dict[str, Any], root: Path) -> Florence2Grounde
     if str(attn_implementation).lower() in {"", "none", "null"}:
         attn_implementation = "eager"
     attn_implementation = str(attn_implementation)
+    use_cache = bool(florence_cfg.get("use_cache", False))
 
     config_class = load_florence2_config_class(model_source, shared_kwargs) if trust_remote_code else None
     if config_class is not None:
@@ -428,6 +438,7 @@ def load_florence2_grounder(cfg: dict[str, Any], root: Path) -> Florence2Grounde
         model_config = AutoConfig.from_pretrained(model_source, trust_remote_code=trust_remote_code, **shared_kwargs)
     patch_florence2_generation_config(model_config)
     apply_attn_implementation(model_config, attn_implementation)
+    apply_use_cache(model_config, use_cache)
     model_class = load_florence2_auto_class(model_source, shared_kwargs, "AutoModelForCausalLM") if trust_remote_code else None
     patch_florence2_model_class(model_class)
 
@@ -440,6 +451,7 @@ def load_florence2_grounder(cfg: dict[str, Any], root: Path) -> Florence2Grounde
     }
     model = AutoModelForCausalLM.from_pretrained(model_source, **model_kwargs).to(device)
     patch_florence2_generation_config(model)
+    apply_use_cache(model, use_cache)
     patch_tokenizer_additional_special_tokens()
     processor = AutoProcessor.from_pretrained(model_source, trust_remote_code=trust_remote_code, **shared_kwargs)
     model.eval()
@@ -492,6 +504,7 @@ def florence2_ground_queries(grounder: Florence2Grounder, image: Image.Image, qu
     task_prompt = str(grounder.cfg.get("task_prompt", "<CAPTION_TO_PHRASE_GROUNDING>"))
     max_new_tokens = int(grounder.cfg.get("max_new_tokens", 1024))
     num_beams = int(grounder.cfg.get("num_beams", 3))
+    use_cache = bool(grounder.cfg.get("use_cache", False))
     boxes: list[dict[str, Any]] = []
     width, height = image.size
 
@@ -514,6 +527,7 @@ def florence2_ground_queries(grounder: Florence2Grounder, image: Image.Image, qu
                 max_new_tokens=max_new_tokens,
                 num_beams=num_beams,
                 do_sample=False,
+                use_cache=use_cache,
             )
         generated_text = grounder.processor.batch_decode(generated_ids, skip_special_tokens=False)[0]
         parsed = grounder.processor.post_process_generation(generated_text, task=task_prompt, image_size=(width, height))
