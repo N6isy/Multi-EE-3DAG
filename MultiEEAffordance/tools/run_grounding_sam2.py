@@ -511,7 +511,6 @@ def florence2_ground_queries(grounder: Florence2Grounder, image: Image.Image, qu
             generated_ids = grounder.model.generate(
                 input_ids=moved.get("input_ids"),
                 pixel_values=moved.get("pixel_values"),
-                attention_mask=moved.get("attention_mask"),
                 max_new_tokens=max_new_tokens,
                 num_beams=num_beams,
                 do_sample=False,
