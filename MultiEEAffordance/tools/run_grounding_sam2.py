@@ -33,6 +33,7 @@ class Florence2Grounder:
         self.device = device
         self.torch_dtype = torch_dtype
         self.cfg = cfg
+        self.last_diagnostics: list[dict[str, Any]] = []
 
 
 FLORENCE2_GENERATION_DEFAULTS = {
@@ -421,6 +422,9 @@ def load_florence2_grounder(cfg: dict[str, Any], root: Path) -> Florence2Grounde
         shared_kwargs["revision"] = florence_cfg["revision"]
     if florence_cfg.get("local_files_only") is not None:
         shared_kwargs["local_files_only"] = bool(florence_cfg["local_files_only"])
+    model_load_kwargs = dict(shared_kwargs)
+    if florence_cfg.get("use_safetensors") is not None:
+        model_load_kwargs["use_safetensors"] = bool(florence_cfg["use_safetensors"])
     trust_remote_code = bool(florence_cfg.get("trust_remote_code", True))
     torch_dtype = torch_dtype_from_config(torch, florence_cfg.get("dtype", "auto"))
     device = str(florence_cfg.get("device", "cuda:0" if torch.cuda.is_available() else "cpu"))
@@ -447,7 +451,7 @@ def load_florence2_grounder(cfg: dict[str, Any], root: Path) -> Florence2Grounde
         "trust_remote_code": trust_remote_code,
         "torch_dtype": torch_dtype,
         "attn_implementation": attn_implementation,
-        **shared_kwargs,
+        **model_load_kwargs,
     }
     model = AutoModelForCausalLM.from_pretrained(model_source, **model_kwargs).to(device)
     patch_florence2_generation_config(model)
@@ -507,6 +511,7 @@ def florence2_ground_queries(grounder: Florence2Grounder, image: Image.Image, qu
     use_cache = bool(grounder.cfg.get("use_cache", False))
     boxes: list[dict[str, Any]] = []
     width, height = image.size
+    grounder.last_diagnostics = []
 
     for query in queries:
         prompt = f"{task_prompt}{query}"
@@ -531,6 +536,15 @@ def florence2_ground_queries(grounder: Florence2Grounder, image: Image.Image, qu
             )
         generated_text = grounder.processor.batch_decode(generated_ids, skip_special_tokens=False)[0]
         parsed = grounder.processor.post_process_generation(generated_text, task=task_prompt, image_size=(width, height))
+        grounder.last_diagnostics.append(
+            {
+                "query": query,
+                "prompt": prompt,
+                "generated_text": generated_text,
+                "parsed": parsed,
+                "image_size": [width, height],
+            }
+        )
         parsed_boxes = parse_florence_boxes(parsed, task_prompt, query, (width, height), args.max_boxes_per_query)
         for item in parsed_boxes:
             item["raw_text"] = generated_text
@@ -642,6 +656,7 @@ def run_for_row(
             boxes = manual_boxes[view]
         else:
             boxes = boxes_from_backend(args, row, entry, queries, image_pil, grounder)
+        diagnostics = getattr(grounder, "last_diagnostics", []) if grounder is not None else []
 
         normalized_boxes: list[dict[str, Any]] = []
         for item in boxes:
@@ -675,6 +690,7 @@ def run_for_row(
                 "view": view,
                 "queries": queries,
                 "boxes": normalized_boxes,
+                "diagnostics": diagnostics,
                 "mask_source": mask_source,
                 "backend": args.backend,
             },

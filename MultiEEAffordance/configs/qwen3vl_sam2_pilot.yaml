@@ -51,6 +51,10 @@ florence2:
   local_files_only: true
   cache_dir: null
   revision: null
+  # The local directory currently contains both model.safetensors and
+  # pytorch_model.bin. Prefer the PyTorch checkpoint because the safetensors
+  # load report showed missing language_model embeddings/lm_head.
+  use_safetensors: false
   trust_remote_code: true
   device: cuda:0
   dtype: auto
