@@ -70,6 +70,20 @@ VLM 应负责语义和机制判断，不应直接承担稀疏点云图上的精�
 | mask builder | 将通过候选写回 `[N,4]` 的目标执行器通道 | 生成 ground truth |
 | human review | accept / refine / reject / uncertain | 被自动流程取代 |
 
+### 3.1.1 规则过滤的保守原则
+
+规则过滤器只做机制一致性检查，不能在 VLM 已经运行后重新引入 VLM 没有支持的候选。否则会出现一种隐蔽错误：VLM 只看了 A-J，但规则模块又把 K-R 中某些几何上像边界/细结构的候选写入 accepted，最终 mask 会包含没有被 VLM 或人工看过的区域。
+
+当前默认策略：
+
+| 情况 | 默认处理 |
+| --- | --- |
+| 候选获得足够 VLM selected votes | 可以进入 `accepted_candidates`，仍需人工审查 |
+| 候选有 VLM 投票但低于 `--min-selected-votes` | 降为 `uncertain_candidates` |
+| 候选被展示给 VLM 但未被选中或标为 uncertain | 不自动进入正例 |
+| 候选没有展示给 VLM | 直接拒绝，除非后续人工明确加入 |
+| 完全没有 VLM selection 文件 | 可按配置启用 rule-only weak proposal，但必须标为弱候选 |
+
 ### 3.2 通用候选类型
 
 | 候选类型 | 生成依据 | 主要服务对象 |

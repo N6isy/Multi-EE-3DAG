@@ -50,6 +50,12 @@ def parse_args() -> argparse.Namespace:
         default=True,
         help="If no VLM selection exists, allow high-score rule candidates as weak proposals.",
     )
+    parser.add_argument(
+        "--require-vlm-for-accept",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="When VLM selection exists, require enough VLM votes before a candidate can be accepted.",
+    )
     parser.add_argument("--overwrite", action="store_true", help="Overwrite outputs.")
     return parser.parse_args()
 
@@ -165,6 +171,61 @@ def build_vlm_vote_maps(selection: dict[str, Any] | None) -> tuple[dict[str, int
     return selected, uncertain
 
 
+def visible_candidate_ids(selection: dict[str, Any] | None) -> set[str]:
+    if not selection:
+        return set()
+    ids: set[str] = set()
+    for item in selection.get("candidate_ids", []):
+        cid = str(item).strip().upper()
+        if cid:
+            ids.add(cid)
+    for item in selection.get("ranked_candidates", []):
+        if not isinstance(item, dict):
+            continue
+        cid = str(item.get("candidate_id", "")).strip().upper()
+        if cid:
+            ids.add(cid)
+    return ids
+
+
+def enforce_vlm_acceptance_gate(
+    scored: list[dict[str, Any]],
+    selection: dict[str, Any] | None,
+    min_selected_votes: int,
+) -> None:
+    """Keep rule filtering from accepting candidates that VLM did not support.
+
+    The rule score is a mechanism sanity check, not an independent positive-label
+    generator once a VLM selection pass has actually run. Candidates not shown to
+    VLM, or shown but not selected/marked uncertain, should not silently enter
+    the positive mask.
+    """
+    if selection is None:
+        return
+    shown_ids = visible_candidate_ids(selection)
+    for item in scored:
+        cid = str(item["candidate_id"]).upper()
+        selected = int(item.get("selected_votes", 0))
+        uncertain = int(item.get("uncertain_votes", 0))
+        if shown_ids and cid not in shown_ids:
+            if item["decision"] != "reject_candidate":
+                item["decision"] = "reject_candidate"
+                item["reasons"].append("该候选没有出现在 VLM overlay/selection 候选列表中，不能仅凭规则自动 accept")
+            continue
+        if selected >= min_selected_votes:
+            continue
+        if selected > 0 or uncertain > 0:
+            if item["decision"] == "accept_candidate":
+                item["decision"] = "uncertain"
+                item["reasons"].append(
+                    f"VLM 支持不足：selected_votes={selected}，低于 min_selected_votes={min_selected_votes}，降为 uncertain"
+                )
+            continue
+        if item["decision"] == "accept_candidate":
+            item["decision"] = "reject_candidate"
+            item["reasons"].append("VLM selection 已运行，但该候选未被选择或标为 uncertain，不能自动写入正例")
+
+
 def score_candidate(
     candidate: dict[str, Any],
     executor: str,
@@ -244,6 +305,9 @@ def filter_for_row(root: Path, args: argparse.Namespace, row: dict[str, str]) ->
             if item["decision"] == "accept_candidate":
                 item["decision"] = "uncertain"
                 item["reasons"].append("存在 VLM selection 文件，但 VLM 没有选择/不确定投票；不能仅凭规则自动写入正例")
+
+    if selection is not None and has_vlm_signal and args.require_vlm_for_accept:
+        enforce_vlm_acceptance_gate(scored, selection, args.min_selected_votes)
 
     if selection is None and not args.use_rule_only_if_no_vlm:
         for item in scored:
