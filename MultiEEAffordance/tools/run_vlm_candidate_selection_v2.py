@@ -45,6 +45,11 @@ def parse_args() -> argparse.Namespace:
         default="processed/vlm_candidate_v2/vlm_selection",
         help="Selection output root relative to dataset root.",
     )
+    parser.add_argument(
+        "--part-plan-root",
+        default="processed/vlm_semantic_part/part_plans",
+        help="Optional Qwen3-VL part-plan root relative to dataset root.",
+    )
     parser.add_argument("--pilot-id", default=None, help="Run only one pilot row.")
     parser.add_argument("--limit", type=int, default=None, help="Limit selected rows.")
     parser.add_argument("--overwrite", action="store_true", help="Overwrite outputs.")
@@ -83,7 +88,7 @@ def write_json(path: Path, data: dict[str, Any], overwrite: bool) -> None:
         f.write("\n")
 
 
-def build_prompt(row: dict[str, str], view: str, candidates: list[dict[str, Any]]) -> str:
+def build_prompt(row: dict[str, str], view: str, candidates: list[dict[str, Any]], part_plan: dict[str, Any] | None) -> str:
     executor = row.get("executor", "")
     task = row.get("task", "")
     candidate_lines = "\n".join(
@@ -97,6 +102,18 @@ def build_prompt(row: dict[str, str], view: str, candidates: list[dict[str, Any]
         )
         for item in candidates
     )
+    part_context = "No previous semantic part plan is available."
+    if part_plan:
+        target_parts = part_plan.get("target_part_names", [])
+        queries = part_plan.get("grounding_queries", [])
+        ranked = part_plan.get("ranked_queries", [])
+        part_context = (
+            f"Previous Qwen3-VL semantic part plan target parts: {target_parts}\n"
+            f"Previous grounding queries: {queries}\n"
+            f"Ranked semantic queries: {ranked}\n"
+            "Use this as semantic context. The current colored candidates may have generic geometry names, "
+            "but they can still correspond to these target parts spatially."
+        )
     return f"""
 You are helping build a multi-label 3D affordance dataset for heterogeneous end-effectors.
 
@@ -113,6 +130,9 @@ View: {view}
 Pilot issue type: {row.get('issue_type', '')}
 Pilot reason: {row.get('pilot_reason', '')}
 
+Semantic part-planner context:
+{part_context}
+
 Candidate list:
 {candidate_lines}
 
@@ -120,9 +140,11 @@ Decision principles:
 1. Select only candidates that are task-related functional contact regions, not all touchable surfaces.
 2. A selected region must satisfy the mechanism of the specified end-effector.
 3. Candidate families are proposals, not labels. You may reject a geometrically plausible candidate if it is not semantically functional.
-4. If the view is ambiguous, put the candidate into uncertain_candidates instead of selected_candidates.
-5. Reject broad fallback/body regions unless they are clearly the functional operation area for this task.
-6. Do not output pixel coordinates, boxes, or segmentation masks.
+4. Do not reject a candidate only because its name is generic, such as "thin_structure" or "existing_gripper_weak_mask".
+5. If a candidate spatially overlaps the semantic target part from the part plan, select it or mark it uncertain even if its original weak-label source came from another executor.
+6. If the view is ambiguous, put the candidate into uncertain_candidates instead of selected_candidates.
+7. Reject broad fallback/body regions unless they are clearly the functional operation area for this task.
+8. Do not output pixel coordinates, boxes, or segmentation masks.
 
 Return strict JSON only:
 {{
@@ -209,6 +231,13 @@ def normalize_selection(raw: dict[str, Any], valid_ids: set[str], view: str) -> 
     }
 
 
+def load_part_plan(root: Path, args: argparse.Namespace, pilot_id: str) -> dict[str, Any] | None:
+    path = resolve_path(root, args.part_plan_root) / pilot_id / "combined_part_plan.json"
+    if not path.exists():
+        return None
+    return read_json(path)
+
+
 def select_rows(root: Path, args: argparse.Namespace) -> list[dict[str, str]]:
     rows = read_csv(resolve_path(root, args.pilot_csv))
     if args.pilot_id:
@@ -231,6 +260,7 @@ def run_for_row(
     pilot_id = row["pilot_id"]
     overlay_manifest_path = resolve_path(root, args.overlay_root) / pilot_id / "overlay_manifest.json"
     overlay_manifest = read_json(overlay_manifest_path)
+    part_plan = load_part_plan(root, args, pilot_id)
     candidates = overlay_manifest["candidates"]
     valid_ids = {str(item["candidate_id"]) for item in candidates}
     output_dir = resolve_path(root, args.selection_root) / pilot_id
@@ -261,7 +291,7 @@ def run_for_row(
                 "raw_qwen3vl_response": {},
             }
         else:
-            prompt = build_prompt(row, view, candidates)
+            prompt = build_prompt(row, view, candidates, part_plan)
             raw = run_qwen_json(model, processor, selector_path, prompt, cfg)
             selection = normalize_selection(raw, valid_ids, view)
         for cid in selection["selected_candidates"]:

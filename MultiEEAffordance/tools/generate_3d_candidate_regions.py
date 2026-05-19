@@ -22,6 +22,7 @@ import csv
 import json
 import string
 import sys
+from collections import deque
 from pathlib import Path
 from typing import Any
 
@@ -52,6 +53,16 @@ def parse_args() -> argparse.Namespace:
         default="processed/vlm_candidate_v2/3d_candidates",
         help="Output root relative to dataset root.",
     )
+    parser.add_argument(
+        "--renders-root",
+        default="processed/vlm_semantic_part/renders",
+        help="Optional render root used for view-based component proposals.",
+    )
+    parser.add_argument(
+        "--fallback-renders-root",
+        default="processed/vlm_pilot/renders",
+        help="Fallback render root for view-based component proposals.",
+    )
     parser.add_argument("--pilot-id", default=None, help="Generate only one pilot row.")
     parser.add_argument("--limit", type=int, default=None, help="Limit selected pilot rows.")
     parser.add_argument("--k-neighbors", type=int, default=24, help="kNN size for local geometric features.")
@@ -63,6 +74,9 @@ def parse_args() -> argparse.Namespace:
         help="Drop candidates larger than this fraction of the object.",
     )
     parser.add_argument("--max-candidates", type=int, default=18, help="Maximum candidates kept per pilot row.")
+    parser.add_argument("--view-dilation-radius", type=int, default=3, help="2D dilation radius for visual components.")
+    parser.add_argument("--body-row-threshold-ratio", type=float, default=0.18, help="Dense-row threshold for body top.")
+    parser.add_argument("--body-top-margin", type=int, default=8, help="Margin above estimated body top.")
     parser.add_argument("--overwrite", action="store_true", help="Overwrite existing outputs.")
     return parser.parse_args()
 
@@ -106,6 +120,13 @@ def write_json(path: Path, data: dict[str, Any], overwrite: bool) -> None:
         f.write("\n")
 
 
+def read_json(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        raise FileNotFoundError(f"JSON not found: {path}")
+    with path.open("r", encoding="utf-8") as f:
+        return json.load(f)
+
+
 def load_points(path: Path) -> tuple[np.ndarray, np.ndarray | None]:
     if not path.exists():
         raise FileNotFoundError(f"Point cloud not found: {path}")
@@ -124,6 +145,16 @@ def load_mask(path: Path | None, n: int) -> np.ndarray | None:
     if mask.ndim != 2 or mask.shape[0] != n or mask.shape[1] != len(EXECUTOR_ORDER):
         raise ValueError(f"Expected mask shape [N,4] matching N={n}, got {mask.shape}: {path}")
     return mask.astype(np.uint8)
+
+
+def render_manifest_path(root: Path, args: argparse.Namespace, sample_id: str) -> Path | None:
+    preferred = resolve_path(root, args.renders_root) / sample_id / "view_manifest.json"
+    if preferred.exists():
+        return preferred
+    fallback = resolve_path(root, args.fallback_renders_root) / sample_id / "view_manifest.json"
+    if fallback.exists():
+        return fallback
+    return None
 
 
 def pairwise_knn(xyz: np.ndarray, k: int) -> np.ndarray:
@@ -177,6 +208,148 @@ def quantile_mask(values: np.ndarray, q: float, side: str) -> np.ndarray:
     if side == "ge":
         return values >= threshold
     raise ValueError(f"Unknown side: {side}")
+
+
+def dilate_bool(mask: np.ndarray, radius: int) -> np.ndarray:
+    radius = max(0, int(radius))
+    if radius <= 0:
+        return mask.astype(bool)
+    h, w = mask.shape
+    out = np.zeros((h, w), dtype=bool)
+    r2 = radius * radius
+    for dy in range(-radius, radius + 1):
+        for dx in range(-radius, radius + 1):
+            if dx * dx + dy * dy > r2:
+                continue
+            src_y0 = max(0, -dy)
+            src_y1 = min(h, h - dy)
+            src_x0 = max(0, -dx)
+            src_x1 = min(w, w - dx)
+            dst_y0 = max(0, dy)
+            dst_y1 = min(h, h + dy)
+            dst_x0 = max(0, dx)
+            dst_x1 = min(w, w + dx)
+            out[dst_y0:dst_y1, dst_x0:dst_x1] |= mask[src_y0:src_y1, src_x0:src_x1]
+    return out
+
+
+def connected_components(mask: np.ndarray) -> list[dict[str, Any]]:
+    h, w = mask.shape
+    visited = np.zeros((h, w), dtype=bool)
+    neighbors = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
+    components: list[dict[str, Any]] = []
+    ys, xs = np.where(mask)
+    for start_y, start_x in zip(ys.tolist(), xs.tolist()):
+        if visited[start_y, start_x]:
+            continue
+        q: deque[tuple[int, int]] = deque([(start_y, start_x)])
+        visited[start_y, start_x] = True
+        pixels: list[tuple[int, int]] = []
+        while q:
+            y, x = q.popleft()
+            pixels.append((y, x))
+            for dy, dx in neighbors:
+                ny, nx = y + dy, x + dx
+                if 0 <= ny < h and 0 <= nx < w and mask[ny, nx] and not visited[ny, nx]:
+                    visited[ny, nx] = True
+                    q.append((ny, nx))
+        py = np.asarray([p[0] for p in pixels], dtype=np.int32)
+        px = np.asarray([p[1] for p in pixels], dtype=np.int32)
+        components.append(
+            {
+                "pixels": pixels,
+                "area": int(len(pixels)),
+                "bbox": [int(px.min()), int(py.min()), int(px.max()), int(py.max())],
+                "center": [float(px.mean()), float(py.mean())],
+            }
+        )
+    return components
+
+
+def ids_from_pixels(index_map: np.ndarray, pixels: list[tuple[int, int]]) -> np.ndarray:
+    if not pixels:
+        return np.asarray([], dtype=np.int64)
+    ys = np.asarray([p[0] for p in pixels], dtype=np.int64)
+    xs = np.asarray([p[1] for p in pixels], dtype=np.int64)
+    ids = index_map[ys, xs]
+    ids = ids[ids >= 0]
+    if ids.size == 0:
+        return np.asarray([], dtype=np.int64)
+    return np.unique(ids.astype(np.int64))
+
+
+def above_body_ids_from_view(index_map: np.ndarray, row_threshold_ratio: float, margin: int) -> np.ndarray:
+    valid = index_map >= 0
+    if not np.any(valid):
+        return np.asarray([], dtype=np.int64)
+    row_counts = valid.sum(axis=1)
+    threshold = max(6, int(round(float(row_counts.max()) * float(row_threshold_ratio))))
+    dense_rows = np.where(row_counts >= threshold)[0]
+    if dense_rows.size == 0:
+        return np.asarray([], dtype=np.int64)
+    body_top = int(dense_rows.min())
+    cutoff = max(0, body_top - max(0, int(margin)))
+    ids = index_map[:cutoff, :]
+    ids = ids[ids >= 0]
+    if ids.size == 0:
+        return np.asarray([], dtype=np.int64)
+    return np.unique(ids.astype(np.int64))
+
+
+def render_component_candidate_ids(
+    root: Path,
+    args: argparse.Namespace,
+    sample_id: str,
+    num_points: int,
+) -> dict[str, np.ndarray]:
+    manifest_path = render_manifest_path(root, args, sample_id)
+    if manifest_path is None:
+        return {}
+    manifest = read_json(manifest_path)
+    above_chunks: list[np.ndarray] = []
+    detached_chunks: list[np.ndarray] = []
+    small_component_chunks: list[np.ndarray] = []
+
+    for entry in manifest.get("views", []):
+        index_path = resolve_portable_path(root, entry["point_index_path"], manifest_path.parent)
+        if not index_path.exists():
+            continue
+        index_map = np.load(index_path)
+        above_ids = above_body_ids_from_view(index_map, args.body_row_threshold_ratio, args.body_top_margin)
+        if above_ids.size:
+            above_chunks.append(above_ids)
+
+        foreground = dilate_bool(index_map >= 0, args.view_dilation_radius)
+        comps = connected_components(foreground)
+        if not comps:
+            continue
+        largest_area = max(int(comp["area"]) for comp in comps)
+        h = index_map.shape[0]
+        for comp in comps:
+            ids = ids_from_pixels(index_map, comp["pixels"])
+            if ids.size < args.min_points:
+                continue
+            if ids.size > max(1, int(num_points * 0.22)):
+                continue
+            _, y1, _, y2 = comp["bbox"]
+            center_y = float(comp["center"][1])
+            is_detached = int(comp["area"]) < largest_area * 0.45
+            is_upper = center_y <= h * 0.58 or y1 <= h * 0.42
+            if is_detached and is_upper:
+                detached_chunks.append(ids)
+            if int(comp["area"]) < largest_area * 0.18:
+                small_component_chunks.append(ids)
+
+    def union(chunks: list[np.ndarray]) -> np.ndarray:
+        if not chunks:
+            return np.asarray([], dtype=np.int64)
+        return np.unique(np.concatenate(chunks).astype(np.int64))
+
+    return {
+        "above_main_body_structure": union(above_chunks),
+        "detached_upper_or_side_component": union(detached_chunks),
+        "small_visual_component": union(small_component_chunks),
+    }
 
 
 def bbox_extent_ratio(xyz: np.ndarray, mask: np.ndarray) -> list[float]:
@@ -277,16 +450,81 @@ def generate_candidates(
     items: list[tuple[np.ndarray, dict[str, Any]]] = []
     task = row.get("task", "")
 
+    view_ids = render_component_candidate_ids(
+        root=Path(args.dataset_root).resolve(),
+        args=args,
+        sample_id=row["sample_id"],
+        num_points=n,
+    )
+    above_main = view_ids.get("above_main_body_structure", np.asarray([], dtype=np.int64))
+    detached = view_ids.get("detached_upper_or_side_component", np.asarray([], dtype=np.int64))
+    small_visual = view_ids.get("small_visual_component", np.asarray([], dtype=np.int64))
+    if above_main.size:
+        mask = np.zeros((n,), dtype=np.uint8)
+        mask[above_main[(above_main >= 0) & (above_main < n)]] = 1
+        add_candidate(
+            items,
+            mask,
+            "above_main_body_structure",
+            "visual_detached_structure",
+            "View-derived points above the dense main body; useful for handles, loops, rings, or top protrusions.",
+            ["hook", "gripper", "dexterous_hand"],
+            ["pick_up", "lift_carry", "open_pull"],
+            xyz,
+            args.min_points,
+            min(float(args.max_candidate_fraction), 0.30),
+            quality_hint="targeted_visual_proposal",
+        )
+    if detached.size:
+        mask = np.zeros((n,), dtype=np.uint8)
+        mask[detached[(detached >= 0) & (detached < n)]] = 1
+        add_candidate(
+            items,
+            mask,
+            "detached_upper_or_side_component",
+            "visual_detached_component",
+            "Small detached visual component from multi-view point-index maps; may be a handle, ring, knob, or protruding part.",
+            ["hook", "gripper", "dexterous_hand"],
+            ["pick_up", "lift_carry", "open_pull", "press_push"],
+            xyz,
+            args.min_points,
+            min(float(args.max_candidate_fraction), 0.35),
+            quality_hint="targeted_visual_proposal",
+        )
+    if small_visual.size:
+        mask = np.zeros((n,), dtype=np.uint8)
+        mask[small_visual[(small_visual >= 0) & (small_visual < n)]] = 1
+        add_candidate(
+            items,
+            mask,
+            "small_visual_component",
+            "visual_small_component",
+            "Small foreground components seen in rendered views; high-recall proposal for small functional parts.",
+            ["hook", "gripper", "dexterous_hand"],
+            ["pick_up", "lift_carry", "open_pull", "press_push"],
+            xyz,
+            args.min_points,
+            min(float(args.max_candidate_fraction), 0.35),
+            quality_hint="targeted_visual_proposal",
+        )
+
     if weak_mask is not None:
         for ch, executor in enumerate(EXECUTOR_ORDER):
             source = weak_mask[:, ch] > 0
+            recommended = [executor]
+            if executor in {"gripper", "dexterous_hand"}:
+                recommended.extend(["hook", "dexterous_hand", "gripper"])
+            recommended = list(dict.fromkeys(recommended))
             add_candidate(
                 items,
                 source,
                 f"existing_{executor}_weak_mask",
                 "existing_weak_mask",
-                f"Existing checked/weak mask channel for {executor}; useful as a prior, not final truth.",
-                [executor],
+                (
+                    f"Existing checked/weak mask channel for {executor}; useful as a spatial prior, "
+                    "not final truth. A gripper/hand prior may overlap handles that are relevant to hook."
+                ),
+                recommended,
                 [task] if task else [],
                 xyz,
                 args.min_points,

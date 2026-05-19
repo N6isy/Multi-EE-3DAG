@@ -47,6 +47,18 @@ VLM 应负责语义和机制判断，不应直接承担稀疏点云图上的精�
 
 也就是说，先由可解释的几何/弱标签模块提出候选区域，再让 VLM 从候选 A/B/C/D 中选择符合当前任务和执行器机制的区域。VLM 不再输出 box、point 或 mask。
 
+### 3.0 远程空选择反馈与 v2.1 修正
+
+在远程 `vlm_pilot_005: Bag / lift_carry / hook` 的 v2 候选选择实验中，Qwen3-VL 对 8 个视角都返回了空的 `selected_candidates` 和 `uncertain_candidates`。这不是简单的模型失效，而是暴露出 v2 的两个关键缺口：
+
+| 暴露问题 | 具体表现 | 修正方向 |
+| --- | --- | --- |
+| 候选区域缺少语义桥接 | 候选名多为 `smooth_surface`、`thin_structure`、`edge_or_boundary` 等几何描述，VLM 难以把它们和 `bag handle / handle loop` 对齐 | 在候选选择 prompt 中显式加入 Qwen3-VL 语义部件计划，让 VLM 知道当前应寻找的目标部件 |
+| 候选生成缺少面向稀疏点云的视觉部件候选 | bag handle 只有少量点，纯几何候选容易把它当成普通稀疏点或弱标签残留 | 从多视角 `point_index map` 中补充 `above_main_body_structure`、`detached_upper_or_side_component`、`small_visual_component` 等视觉候选 |
+| 旧弱标签来源会误导 VLM | handle 区域可能来自 gripper weak mask，但当前任务是 hook，VLM 会认为它不是 hook 候选 | 弱标签候选增加说明：gripper/hand 的空间先验可能覆盖 handle，可作为 hook 的候选但必须经机制审查 |
+
+因此，v2.1 的核心不是让 VLM 更激进地“猜”，而是把它的输入改成更符合任务的形式：**语义部件计划告诉 VLM 应该找什么，3D 候选生成器告诉 VLM 可以在哪些真实点云区域中选择**。
+
 ### 3.1 模块分工
 
 | 模块 | 负责 | 不负责 |
@@ -71,8 +83,13 @@ VLM 应负责语义和机制判断，不应直接承担稀疏点云图上的精�
 | `protruding_or_thin_part` | 轴向极值处的细长或突出结构 | gripper、hook、hand |
 | `small_protrusion` | 小型凸起或高曲率紧凑区域 | button、knob、switch |
 | `central_body` | 主体中部候选 | dexterous hand 包覆抓握，需严格审查 |
+| `above_main_body_structure` | 多视角中位于主体上方或外侧的稀疏结构 | handle、loop、ring、top protrusion |
+| `detached_upper_or_side_component` | 多视角中与主体分离或弱连接的小部件 | handle、hookable component、thin attachment |
+| `small_visual_component` | 渲染图中的小型连通视觉部件 | button、knob、ring、handle fragment |
 
 这些候选不是正例。它们的目标是尽量保证“正确区域在候选集合中”，后续再通过 VLM、规则和人工审查过滤。
+
+需要强调的是，新增的视觉候选仍然是通用候选，不是 bag/handle 特例。它们只利用多视角渲染和 `point_index map` 找出“主体外的小型结构”，可服务于 hook 的环/孔/提手，也可服务于 gripper 的细柄、dexterous hand 的旋钮按钮等。
 
 ## 4. 四执行器机制过滤
 
@@ -91,7 +108,7 @@ VLM 应负责语义和机制判断，不应直接承担稀疏点云图上的精�
 | --- | --- |
 | `tools/generate_3d_candidate_regions.py` | 从真实点云、已有弱 mask 和局部几何特征生成通用 3D 候选 |
 | `tools/render_candidate_overlays_v2.py` | 把候选区域渲染成 VLM 可读的多视角 overlay 和 selector panel |
-| `tools/run_vlm_candidate_selection_v2.py` | 让 Qwen3-VL 从候选 ID 中选择，而不是输出 box/mask |
+| `tools/run_vlm_candidate_selection_v2.py` | 让 Qwen3-VL 结合语义部件计划从候选 ID 中选择，而不是输出 box/mask |
 | `tools/filter_candidates_by_executor_rules.py` | 按四类执行器机制对 VLM 选择结果做规则过滤 |
 | `tools/build_v2_candidate_masks.py` | 将通过过滤的候选写回 `[N,4]` mask，并生成网页审查 JSONL |
 
