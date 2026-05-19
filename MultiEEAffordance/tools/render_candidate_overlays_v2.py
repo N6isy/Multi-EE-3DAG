@@ -166,20 +166,36 @@ def overlay_candidates(
     return Image.fromarray(base), positive_pixels, bboxes
 
 
-def draw_legend(image: Image.Image, candidates: list[dict[str, Any]]) -> None:
-    draw = ImageDraw.Draw(image)
+def make_legend_band(width: int, candidates: list[dict[str, Any]]) -> Image.Image:
     font = ImageFont.load_default()
-    x0, y0 = 12, 12
+    margin = 12
     row_h = 18
-    width = min(image.width - 24, 560)
-    height = 10 + row_h * len(candidates)
-    draw.rectangle([x0 - 6, y0 - 6, x0 + width, y0 + height], fill=(8, 10, 14), outline=(88, 96, 112))
+    columns = max(1, min(3, width // 480))
+    rows = int(np.ceil(len(candidates) / columns))
+    col_w = max(1, (width - margin * 2) // columns)
+    height = margin * 2 + row_h * rows
+    band = Image.new("RGB", (width, height), (8, 10, 14))
+    draw = ImageDraw.Draw(band)
+    draw.rectangle([0, 0, width - 1, height - 1], outline=(88, 96, 112))
     for idx, item in enumerate(candidates):
-        y = y0 + idx * row_h
+        col = idx // rows
+        row = idx % rows
+        x = margin + col * col_w
+        y = margin + row * row_h
         color = PALETTE[idx % len(PALETTE)]
-        draw.rectangle([x0, y + 2, x0 + 12, y + 14], fill=color)
+        draw.rectangle([x, y + 2, x + 12, y + 14], fill=color)
         label = f"{item['candidate_id']}: {item['candidate_name']} ({item['candidate_family']})"
-        draw.text((x0 + 18, y), label[:84], fill=(235, 238, 245), font=font)
+        max_chars = max(24, int((col_w - 26) / 6))
+        draw.text((x + 18, y), label[:max_chars], fill=(235, 238, 245), font=font)
+    return band
+
+
+def append_legend_footer(image: Image.Image, candidates: list[dict[str, Any]]) -> Image.Image:
+    legend = make_legend_band(image.width, candidates)
+    out = Image.new("RGB", (image.width, image.height + legend.height), (14, 16, 20))
+    out.paste(image, (0, 0))
+    out.paste(legend, (0, image.height))
+    return out
 
 
 def crop_box_from_bboxes(bboxes: dict[str, list[int] | None], padding: int, w: int, h: int) -> list[int] | None:
@@ -196,7 +212,7 @@ def crop_box_from_bboxes(bboxes: dict[str, list[int] | None], padding: int, w: i
     return [max(0, min(xs) - pad), max(0, min(ys) - pad), min(w - 1, max(xs) + pad), min(h - 1, max(ys) + pad)]
 
 
-def make_selector_panel(overlay: Image.Image, crop_box: list[int] | None) -> Image.Image:
+def make_selector_panel(overlay: Image.Image, crop_box: list[int] | None, candidates: list[dict[str, Any]]) -> Image.Image:
     w, h = overlay.size
     if crop_box is None:
         crop_box = [0, 0, w - 1, h - 1]
@@ -208,15 +224,19 @@ def make_selector_panel(overlay: Image.Image, crop_box: list[int] | None) -> Ima
     crop = crop.resize(new_size, resample)
     canvas = Image.new("RGB", (target, target), (14, 16, 20))
     canvas.paste(crop, ((target - crop.width) // 2, (target - crop.height) // 2))
-    panel = Image.new("RGB", (w + target, h), (14, 16, 20))
-    panel.paste(overlay, (0, 0))
-    panel.paste(canvas, (w, 0))
+    caption_h = 26
+    body = Image.new("RGB", (w + target, h), (14, 16, 20))
+    body.paste(overlay, (0, 0))
+    body.paste(canvas, (w, 0))
+    draw = ImageDraw.Draw(body)
+    draw.line([(w, 0), (w, h)], fill=(88, 96, 112), width=1)
+    panel = Image.new("RGB", (w + target, h + caption_h), (14, 16, 20))
+    panel.paste(body, (0, 0))
     draw = ImageDraw.Draw(panel)
     font = ImageFont.load_default()
-    draw.text((12, h - 22), "Full view with candidates", fill=(235, 238, 245), font=font)
-    draw.text((w + 12, h - 22), "Zoomed candidate region", fill=(235, 238, 245), font=font)
-    draw.line([(w, 0), (w, h)], fill=(88, 96, 112), width=1)
-    return panel
+    draw.text((12, h + 7), "Full view with candidates", fill=(235, 238, 245), font=font)
+    draw.text((w + 12, h + 7), "Zoomed candidate region", fill=(235, 238, 245), font=font)
+    return append_legend_footer(panel, candidates)
 
 
 def render_for_row(root: Path, args: argparse.Namespace, row: dict[str, str]) -> dict[str, Any]:
@@ -253,16 +273,16 @@ def render_for_row(root: Path, args: argparse.Namespace, row: dict[str, str]) ->
             point_radius=args.point_radius,
             alpha=max(0.0, min(1.0, float(args.alpha))),
         )
-        draw_legend(overlay, candidates)
         overlay_path = output_dir / f"{view}_overlay.png"
         if overlay_path.exists() and not args.overwrite:
             raise FileExistsError(f"Output exists. Use --overwrite: {overlay_path}")
-        overlay.save(overlay_path)
+        overlay_with_legend = append_legend_footer(overlay, candidates)
+        overlay_with_legend.save(overlay_path)
         selector_path = overlay_path
         crop_box = None
         if args.selector_panel:
             crop_box = crop_box_from_bboxes(bboxes, args.crop_padding, image.width, image.height)
-            selector = make_selector_panel(overlay, crop_box)
+            selector = make_selector_panel(overlay, crop_box, candidates)
             selector_path = output_dir / f"{view}_selector.png"
             if selector_path.exists() and not args.overwrite:
                 raise FileExistsError(f"Output exists. Use --overwrite: {selector_path}")
