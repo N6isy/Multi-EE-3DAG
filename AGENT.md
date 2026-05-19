@@ -56,10 +56,10 @@
 ## 当前 VLM Pipeline 立场
 
 - Qwen3-VL 更适合作为语义部件规划器，而不是直接输出稀疏点云渲染图上的精确 box / point。
-- Florence-2 / GroundingDINO 负责根据部件文本做 2D grounding。
-- SAM2 负责从 box 或 point prompt 生成 2D mask。
-- `point_index_map` 负责从 2D mask 回投到真实 3D 点云。
-- 所有 VLM/SAM2 输出都只是 candidate proposal，不能直接作为 ground truth，必须经过规则检查和人工审查。
+- 2026-05-19 后，推荐主线升级为 v2：先由真实 3D 点云和已有弱标签生成通用候选区域，再让 Qwen3-VL 从候选 A/B/C/D 中做语义-机制选择。
+- Florence-2 / GroundingDINO / SAM2 可以继续作为辅助分割工具，但不再作为主线中唯一的精确定位来源。
+- v2 主线文件包括：`generate_3d_candidate_regions.py`、`render_candidate_overlays_v2.py`、`run_vlm_candidate_selection_v2.py`、`filter_candidates_by_executor_rules.py`、`build_v2_candidate_masks.py`。
+- 所有 VLM/SAM2/候选生成输出都只是 candidate proposal，不能直接作为 ground truth，必须经过规则检查和人工审查。
 
 ## 回复风格
 

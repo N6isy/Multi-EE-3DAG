@@ -40,6 +40,8 @@ MultiEEAffordance/
     项目进度日志.md
     选题思路跟进报告.md
     异构末端执行器标注规范.md
+    VLM语义部件引导标注Pipeline.md
+    VLM候选选择Pipeline_v2设计与汇报.md
   manifests/
     sample_manifest_template.jsonl
   raw/
@@ -65,6 +67,11 @@ MultiEEAffordance/
     visualize_masks.py
     build_samples_jsonl.py
     check_dataset.py
+    generate_3d_candidate_regions.py
+    render_candidate_overlays_v2.py
+    run_vlm_candidate_selection_v2.py
+    filter_candidates_by_executor_rules.py
+    build_v2_candidate_masks.py
 ```
 
 ## 推荐构建流程

@@ -1,0 +1,76 @@
+version: v2
+
+# VLM-guided Candidate Selection Pipeline v2
+# Workflow:
+# local Codex edits -> GitHub push -> remote git pull -> run scripts manually.
+#
+# This pipeline is designed to avoid asking VLMs to output fragile pixel boxes
+# on sparse point-cloud renders. It first generates interpretable 3D candidate
+# regions, then asks Qwen3-VL to select candidate IDs, and finally applies
+# executor mechanism rules before human review.
+
+inputs:
+  pilot_csv: processed/metadata/vlm_pilot_samples_v0_1.csv
+  checked_samples: processed/metadata/samples_checked_v0_1.jsonl
+  semantic_render_root: processed/vlm_semantic_part/renders
+  fallback_render_root: processed/vlm_pilot/renders
+
+outputs:
+  candidate_root: processed/vlm_candidate_v2/3d_candidates
+  overlay_root: processed/vlm_candidate_v2/candidate_overlays
+  vlm_selection_root: processed/vlm_candidate_v2/vlm_selection
+  rule_filter_root: processed/vlm_candidate_v2/rule_filter
+  fused_mask_root: processed/vlm_candidate_v2/fused_masks
+  candidate_samples: processed/metadata/v2_candidate_samples_v0_1.jsonl
+  candidate_summary: processed/metadata/v2_candidate_summary_v0_1.json
+  split_dir: splits_v2_candidates
+
+candidate_generation:
+  k_neighbors: 24
+  min_points: 4
+  max_candidate_fraction: 0.70
+  max_candidates: 18
+  families:
+    - existing_weak_mask
+    - smooth_surface
+    - smooth_extreme_patch
+    - edge_or_boundary
+    - extreme_edge_or_lip
+    - thin_structure
+    - protruding_or_thin_part
+    - small_protrusion
+    - central_body
+
+candidate_overlay:
+  max_candidates: 10
+  point_radius: 4
+  alpha: 0.78
+  selector_panel: true
+  crop_padding: 80
+
+vlm_selection:
+  model_config: configs/qwen3vl_sam2_pilot.yaml
+  # The selector must output candidate IDs only, never boxes or pixel masks.
+  output_contract:
+    - visible_functional_parts
+    - selected_candidates
+    - uncertain_candidates
+    - rejected_candidates
+    - confidence
+    - reason
+
+rule_filter:
+  min_selected_votes: 1
+  use_rule_only_if_no_vlm: true
+  decisions:
+    accept_candidate: "可进入候选 mask，但仍需人工审查"
+    uncertain: "保留为人工复核线索，默认不写入 mask，除非指定 --include-uncertain"
+    reject_candidate: "不写入候选 mask"
+
+mask_build:
+  include_uncertain_by_default: false
+  target_quality_flag: weak
+  # samples.jsonl label_source must stay within the existing schema enum.
+  # Detailed v2 provenance is stored in v2_candidate_update.provenance.
+  label_source: mixed
+  requires_human_review: true
