@@ -125,6 +125,7 @@ VLM 应负责语义和机制判断，不应直接承担稀疏点云图上的精�
 | `tools/run_vlm_candidate_selection_v2.py` | 让 Qwen3-VL 结合语义部件计划从候选 ID 中选择，而不是输出 box/mask |
 | `tools/filter_candidates_by_executor_rules.py` | 按四类执行器机制对 VLM 选择结果做规则过滤 |
 | `tools/build_v2_candidate_masks.py` | 将通过过滤的候选写回 `[N,4]` mask，并生成网页审查 JSONL |
+| `tools/visualize_v2_candidates.py` | 为人工审查生成已选候选定位图、单候选网格图和 HTML 索引页 |
 
 新增配置：
 
@@ -197,6 +198,30 @@ python MultiEEAffordance/tools/build_v2_candidate_masks.py \
   --pilot-id vlm_pilot_005 \
   --overwrite
 ```
+
+生成候选人工审查可视化：
+
+```bash
+python MultiEEAffordance/tools/visualize_v2_candidates.py \
+  --dataset-root MultiEEAffordance \
+  --pilot-id vlm_pilot_005 \
+  --selected-candidates A \
+  --overwrite
+```
+
+输出目录：
+
+```text
+processed/vlm_candidate_v2/review_visualizations/vlm_pilot_005/
+```
+
+其中：
+
+| 文件 | 用途 |
+| --- | --- |
+| `index.html` | 汇总查看所有视角的人工审查页面 |
+| `{view}_selected_context.png` | 左侧原图、中间仅显示已选候选、右侧局部放大 |
+| `{view}_candidate_grid.png` | 每个候选编号单独成图，方便判断 A/B/C... 的位置 |
 
 用现有网页工具复核：
 

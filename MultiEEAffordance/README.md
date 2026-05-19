@@ -72,6 +72,7 @@ MultiEEAffordance/
     run_vlm_candidate_selection_v2.py
     filter_candidates_by_executor_rules.py
     build_v2_candidate_masks.py
+    visualize_v2_candidates.py
 ```
 
 ## 推荐构建流程
