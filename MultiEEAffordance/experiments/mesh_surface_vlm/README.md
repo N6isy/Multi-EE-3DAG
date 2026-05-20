@@ -94,6 +94,69 @@ python MultiEEAffordance/experiments/mesh_surface_vlm/render_mesh_views.py \
   --overwrite
 ```
 
+## 5.1 Component-aware Mesh + 原始点叠加实验
+
+如果纯 mesh 把 handle 吃掉，可以把候选点从 mesh 重建输入中排除，只用主体点重建 mesh，再在渲染时把原始点云和候选点叠加回来。
+
+例如保留候选 `A,E`，只用剩余点重建 body mesh：
+
+```bash
+python MultiEEAffordance/experiments/mesh_surface_vlm/reconstruct_pointcloud_mesh.py \
+  --dataset-root MultiEEAffordance \
+  --pilot-id vlm_pilot_005 \
+  --output-dir processed/mesh_surface_vlm/vlm_pilot_005_component_aware \
+  --method all \
+  --preserve-candidates A,E \
+  --overwrite
+```
+
+该命令会额外输出：
+
+```text
+preserved_candidate_points.npy
+preserved_candidate_mask.npy
+body_points_for_mesh.npy
+poisson_body_mesh.ply
+ball_pivoting_body_mesh.ply
+alpha_shape_body_mesh.ply
+```
+
+渲染时将 mesh 作为半透明背景，并叠加原始点云与候选 `A,E`：
+
+```bash
+python MultiEEAffordance/experiments/mesh_surface_vlm/render_mesh_views.py \
+  --dataset-root MultiEEAffordance \
+  --pilot-id vlm_pilot_005 \
+  --mesh processed/mesh_surface_vlm/vlm_pilot_005_component_aware/poisson_body_mesh.ply \
+  --output-dir processed/mesh_surface_vlm/vlm_pilot_005_component_aware/renders_poisson_hybrid_AE \
+  --overlay-points \
+  --overlay-candidates A,E \
+  --mesh-alpha 0.55 \
+  --point-alpha 0.25 \
+  --overwrite
+```
+
+如果不想显示全部原始点，只想显示候选点，可以去掉 `--overlay-points`：
+
+```bash
+python MultiEEAffordance/experiments/mesh_surface_vlm/render_mesh_views.py \
+  --dataset-root MultiEEAffordance \
+  --pilot-id vlm_pilot_005 \
+  --mesh processed/mesh_surface_vlm/vlm_pilot_005_component_aware/poisson_body_mesh.ply \
+  --output-dir processed/mesh_surface_vlm/vlm_pilot_005_component_aware/renders_poisson_candidates_AE \
+  --overlay-candidates A,E \
+  --mesh-alpha 0.55 \
+  --overwrite
+```
+
+这个 hybrid render 的目标不是得到更真实的 mesh，而是让 VLM 和人工同时看到：
+
+```text
+主体连续表面 + 原始真实点 + 被保留的候选功能部件
+```
+
+这比“纯 mesh”更适合 hook / handle / ring 这类依赖细结构的 affordance 判断。
+
 ## 6. 如何判断实验是否值得继续
 
 人工检查 mesh render 时重点看：

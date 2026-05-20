@@ -83,14 +83,15 @@ processed/metadata/v2_candidate_samples_v0_1.jsonl
 
 - 查看点云和目标通道正样本；
 - 查看 top-k 候选区域的名称、类型、VLM 票数、规则分数和状态；
-- 鼠标悬停或点击某个候选卡片时，在点云图中实时单独高亮该候选；
+- 鼠标悬停某个候选卡片时，在点云图中临时高亮该候选；
+- 点击某个候选卡片时，锁定该候选预览，直到点击“取消候选预览”或切换新的锁定候选；
 - 勾选一个或多个候选区域，例如 `A`、`A+E` 或 `A+E+I`；
 - 点击“预览勾选组合”，只显示当前勾选候选的组合位置；
 - 点击“应用勾选候选”，将候选组合合并成当前待编辑 mask；
 - 旋转、缩放点云；
 - 切换编辑模式：查看、添加、删除、切换；
 - 点击点云中的点，删除误标点或补充漏标点；
-- 填写审查人、审查状态、质量等级和备注；
+- 填写审查状态、质量等级和备注；
 - 保存新的 refined mask。
 
 运行：
@@ -132,7 +133,6 @@ http://服务器IP:8770
 
 - sample_id；
 - executor；
-- reviewer；
 - selected_candidate_ids；
 - review_status；
 - review_decision；
@@ -142,7 +142,7 @@ http://服务器IP:8770
 - notes；
 - output_mask_path。
 
-这样后续可以追溯每个本科生审查者做了哪些修改。
+当前 MVP 页面不再要求手动填写 `reviewer`。如果后续多人协作上线，应由登录账号或样本领取系统自动提供审查者身份，而不是让审查者在表单里手动输入。
 
 ## 6. 多人协作上线建议
 
@@ -211,11 +211,13 @@ python MultiEEAffordance/tools/serve_v2_annotation_app.py \
 
 人工审查时：
 
-1. 删除 A 中落到无关区域的 false positive 点；
-2. 如果 A 覆盖不足，在网页候选菜单中勾选 E/I 等候选，点击“应用勾选候选”生成组合 mask；
-3. 对组合 mask 继续点级删除/补点；
-4. 保存 refined mask；
-5. 后续由管理员汇总 `v2_manual_refined_samples_v0_1.jsonl`，再进入二次复核。
+1. 悬停候选卡片，快速查看该候选在点云中的位置；
+2. 点击候选卡片，锁定某个候选区域进行仔细判断；
+3. 用 checkbox 勾选真正想组合进 mask 的候选，例如 `A`、`A+E` 或 `A+E+I`；
+4. 点击“应用勾选候选”生成组合 mask；
+5. 对组合 mask 继续点级删除/补点；
+6. 保存 refined mask；
+7. 后续由管理员汇总 `v2_manual_refined_samples_v0_1.jsonl`，再进入二次复核。
 
 ## 8. 当前限制
 

@@ -32,6 +32,16 @@ def parse_args() -> argparse.Namespace:
         default="processed/metadata/samples_checked_v0_1.jsonl",
         help="Samples JSONL relative to dataset root.",
     )
+    parser.add_argument(
+        "--candidate-root",
+        default="processed/vlm_candidate_v2/3d_candidates",
+        help="Candidate root relative to dataset root. Used by --preserve-candidates.",
+    )
+    parser.add_argument(
+        "--preserve-candidates",
+        default="",
+        help="Comma-separated candidate ids to exclude from mesh reconstruction and save as preserved point components.",
+    )
     parser.add_argument("--output-dir", required=True, help="Output directory relative to dataset root or absolute.")
     parser.add_argument(
         "--method",
@@ -162,6 +172,74 @@ def parse_ratios(value: str) -> list[float]:
     return ratios
 
 
+def parse_id_list(value: str) -> list[str]:
+    out: list[str] = []
+    for item in str(value or "").split(","):
+        cid = item.strip().upper()
+        if cid and cid not in out:
+            out.append(cid)
+    return out
+
+
+def load_preserve_mask(root: Path, args: argparse.Namespace, n: int) -> tuple[np.ndarray, list[str], Path | None]:
+    ids = parse_id_list(args.preserve_candidates)
+    preserve_mask = np.zeros((n,), dtype=bool)
+    if not ids:
+        return preserve_mask, [], None
+    if not args.pilot_id:
+        raise ValueError("--preserve-candidates requires --pilot-id so the candidate manifest can be resolved.")
+    manifest_path = resolve_path(root, args.candidate_root) / args.pilot_id / "candidate_manifest.json"
+    if not manifest_path.exists():
+        raise FileNotFoundError(f"Candidate manifest not found: {manifest_path}")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    candidate_npz_path = resolve_path(root, manifest["candidate_npz"])
+    if not candidate_npz_path.exists():
+        candidate_npz_path = manifest_path.parent / Path(manifest["candidate_npz"]).name
+    if not candidate_npz_path.exists():
+        raise FileNotFoundError(f"Candidate NPZ not found: {candidate_npz_path}")
+    data = np.load(candidate_npz_path, allow_pickle=True)
+    candidate_ids = [str(item).upper() for item in data["candidate_ids"].tolist()]
+    candidate_masks = data["candidate_masks"].astype(bool)
+    missing = [cid for cid in ids if cid not in candidate_ids]
+    if missing:
+        raise ValueError(f"Preserve candidates not found in manifest: {missing}")
+    if candidate_masks.ndim != 2 or candidate_masks.shape[1] != n:
+        raise ValueError(f"Candidate mask shape {candidate_masks.shape} does not match point count {n}")
+    for cid in ids:
+        preserve_mask |= candidate_masks[candidate_ids.index(cid)]
+    return preserve_mask, ids, manifest_path
+
+
+def save_component_arrays(
+    root: Path,
+    output_dir: Path,
+    xyz: np.ndarray,
+    preserve_mask: np.ndarray,
+    preserve_ids: list[str],
+    overwrite: bool,
+) -> dict[str, Any]:
+    if not preserve_ids:
+        return {}
+    preserved_points_path = output_dir / "preserved_candidate_points.npy"
+    preserved_mask_path = output_dir / "preserved_candidate_mask.npy"
+    body_points_path = output_dir / "body_points_for_mesh.npy"
+    for path in (preserved_points_path, preserved_mask_path, body_points_path):
+        if path.exists() and not overwrite:
+            raise FileExistsError(f"Output exists. Use --overwrite: {path}")
+    np.save(preserved_points_path, xyz[preserve_mask].astype(np.float32))
+    np.save(preserved_mask_path, preserve_mask.astype(np.uint8))
+    np.save(body_points_path, xyz[~preserve_mask].astype(np.float32))
+    return {
+        "preserve_candidates": preserve_ids,
+        "preserved_point_count": int(preserve_mask.sum()),
+        "body_point_count": int((~preserve_mask).sum()),
+        "preserved_points_path": relative_to_root(root, preserved_points_path),
+        "preserved_mask_path": relative_to_root(root, preserved_mask_path),
+        "body_points_path": relative_to_root(root, body_points_path),
+        "notes": "Preserved candidates are not meshed; render them as original points over the body mesh.",
+    }
+
+
 def make_point_cloud(xyz: np.ndarray, normals: np.ndarray | None, args: argparse.Namespace):
     try:
         import open3d as o3d
@@ -254,8 +332,14 @@ def main() -> int:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     xyz, normals = load_points(points_path)
-    diag = bbox_diag(xyz)
-    pcd, o3d = make_point_cloud(xyz, normals, args)
+    preserve_mask, preserve_ids, candidate_manifest_path = load_preserve_mask(root, args, xyz.shape[0])
+    component_summary = save_component_arrays(root, output_dir, xyz, preserve_mask, preserve_ids, args.overwrite)
+    mesh_xyz = xyz[~preserve_mask] if preserve_ids else xyz
+    mesh_normals = normals[~preserve_mask] if normals is not None and preserve_ids else normals
+    if mesh_xyz.shape[0] < 32:
+        raise ValueError(f"Too few points left for mesh reconstruction after preserving candidates: {mesh_xyz.shape[0]}")
+    diag = bbox_diag(mesh_xyz)
+    pcd, o3d = make_point_cloud(mesh_xyz, mesh_normals, args)
 
     methods = ["poisson", "ball_pivoting", "alpha_shape"] if args.method == "all" else [args.method]
     outputs: list[dict[str, Any]] = []
@@ -264,13 +348,13 @@ def main() -> int:
         try:
             if method == "poisson":
                 mesh = reconstruct_poisson(pcd, o3d, args)
-                mesh_path = output_dir / "poisson_mesh.ply"
+                mesh_path = output_dir / ("poisson_body_mesh.ply" if preserve_ids else "poisson_mesh.ply")
             elif method == "ball_pivoting":
                 mesh = reconstruct_ball_pivoting(pcd, o3d, diag, args)
-                mesh_path = output_dir / "ball_pivoting_mesh.ply"
+                mesh_path = output_dir / ("ball_pivoting_body_mesh.ply" if preserve_ids else "ball_pivoting_mesh.ply")
             elif method == "alpha_shape":
                 mesh = reconstruct_alpha_shape(pcd, o3d, diag, args)
-                mesh_path = output_dir / "alpha_shape_mesh.ply"
+                mesh_path = output_dir / ("alpha_shape_body_mesh.ply" if preserve_ids else "alpha_shape_mesh.ply")
             else:
                 raise ValueError(f"Unsupported method: {method}")
             record = write_mesh(o3d, mesh, mesh_path, args.overwrite)
@@ -292,6 +376,10 @@ def main() -> int:
         "experiment": "mesh_surface_vlm",
         "points_path": relative_to_root(root, points_path),
         "num_points": int(xyz.shape[0]),
+        "mesh_input_points": int(mesh_xyz.shape[0]),
+        "component_aware": bool(preserve_ids),
+        "preserved_components": component_summary,
+        "candidate_manifest": relative_to_root(root, candidate_manifest_path) if candidate_manifest_path else None,
         "bbox_diag": float(diag),
         "methods_requested": methods,
         "outputs": [

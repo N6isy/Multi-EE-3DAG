@@ -465,9 +465,10 @@ APP_HTML = r"""<!doctype html>
     .hud { position: absolute; left: 12px; bottom: 12px; background: rgba(23,32,46,.82); color: white; padding: 9px 11px; border-radius: 7px; font-size: 12px; line-height: 1.55; }
     .box { border: 1px solid #d8e0eb; background: #f8fafc; border-radius: 8px; padding: 10px; margin-bottom: 12px; font-size: 12px; line-height: 1.55; color: #475569; }
     .candidate-list { display: flex; flex-direction: column; gap: 7px; margin: 8px 0 10px; }
-    .candidate-item { border: 1px solid #d8e0eb; border-radius: 8px; padding: 8px; background: #fff; }
+    .candidate-item { border: 1px solid #d8e0eb; border-radius: 8px; padding: 8px; background: #fff; cursor: pointer; }
     .candidate-item.selected { border-color: #d54444; background: #fff7f7; }
     .candidate-item.focused { border-color: #1f6feb; background: #eef6ff; box-shadow: 0 0 0 2px rgba(31,111,235,.12); }
+    .candidate-item.locked { border-color: #0f766e; background: #ecfdf5; box-shadow: 0 0 0 2px rgba(15,118,110,.14); }
     .candidate-main { display: flex; gap: 8px; align-items: flex-start; }
     .candidate-swatch { width: 12px; height: 12px; border-radius: 3px; margin-top: 3px; flex: 0 0 auto; }
     .candidate-title { font-size: 12px; font-weight: 650; color: #202635; }
@@ -533,7 +534,6 @@ APP_HTML = r"""<!doctype html>
         <button class="secondary" id="clearFocusBtn">取消候选预览</button>
       </div>
     </div>
-    <div class="field"><label>reviewer</label><input id="reviewer" placeholder="填写姓名或学号" /></div>
     <div class="row">
       <div class="field">
         <label>review_status</label>
@@ -579,6 +579,7 @@ let candidateSets = new Map();
 let candidateInfo = [];
 let selectedCandidateIds = new Set();
 let focusedCandidateIds = new Set();
+let previewLocked = false;
 let mode = "toggle";
 let rotX = -0.55, rotY = 0.65, zoom = 1.0;
 let dragging = false, lastX = 0, lastY = 0;
@@ -635,6 +636,7 @@ async function loadSample(sampleId) {
   candidateInfo = (current.candidate_context && current.candidate_context.candidates) || [];
   selectedCandidateIds = new Set();
   focusedCandidateIds = new Set();
+  previewLocked = false;
   candidateInfo.forEach(c => {
     candidateSets.set(c.candidate_id, new Set(c.point_indices || []));
     if (c.default_checked) selectedCandidateIds.add(c.candidate_id);
@@ -671,6 +673,23 @@ function candidateColor(cid) {
   return CANDIDATE_COLORS[(idx < 0 ? 0 : idx) % CANDIDATE_COLORS.length];
 }
 
+function updateCandidateFocusStyles() {
+  document.querySelectorAll(".candidate-item").forEach(item => {
+    const cid = item.dataset.candidateId;
+    const focused = focusedCandidateIds.has(cid);
+    item.classList.toggle("focused", focused && !previewLocked);
+    item.classList.toggle("locked", focused && previewLocked);
+    item.classList.toggle("selected", selectedCandidateIds.has(cid));
+  });
+}
+
+function setCandidateFocus(ids, locked) {
+  focusedCandidateIds = new Set(ids);
+  previewLocked = Boolean(locked && focusedCandidateIds.size);
+  updateCandidateFocusStyles();
+  draw();
+}
+
 function renderCandidateList() {
   const box = document.getElementById("candidateList");
   box.innerHTML = "";
@@ -683,7 +702,8 @@ function renderCandidateList() {
     item.className =
       "candidate-item"
       + (selectedCandidateIds.has(c.candidate_id) ? " selected" : "")
-      + (focusedCandidateIds.has(c.candidate_id) ? " focused" : "");
+      + (focusedCandidateIds.has(c.candidate_id) ? (previewLocked ? " locked" : " focused") : "");
+    item.dataset.candidateId = c.candidate_id;
     const color = candidateColor(c.candidate_id);
     item.innerHTML = `
       <div class="candidate-main">
@@ -698,22 +718,24 @@ function renderCandidateList() {
         </div>
       </div>`;
     const checkbox = item.querySelector("input");
-    checkbox.onchange = () => {
+    checkbox.addEventListener("mousedown", event => event.stopPropagation());
+    checkbox.addEventListener("click", event => event.stopPropagation());
+    checkbox.onchange = (event) => {
+      event.stopPropagation();
       if (checkbox.checked) selectedCandidateIds.add(c.candidate_id);
       else selectedCandidateIds.delete(c.candidate_id);
-      renderCandidateList();
+      updateCandidateFocusStyles();
       draw();
     };
     item.onmouseenter = () => {
-      focusedCandidateIds = new Set([c.candidate_id]);
-      renderCandidateList();
-      draw();
+      if (!previewLocked) setCandidateFocus([c.candidate_id], false);
+    };
+    item.onmouseleave = () => {
+      if (!previewLocked) setCandidateFocus([], false);
     };
     item.onclick = (event) => {
       if (event.target && event.target.tagName === "INPUT") return;
-      focusedCandidateIds = new Set([c.candidate_id]);
-      renderCandidateList();
-      draw();
+      setCandidateFocus([c.candidate_id], true);
     };
     box.appendChild(item);
   });
@@ -733,7 +755,7 @@ function applySelectedCandidates() {
   saveHistory();
   positives = candidateUnion(selectedCandidateIds);
   initialPositives = new Set(positives);
-  draw();
+  setCandidateFocus([...selectedCandidateIds], true);
 }
 
 function clearMask() {
@@ -743,15 +765,11 @@ function clearMask() {
 }
 
 function focusCheckedCandidates() {
-  focusedCandidateIds = new Set(selectedCandidateIds);
-  renderCandidateList();
-  draw();
+  setCandidateFocus([...selectedCandidateIds], true);
 }
 
 function clearCandidateFocus() {
-  focusedCandidateIds = new Set();
-  renderCandidateList();
-  draw();
+  setCandidateFocus([], false);
 }
 
 function project(p) {
@@ -886,7 +904,7 @@ async function saveEdit() {
     selected_candidate_ids: [...selectedCandidateIds].sort(),
     positive_indices: [...positives].sort((a,b) => a-b),
     visible_all_points: current.visible_all_points,
-    reviewer: document.getElementById("reviewer").value,
+    reviewer: "",
     review_status: document.getElementById("reviewStatus").value,
     review_decision: document.getElementById("reviewDecision").value,
     quality_after_review: document.getElementById("quality").value,
