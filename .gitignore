@@ -35,7 +35,10 @@ MultiEEAffordance/splits_semantic_part_candidates/
 MultiEEAffordance/processed/vlm_candidate_v2/
 MultiEEAffordance/processed/metadata/v2_candidate_samples_v0_1.jsonl
 MultiEEAffordance/processed/metadata/v2_candidate_summary_v0_1.json
+MultiEEAffordance/processed/metadata/v2_point_level_review_records.jsonl
+MultiEEAffordance/processed/metadata/v2_manual_refined_samples_v0_1.jsonl
 MultiEEAffordance/splits_v2_candidates/
+MultiEEAffordance/processed/mesh_surface_vlm/
 
 
 # Large model/data files

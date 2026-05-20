@@ -42,6 +42,7 @@ MultiEEAffordance/
     异构末端执行器标注规范.md
     VLM语义部件引导标注Pipeline.md
     VLM候选选择Pipeline_v2设计与汇报.md
+    v2模块化Pipeline与点级审查系统设计.md
   manifests/
     sample_manifest_template.jsonl
   raw/
@@ -73,6 +74,8 @@ MultiEEAffordance/
     filter_candidates_by_executor_rules.py
     build_v2_candidate_masks.py
     visualize_v2_candidates.py
+    run_v2_pipeline.py
+    serve_v2_annotation_app.py
 ```
 
 ## 推荐构建流程
