@@ -467,6 +467,7 @@ APP_HTML = r"""<!doctype html>
     .candidate-list { display: flex; flex-direction: column; gap: 7px; margin: 8px 0 10px; }
     .candidate-item { border: 1px solid #d8e0eb; border-radius: 8px; padding: 8px; background: #fff; }
     .candidate-item.selected { border-color: #d54444; background: #fff7f7; }
+    .candidate-item.focused { border-color: #1f6feb; background: #eef6ff; box-shadow: 0 0 0 2px rgba(31,111,235,.12); }
     .candidate-main { display: flex; gap: 8px; align-items: flex-start; }
     .candidate-swatch { width: 12px; height: 12px; border-radius: 3px; margin-top: 3px; flex: 0 0 auto; }
     .candidate-title { font-size: 12px; font-weight: 650; color: #202635; }
@@ -527,6 +528,10 @@ APP_HTML = r"""<!doctype html>
         <button class="secondary" id="applyCandidatesBtn">应用勾选候选</button>
         <button class="secondary" id="clearMaskBtn">清空当前 mask</button>
       </div>
+      <div class="candidate-actions">
+        <button class="secondary" id="focusCheckedBtn">预览勾选组合</button>
+        <button class="secondary" id="clearFocusBtn">取消候选预览</button>
+      </div>
     </div>
     <div class="field"><label>reviewer</label><input id="reviewer" placeholder="填写姓名或学号" /></div>
     <div class="row">
@@ -573,6 +578,7 @@ let initialPositives = new Set();
 let candidateSets = new Map();
 let candidateInfo = [];
 let selectedCandidateIds = new Set();
+let focusedCandidateIds = new Set();
 let mode = "toggle";
 let rotX = -0.55, rotY = 0.65, zoom = 1.0;
 let dragging = false, lastX = 0, lastY = 0;
@@ -628,6 +634,7 @@ async function loadSample(sampleId) {
   candidateSets = new Map();
   candidateInfo = (current.candidate_context && current.candidate_context.candidates) || [];
   selectedCandidateIds = new Set();
+  focusedCandidateIds = new Set();
   candidateInfo.forEach(c => {
     candidateSets.set(c.candidate_id, new Set(c.point_indices || []));
     if (c.default_checked) selectedCandidateIds.add(c.candidate_id);
@@ -673,7 +680,10 @@ function renderCandidateList() {
   }
   candidateInfo.forEach(c => {
     const item = document.createElement("div");
-    item.className = "candidate-item" + (selectedCandidateIds.has(c.candidate_id) ? " selected" : "");
+    item.className =
+      "candidate-item"
+      + (selectedCandidateIds.has(c.candidate_id) ? " selected" : "")
+      + (focusedCandidateIds.has(c.candidate_id) ? " focused" : "");
     const color = candidateColor(c.candidate_id);
     item.innerHTML = `
       <div class="candidate-main">
@@ -691,6 +701,17 @@ function renderCandidateList() {
     checkbox.onchange = () => {
       if (checkbox.checked) selectedCandidateIds.add(c.candidate_id);
       else selectedCandidateIds.delete(c.candidate_id);
+      renderCandidateList();
+      draw();
+    };
+    item.onmouseenter = () => {
+      focusedCandidateIds = new Set([c.candidate_id]);
+      renderCandidateList();
+      draw();
+    };
+    item.onclick = (event) => {
+      if (event.target && event.target.tagName === "INPUT") return;
+      focusedCandidateIds = new Set([c.candidate_id]);
       renderCandidateList();
       draw();
     };
@@ -718,6 +739,18 @@ function applySelectedCandidates() {
 function clearMask() {
   saveHistory();
   positives = new Set();
+  draw();
+}
+
+function focusCheckedCandidates() {
+  focusedCandidateIds = new Set(selectedCandidateIds);
+  renderCandidateList();
+  draw();
+}
+
+function clearCandidateFocus() {
+  focusedCandidateIds = new Set();
+  renderCandidateList();
   draw();
 }
 
@@ -754,6 +787,13 @@ function nearestPoint(x, y, positiveOnly=false) {
 }
 
 function previewColorForPoint(originalIndex) {
+  if (focusedCandidateIds.size) {
+    for (const cid of focusedCandidateIds) {
+      const s = candidateSets.get(cid);
+      if (s && s.has(originalIndex)) return candidateColor(cid);
+    }
+    return null;
+  }
   for (const c of candidateInfo) {
     const s = candidateSets.get(c.candidate_id);
     if (s && s.has(originalIndex)) return candidateColor(c.candidate_id);
@@ -777,16 +817,22 @@ function draw() {
     const on = positives.has(p.original);
     const preview = showPreview ? previewColorForPoint(p.original) : null;
     ctx.beginPath();
-    ctx.fillStyle = on ? "#d83c3c" : (preview || "#aeb8c6");
-    ctx.globalAlpha = on ? 0.96 : (preview ? 0.72 : 0.34);
-    ctx.arc(p.x, p.y, on ? 4.4 : (preview ? 3.4 : 2.4), 0, Math.PI * 2);
+    if (focusedCandidateIds.size) {
+      ctx.fillStyle = preview || (on ? "#d83c3c" : "#aeb8c6");
+      ctx.globalAlpha = preview ? 0.98 : (on ? 0.34 : 0.16);
+      ctx.arc(p.x, p.y, preview ? 5.2 : (on ? 3.2 : 2.0), 0, Math.PI * 2);
+    } else {
+      ctx.fillStyle = on ? "#d83c3c" : (preview || "#aeb8c6");
+      ctx.globalAlpha = on ? 0.96 : (preview ? 0.72 : 0.34);
+      ctx.arc(p.x, p.y, on ? 4.4 : (preview ? 3.4 : 2.4), 0, Math.PI * 2);
+    }
     ctx.fill();
   }
   ctx.globalAlpha = 1;
   const added = [...positives].filter(x => !initialPositives.has(x)).length;
   const removed = [...initialPositives].filter(x => !positives.has(x)).length;
   document.getElementById("hud").innerHTML =
-    `mode=${mode} | executor=${current.target_executor}<br/>checked_candidates=${[...selectedCandidateIds].join(",") || "(none)"}<br/>positive=${positives.size} | added=${added} | removed=${removed}<br/>拖拽旋转，滚轮缩放；点击按当前模式编辑`;
+    `mode=${mode} | executor=${current.target_executor}<br/>checked_candidates=${[...selectedCandidateIds].join(",") || "(none)"}<br/>preview=${[...focusedCandidateIds].join(",") || "(all/off)"}<br/>positive=${positives.size} | added=${added} | removed=${removed}<br/>拖拽旋转，滚轮缩放；点击按当前模式编辑`;
   document.getElementById("count").value = positives.size;
 }
 
@@ -864,6 +910,8 @@ document.getElementById("resetView").onclick = () => { rotX = -0.55; rotY = 0.65
 document.getElementById("undoBtn").onclick = () => { if (history.length) { positives = history.pop(); draw(); } };
 document.getElementById("applyCandidatesBtn").onclick = applySelectedCandidates;
 document.getElementById("clearMaskBtn").onclick = clearMask;
+document.getElementById("focusCheckedBtn").onclick = focusCheckedCandidates;
+document.getElementById("clearFocusBtn").onclick = clearCandidateFocus;
 document.getElementById("showCandidatePreview").onchange = draw;
 document.getElementById("saveBtn").onclick = () => saveEdit().catch(err => alert(err.message));
 document.getElementById("reloadBtn").onclick = () => current && loadSample(current.sample.sample_id).catch(err => alert(err.message));
