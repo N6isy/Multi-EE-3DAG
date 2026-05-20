@@ -1,12 +1,12 @@
 # VLM Pilot 运行说明
 
-更新时间：2026-05-07 20:51 +08:00
+更新时间：2026-05-20 +08:00
 
-本说明用于把 8 条 pilot 样本从“多视角图像”推进到“候选 3D mask + 网页复核”。
+本说明用于把 10 条 pilot 样本从“多视角图像/候选区域”推进到“候选 3D mask + 网页复核”。
 
 ## 1. 当前状态
 
-- 已有 8 条通道级 pilot 样本：`processed/metadata/vlm_pilot_samples_v0_1.csv`
+- 已有 10 条通道级 pilot 样本：`processed/metadata/vlm_pilot_samples_v0_1.csv`
 - 已有 7 个唯一 object-task 样本的多视角渲染：`processed/vlm_pilot/renders/`
 - 已有 OpenAI VLM 调用脚本：`tools/run_openai_vlm_pilot.py`
 - 已有批量回投/融合脚本：`tools/build_vlm_pilot_candidates.py`
