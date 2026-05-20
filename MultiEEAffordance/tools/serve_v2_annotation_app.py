@@ -520,7 +520,7 @@ APP_HTML = r"""<!doctype html>
     </div>
     <div class="box" id="candidateHint"></div>
     <div class="box">
-      <b>候选选择：</b>系统按 VLM 投票和规则过滤给出 top-k 候选。先勾选候选组合，再点击“应用勾选候选”，随后进行点级删除/补点。
+      <b>候选选择：</b>勾选框表示当前准备采用的候选组合，点云会实时显示已勾选候选的集合。点击候选卡片只用于单独查看某个候选；确认组合后再点击“应用勾选候选”，随后进行点级删除/补点。
       <label style="display:flex;align-items:center;gap:7px;margin-top:8px;color:#334155;">
         <input id="showCandidatePreview" type="checkbox" checked style="width:auto;"> 显示候选预览颜色
       </label>
@@ -641,6 +641,8 @@ async function loadSample(sampleId) {
     candidateSets.set(c.candidate_id, new Set(c.point_indices || []));
     if (c.default_checked) selectedCandidateIds.add(c.candidate_id);
   });
+  focusedCandidateIds = new Set(selectedCandidateIds);
+  previewLocked = selectedCandidateIds.size > 0;
   const ch = current.target_channel;
   current.point_indices.forEach((idx, i) => {
     if (current.masks[i][ch]) positives.add(idx);
@@ -724,8 +726,7 @@ function renderCandidateList() {
       event.stopPropagation();
       if (checkbox.checked) selectedCandidateIds.add(c.candidate_id);
       else selectedCandidateIds.delete(c.candidate_id);
-      updateCandidateFocusStyles();
-      draw();
+      setCandidateFocus([...selectedCandidateIds], selectedCandidateIds.size > 0);
     };
     item.onmouseenter = () => {
       if (!previewLocked) setCandidateFocus([c.candidate_id], false);
