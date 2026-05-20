@@ -61,12 +61,32 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Allow saving when max-points downsampling hides some original points.",
     )
+    parser.add_argument(
+        "--top-k-candidates",
+        type=int,
+        default=8,
+        help="Number of ranked candidates shown in the review UI. Use 0 to show all.",
+    )
     return parser.parse_args()
 
 
 def resolve_path(root: Path, value: str | Path) -> Path:
     path = Path(value)
     return path if path.is_absolute() else root / path
+
+
+def resolve_portable_path(root: Path, value: str | Path | None, base_dir: Path | None = None) -> Path:
+    if value in (None, ""):
+        return Path("")
+    raw = str(value).replace("\\", "/")
+    path = Path(raw)
+    if path.is_absolute():
+        return path
+    if base_dir is not None:
+        candidate = base_dir / path
+        if candidate.exists():
+            return candidate
+    return root / path
 
 
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -83,6 +103,13 @@ def read_jsonl(path: Path) -> list[dict[str, Any]]:
             except json.JSONDecodeError as exc:
                 raise ValueError(f"Invalid JSON at {path}:{line_no}: {exc}") from exc
     return rows
+
+
+def read_json(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        raise FileNotFoundError(f"JSON not found: {path}")
+    with path.open("r", encoding="utf-8") as f:
+        return json.load(f)
 
 
 def write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
@@ -141,6 +168,7 @@ class AnnotationStore:
         output_samples_path: Path,
         max_points: int,
         allow_partial_save: bool,
+        top_k_candidates: int,
     ):
         self.dataset_root = dataset_root
         self.samples_path = samples_path
@@ -149,6 +177,7 @@ class AnnotationStore:
         self.output_samples_path = output_samples_path
         self.max_points = int(max_points)
         self.allow_partial_save = allow_partial_save
+        self.top_k_candidates = int(top_k_candidates)
         self.reload()
 
     def reload(self) -> None:
@@ -180,6 +209,104 @@ class AnnotationStore:
             )
         return {"samples": rows, "count": len(rows)}
 
+    def load_candidate_context(self, sample: dict[str, Any], visible_indices: np.ndarray) -> dict[str, Any]:
+        update = sample.get("v2_candidate_update", {})
+        manifest_value = update.get("candidate_manifest", "")
+        if not manifest_value:
+            return {"available": False, "candidates": [], "default_selected_candidates": update.get("selected_candidates", [])}
+        manifest_path = resolve_portable_path(self.dataset_root, manifest_value)
+        if not manifest_path.exists():
+            return {
+                "available": False,
+                "error": f"candidate_manifest not found: {manifest_value}",
+                "candidates": [],
+                "default_selected_candidates": update.get("selected_candidates", []),
+            }
+        manifest = read_json(manifest_path)
+        npz_path = resolve_portable_path(self.dataset_root, manifest.get("candidate_npz", ""), manifest_path.parent)
+        if not npz_path.exists():
+            return {
+                "available": False,
+                "error": f"candidate_npz not found: {manifest.get('candidate_npz', '')}",
+                "candidates": [],
+                "default_selected_candidates": update.get("selected_candidates", []),
+            }
+        data = np.load(npz_path, allow_pickle=True)
+        candidate_ids = [str(item).upper() for item in data["candidate_ids"].tolist()]
+        candidate_masks = data["candidate_masks"].astype(np.uint8)
+        rule_value = update.get("rule_filter_path", "")
+        rule: dict[str, Any] = {}
+        rule_path = resolve_portable_path(self.dataset_root, rule_value) if rule_value else Path("")
+        if rule_path and rule_path.exists():
+            rule = read_json(rule_path)
+        score_by_id: dict[str, dict[str, Any]] = {}
+        for item in rule.get("candidate_scores", []):
+            if isinstance(item, dict):
+                cid = str(item.get("candidate_id", "")).upper()
+                if cid:
+                    score_by_id[cid] = item
+        accepted = {str(item).upper() for item in rule.get("accepted_candidates", [])}
+        uncertain = {str(item).upper() for item in rule.get("uncertain_candidates", [])}
+        default_selected = [str(item).upper() for item in update.get("selected_candidates", [])]
+        default_selected_set = set(default_selected)
+
+        candidates: list[dict[str, Any]] = []
+        records = {str(item.get("candidate_id", "")).upper(): item for item in manifest.get("candidates", []) if item.get("candidate_id")}
+        for idx, cid in enumerate(candidate_ids):
+            record = records.get(cid, {})
+            score = score_by_id.get(cid, {})
+            visible_mask = candidate_masks[idx][visible_indices].astype(bool)
+            visible_point_indices = visible_indices[visible_mask].astype(int).tolist()
+            selected_votes = int(score.get("selected_votes", 0) or 0)
+            uncertain_votes = int(score.get("uncertain_votes", 0) or 0)
+            rule_score = float(score.get("rule_score", 0.0) or 0.0)
+            decision = str(score.get("decision", ""))
+            if cid in default_selected_set:
+                rank_bucket = 0
+            elif cid in accepted:
+                rank_bucket = 1
+            elif selected_votes > 0:
+                rank_bucket = 2
+            elif cid in uncertain or uncertain_votes > 0:
+                rank_bucket = 3
+            else:
+                rank_bucket = 4
+            candidates.append(
+                {
+                    "candidate_id": cid,
+                    "candidate_name": record.get("candidate_name", score.get("candidate_name", "")),
+                    "candidate_family": record.get("candidate_family", score.get("candidate_family", "")),
+                    "description": record.get("description", ""),
+                    "point_count": int(record.get("point_count", score.get("point_count", len(visible_point_indices))) or 0),
+                    "visible_point_count": len(visible_point_indices),
+                    "point_indices": visible_point_indices,
+                    "selected_votes": selected_votes,
+                    "uncertain_votes": uncertain_votes,
+                    "rule_score": rule_score,
+                    "decision": decision,
+                    "auto_status": "selected" if cid in default_selected_set else ("accepted" if cid in accepted else ("uncertain" if cid in uncertain else "candidate")),
+                    "default_checked": (cid in default_selected_set) if default_selected_set else (cid in accepted),
+                    "_rank": (rank_bucket, -selected_votes, -rule_score, cid),
+                }
+            )
+        candidates.sort(key=lambda item: item["_rank"])
+        for item in candidates:
+            item.pop("_rank", None)
+        if self.top_k_candidates > 0:
+            pinned = [item for item in candidates if item["candidate_id"] in default_selected_set]
+            rest = [item for item in candidates if item["candidate_id"] not in default_selected_set]
+            candidates = (pinned + rest)[: self.top_k_candidates]
+        return {
+            "available": True,
+            "candidate_manifest": str(manifest_path.relative_to(self.dataset_root).as_posix()),
+            "rule_filter_path": str(rule_path.relative_to(self.dataset_root).as_posix()) if rule_path and rule_path.exists() else "",
+            "default_selected_candidates": default_selected,
+            "accepted_candidates": sorted(accepted),
+            "uncertain_candidates": sorted(uncertain),
+            "candidates": candidates,
+            "notes": "Candidates are ranked proposals. Reviewers choose a subset, then refine points manually.",
+        }
+
     def sample_payload(self, sample_id: str) -> dict[str, Any]:
         sample = self.refined_by_id.get(sample_id) or self.samples_by_id.get(sample_id)
         if sample is None:
@@ -203,6 +330,7 @@ class AnnotationStore:
         normalized = normalize_points(points)
         visible_points = normalized[indices]
         visible_masks = (masks[indices] > 0).astype(np.uint8)
+        candidate_context = self.load_candidate_context(sample, indices)
         return {
             "sample": sample,
             "executor_order": EXECUTOR_ORDER,
@@ -220,11 +348,12 @@ class AnnotationStore:
                 "candidate_manifest": update.get("candidate_manifest", ""),
                 "rule_filter_path": update.get("rule_filter_path", ""),
             },
+            "candidate_context": candidate_context,
         }
 
     def save_edit(self, payload: dict[str, Any]) -> dict[str, Any]:
         sample_id = str(payload.get("sample_id", ""))
-        base_sample = self.samples_by_id.get(sample_id)
+        base_sample = self.refined_by_id.get(sample_id) or self.samples_by_id.get(sample_id)
         if base_sample is None:
             raise KeyError(f"Unknown sample_id: {sample_id}")
         executor = str(payload.get("executor") or base_sample.get("v2_candidate_update", {}).get("executor") or "hook")
@@ -264,6 +393,7 @@ class AnnotationStore:
             "executor": executor,
             "source_mask_path": base_sample["multi_channel_mask_path"],
             "output_mask_path": refined_sample["multi_channel_mask_path"],
+            "selected_candidate_ids": [str(item).upper() for item in payload.get("selected_candidate_ids", [])],
             "positive_points_before": len(old_positive),
             "positive_points_after": len(new_positive),
             "added_points": sorted(new_positive - old_positive),
@@ -290,6 +420,7 @@ class AnnotationStore:
             "notes": str(payload.get("notes") or ""),
             "positive_points_before": len(old_positive),
             "positive_points_after": len(new_positive),
+            "selected_candidate_ids": [str(item).upper() for item in payload.get("selected_candidate_ids", [])],
             "added_points": sorted(new_positive - old_positive),
             "removed_points": sorted(old_positive - new_positive),
             "output_mask_path": refined_sample["multi_channel_mask_path"],
@@ -333,6 +464,14 @@ APP_HTML = r"""<!doctype html>
     .toolbar { position: absolute; left: 12px; top: 12px; right: 12px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; z-index: 2; }
     .hud { position: absolute; left: 12px; bottom: 12px; background: rgba(23,32,46,.82); color: white; padding: 9px 11px; border-radius: 7px; font-size: 12px; line-height: 1.55; }
     .box { border: 1px solid #d8e0eb; background: #f8fafc; border-radius: 8px; padding: 10px; margin-bottom: 12px; font-size: 12px; line-height: 1.55; color: #475569; }
+    .candidate-list { display: flex; flex-direction: column; gap: 7px; margin: 8px 0 10px; }
+    .candidate-item { border: 1px solid #d8e0eb; border-radius: 8px; padding: 8px; background: #fff; }
+    .candidate-item.selected { border-color: #d54444; background: #fff7f7; }
+    .candidate-main { display: flex; gap: 8px; align-items: flex-start; }
+    .candidate-swatch { width: 12px; height: 12px; border-radius: 3px; margin-top: 3px; flex: 0 0 auto; }
+    .candidate-title { font-size: 12px; font-weight: 650; color: #202635; }
+    .candidate-meta { font-size: 11px; color: #64748b; line-height: 1.45; margin-top: 2px; }
+    .candidate-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
     .field { margin-bottom: 11px; }
     .field label { display: block; color: #526070; font-size: 12px; margin-bottom: 5px; }
     .row { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
@@ -378,6 +517,17 @@ APP_HTML = r"""<!doctype html>
       <div class="field"><label>positive count</label><input id="count" disabled /></div>
     </div>
     <div class="box" id="candidateHint"></div>
+    <div class="box">
+      <b>候选选择：</b>系统按 VLM 投票和规则过滤给出 top-k 候选。先勾选候选组合，再点击“应用勾选候选”，随后进行点级删除/补点。
+      <label style="display:flex;align-items:center;gap:7px;margin-top:8px;color:#334155;">
+        <input id="showCandidatePreview" type="checkbox" checked style="width:auto;"> 显示候选预览颜色
+      </label>
+      <div class="candidate-list" id="candidateList"></div>
+      <div class="candidate-actions">
+        <button class="secondary" id="applyCandidatesBtn">应用勾选候选</button>
+        <button class="secondary" id="clearMaskBtn">清空当前 mask</button>
+      </div>
+    </div>
     <div class="field"><label>reviewer</label><input id="reviewer" placeholder="填写姓名或学号" /></div>
     <div class="row">
       <div class="field">
@@ -420,12 +570,16 @@ let current = null;
 let currentIndex = -1;
 let positives = new Set();
 let initialPositives = new Set();
+let candidateSets = new Map();
+let candidateInfo = [];
+let selectedCandidateIds = new Set();
 let mode = "toggle";
 let rotX = -0.55, rotY = 0.65, zoom = 1.0;
 let dragging = false, lastX = 0, lastY = 0;
 let history = [];
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
+const CANDIDATE_COLORS = ["#ff4848","#32dc78","#ffd240","#78a0ff","#ff70d2","#46e6eb","#ff9150","#be7dff","#aae65a","#ffffff","#ff7878","#78ffb4"];
 
 function setMode(next) {
   mode = next;
@@ -471,6 +625,13 @@ async function loadSample(sampleId) {
   current = await res.json();
   currentIndex = samples.findIndex(s => s.sample_id === sampleId);
   positives = new Set();
+  candidateSets = new Map();
+  candidateInfo = (current.candidate_context && current.candidate_context.candidates) || [];
+  selectedCandidateIds = new Set();
+  candidateInfo.forEach(c => {
+    candidateSets.set(c.candidate_id, new Set(c.point_indices || []));
+    if (c.default_checked) selectedCandidateIds.add(c.candidate_id);
+  });
   const ch = current.target_channel;
   current.point_indices.forEach((idx, i) => {
     if (current.masks[i][ch]) positives.add(idx);
@@ -495,6 +656,69 @@ function fillPanel() {
      selected_candidates: <code>${(hint.selected_candidates || []).join(",") || "(none)"}</code><br/>
      positive_points_before: <code>${hint.positive_points ?? ""}</code><br/>
      这个页面保存的是人工点级 refinement，不会把自动候选直接当 GT。`;
+  renderCandidateList();
+}
+
+function candidateColor(cid) {
+  const idx = candidateInfo.findIndex(c => c.candidate_id === cid);
+  return CANDIDATE_COLORS[(idx < 0 ? 0 : idx) % CANDIDATE_COLORS.length];
+}
+
+function renderCandidateList() {
+  const box = document.getElementById("candidateList");
+  box.innerHTML = "";
+  if (!candidateInfo.length) {
+    box.innerHTML = `<div class="candidate-meta">没有可用候选上下文。可继续编辑当前 mask，但无法从 top-k 候选中勾选组合。</div>`;
+    return;
+  }
+  candidateInfo.forEach(c => {
+    const item = document.createElement("div");
+    item.className = "candidate-item" + (selectedCandidateIds.has(c.candidate_id) ? " selected" : "");
+    const color = candidateColor(c.candidate_id);
+    item.innerHTML = `
+      <div class="candidate-main">
+        <input type="checkbox" style="width:auto;margin-top:1px" ${selectedCandidateIds.has(c.candidate_id) ? "checked" : ""}>
+        <span class="candidate-swatch" style="background:${color}"></span>
+        <div>
+          <div class="candidate-title">${c.candidate_id} ${c.candidate_name || ""}</div>
+          <div class="candidate-meta">
+            ${c.candidate_family || ""} | status=${c.auto_status || "candidate"} | decision=${c.decision || ""}<br>
+            votes=${c.selected_votes || 0}, uncertain=${c.uncertain_votes || 0}, rule=${Number(c.rule_score || 0).toFixed(2)}, points=${c.point_count || 0}
+          </div>
+        </div>
+      </div>`;
+    const checkbox = item.querySelector("input");
+    checkbox.onchange = () => {
+      if (checkbox.checked) selectedCandidateIds.add(c.candidate_id);
+      else selectedCandidateIds.delete(c.candidate_id);
+      renderCandidateList();
+      draw();
+    };
+    box.appendChild(item);
+  });
+}
+
+function candidateUnion(ids) {
+  const out = new Set();
+  ids.forEach(cid => {
+    const s = candidateSets.get(cid);
+    if (!s) return;
+    s.forEach(idx => out.add(idx));
+  });
+  return out;
+}
+
+function applySelectedCandidates() {
+  saveHistory();
+  positives = candidateUnion(selectedCandidateIds);
+  initialPositives = new Set(positives);
+  draw();
+}
+
+function clearMask() {
+  saveHistory();
+  positives = new Set();
+  draw();
 }
 
 function project(p) {
@@ -529,6 +753,14 @@ function nearestPoint(x, y, positiveOnly=false) {
   return bestD <= 18 * 18 ? best : null;
 }
 
+function previewColorForPoint(originalIndex) {
+  for (const c of candidateInfo) {
+    const s = candidateSets.get(c.candidate_id);
+    if (s && s.has(originalIndex)) return candidateColor(c.candidate_id);
+  }
+  return null;
+}
+
 function saveHistory() {
   history.push(new Set(positives));
   if (history.length > 50) history.shift();
@@ -540,19 +772,21 @@ function draw() {
   ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
   if (!current) return;
   const pts = projectedPoints().sort((a,b) => a.z - b.z);
+  const showPreview = document.getElementById("showCandidatePreview").checked;
   for (const p of pts) {
     const on = positives.has(p.original);
+    const preview = showPreview ? previewColorForPoint(p.original) : null;
     ctx.beginPath();
-    ctx.fillStyle = on ? "#d83c3c" : "#aeb8c6";
-    ctx.globalAlpha = on ? 0.95 : 0.42;
-    ctx.arc(p.x, p.y, on ? 4.2 : 2.5, 0, Math.PI * 2);
+    ctx.fillStyle = on ? "#d83c3c" : (preview || "#aeb8c6");
+    ctx.globalAlpha = on ? 0.96 : (preview ? 0.72 : 0.34);
+    ctx.arc(p.x, p.y, on ? 4.4 : (preview ? 3.4 : 2.4), 0, Math.PI * 2);
     ctx.fill();
   }
   ctx.globalAlpha = 1;
   const added = [...positives].filter(x => !initialPositives.has(x)).length;
   const removed = [...initialPositives].filter(x => !positives.has(x)).length;
   document.getElementById("hud").innerHTML =
-    `mode=${mode} | executor=${current.target_executor}<br/>positive=${positives.size} | added=${added} | removed=${removed}<br/>拖拽旋转，滚轮缩放；点击按当前模式编辑`;
+    `mode=${mode} | executor=${current.target_executor}<br/>checked_candidates=${[...selectedCandidateIds].join(",") || "(none)"}<br/>positive=${positives.size} | added=${added} | removed=${removed}<br/>拖拽旋转，滚轮缩放；点击按当前模式编辑`;
   document.getElementById("count").value = positives.size;
 }
 
@@ -603,6 +837,7 @@ async function saveEdit() {
   const payload = {
     sample_id: current.sample.sample_id,
     executor: current.target_executor,
+    selected_candidate_ids: [...selectedCandidateIds].sort(),
     positive_indices: [...positives].sort((a,b) => a-b),
     visible_all_points: current.visible_all_points,
     reviewer: document.getElementById("reviewer").value,
@@ -627,6 +862,9 @@ document.getElementById("modeAdd").onclick = () => setMode("add");
 document.getElementById("modeDelete").onclick = () => setMode("delete");
 document.getElementById("resetView").onclick = () => { rotX = -0.55; rotY = 0.65; zoom = 1; draw(); };
 document.getElementById("undoBtn").onclick = () => { if (history.length) { positives = history.pop(); draw(); } };
+document.getElementById("applyCandidatesBtn").onclick = applySelectedCandidates;
+document.getElementById("clearMaskBtn").onclick = clearMask;
+document.getElementById("showCandidatePreview").onchange = draw;
 document.getElementById("saveBtn").onclick = () => saveEdit().catch(err => alert(err.message));
 document.getElementById("reloadBtn").onclick = () => current && loadSample(current.sample.sample_id).catch(err => alert(err.message));
 window.addEventListener("resize", resize);
@@ -701,6 +939,7 @@ def main() -> int:
         output_samples_path=resolve_path(root, args.output_samples),
         max_points=args.max_points,
         allow_partial_save=args.allow_partial_save,
+        top_k_candidates=args.top_k_candidates,
     )
     Handler.store = store
     server = ThreadingHTTPServer((args.host, args.port), Handler)

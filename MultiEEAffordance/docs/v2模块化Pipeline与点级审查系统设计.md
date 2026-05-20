@@ -79,9 +79,12 @@ tools/serve_v2_annotation_app.py
 processed/metadata/v2_candidate_samples_v0_1.jsonl
 ```
 
-并在浏览器中显示候选 mask 对应的目标执行器通道。审查者可以：
+并在浏览器中显示候选 mask 对应的目标执行器通道。系统同时会读取该样本的 `candidate_manifest` 和 `rule_filter`，把 VLM/规则筛选后的 top-k 候选显示成可勾选菜单。审查者可以：
 
 - 查看点云和目标通道正样本；
+- 查看 top-k 候选区域的名称、类型、VLM 票数、规则分数和状态；
+- 勾选一个或多个候选区域，例如 `A`、`A+E` 或 `A+E+I`；
+- 点击“应用勾选候选”，将候选组合合并成当前待编辑 mask；
 - 旋转、缩放点云；
 - 切换编辑模式：查看、添加、删除、切换；
 - 点击点云中的点，删除误标点或补充漏标点；
@@ -95,7 +98,8 @@ python MultiEEAffordance/tools/serve_v2_annotation_app.py \
   --dataset-root MultiEEAffordance \
   --samples processed/metadata/v2_candidate_samples_v0_1.jsonl \
   --host 0.0.0.0 \
-  --port 8770
+  --port 8770 \
+  --top-k-candidates 8
 ```
 
 本地访问：
@@ -127,6 +131,7 @@ http://服务器IP:8770
 - sample_id；
 - executor；
 - reviewer；
+- selected_candidate_ids；
 - review_status；
 - review_decision；
 - positive_points_before / after；
@@ -205,14 +210,16 @@ python MultiEEAffordance/tools/serve_v2_annotation_app.py \
 人工审查时：
 
 1. 删除 A 中落到无关区域的 false positive 点；
-2. 如果 A 覆盖不足，参考 `visualize_v2_candidates.py` 的 `candidate_grid` 判断是否需要加入 E/I；
-3. 保存 refined mask；
-4. 后续由管理员汇总 `v2_manual_refined_samples_v0_1.jsonl`，再进入二次复核。
+2. 如果 A 覆盖不足，在网页候选菜单中勾选 E/I 等候选，点击“应用勾选候选”生成组合 mask；
+3. 对组合 mask 继续点级删除/补点；
+4. 保存 refined mask；
+5. 后续由管理员汇总 `v2_manual_refined_samples_v0_1.jsonl`，再进入二次复核。
 
 ## 8. 当前限制
 
 - MVP 使用 Python 标准库 HTTP server，不是高并发生产服务；
 - 当前点级编辑以点为单位，适合 2048 点规模数据；
 - 暂未实现账号登录、样本锁定和多人冲突检测；
+- 候选组合已经支持勾选，但暂未实现候选级 reject 原因结构化记录；
 - 暂未实现框选/套索选择，只支持点击单点增删；
 - refined mask 仍需要二次质量检查，不能直接等同 verified 数据。
