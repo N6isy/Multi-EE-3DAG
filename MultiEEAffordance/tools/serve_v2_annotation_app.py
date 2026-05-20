@@ -641,8 +641,6 @@ async function loadSample(sampleId) {
     candidateSets.set(c.candidate_id, new Set(c.point_indices || []));
     if (c.default_checked) selectedCandidateIds.add(c.candidate_id);
   });
-  focusedCandidateIds = new Set(selectedCandidateIds);
-  previewLocked = selectedCandidateIds.size > 0;
   const ch = current.target_channel;
   current.point_indices.forEach((idx, i) => {
     if (current.masks[i][ch]) positives.add(idx);
@@ -726,7 +724,7 @@ function renderCandidateList() {
       event.stopPropagation();
       if (checkbox.checked) selectedCandidateIds.add(c.candidate_id);
       else selectedCandidateIds.delete(c.candidate_id);
-      setCandidateFocus([...selectedCandidateIds], selectedCandidateIds.size > 0);
+      syncMaskToSelectedCandidates(true);
     };
     item.onmouseenter = () => {
       if (!previewLocked) setCandidateFocus([c.candidate_id], false);
@@ -752,11 +750,18 @@ function candidateUnion(ids) {
   return out;
 }
 
-function applySelectedCandidates() {
-  saveHistory();
+function syncMaskToSelectedCandidates(recordHistory=true) {
+  if (recordHistory) saveHistory();
   positives = candidateUnion(selectedCandidateIds);
   initialPositives = new Set(positives);
-  setCandidateFocus([...selectedCandidateIds], true);
+  focusedCandidateIds = new Set();
+  previewLocked = false;
+  updateCandidateFocusStyles();
+  draw();
+}
+
+function applySelectedCandidates() {
+  syncMaskToSelectedCandidates(true);
 }
 
 function clearMask() {
@@ -834,7 +839,9 @@ function draw() {
   const showPreview = document.getElementById("showCandidatePreview").checked;
   for (const p of pts) {
     const on = positives.has(p.original);
-    const preview = showPreview ? previewColorForPoint(p.original) : null;
+    let preview = showPreview ? previewColorForPoint(p.original) : null;
+    if (!focusedCandidateIds.size && selectedCandidateIds.size && !on) preview = null;
+    if (mode === "delete" && !on) preview = null;
     ctx.beginPath();
     if (focusedCandidateIds.size) {
       ctx.fillStyle = preview || (on ? "#d83c3c" : "#aeb8c6");
