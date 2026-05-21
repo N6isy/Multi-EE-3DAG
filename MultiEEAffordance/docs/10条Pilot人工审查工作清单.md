@@ -54,6 +54,7 @@ CUDA_VISIBLE_DEVICES=1,2 python MultiEEAffordance/tools/run_v2_pipeline.py \
 说明：
 
 - `--limit 10` 表示读取 `vlm_pilot_samples_v0_1.csv` 前 10 条；
+- `render` 阶段会先自动调用 `render_vlm_friendly_views.py` 生成多视角图和 `view_manifest.json`，再调用 `render_candidate_overlays_v2.py` 生成候选 overlay；
 - `--allow-empty` 是必要的，因为某些执行器/任务组合可能没有被规则过滤接受的候选，但仍需要进入人工审查；
 - `--overwrite` 会重建 v2 candidate 样本表，不会删除已经保存的 manual refined mask。
 

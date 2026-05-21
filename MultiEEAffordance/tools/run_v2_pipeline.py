@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Run the modular v2 candidate-labeling pipeline.
 
-This wrapper keeps the candidate-generation, VLM-selection, rule-filtering,
-mask-building, and review-visualization steps in one reproducible command.
+This wrapper keeps the candidate-generation, view-rendering, VLM-selection,
+rule-filtering, mask-building, and review-visualization steps in one reproducible command.
 It does not replace the individual scripts; it records and runs them in order.
 """
 
@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any
 
 
-DEFAULT_STAGES = ["generate", "render", "select", "filter", "build", "visualize"]
+DEFAULT_STAGES = ["generate", "views", "render", "select", "filter", "build", "visualize"]
 
 
 def parse_args() -> argparse.Namespace:
@@ -74,6 +74,8 @@ def build_commands(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
     commands: list[tuple[str, list[str]]] = []
     if "generate" in stages:
         commands.append(("generate", add_common([sys.executable, script(root, "generate_3d_candidate_regions.py")], args)))
+    if "views" in stages or "render" in stages:
+        commands.append(("views", add_common([sys.executable, script(root, "render_vlm_friendly_views.py")], args)))
     if "render" in stages:
         commands.append(("render", add_common([sys.executable, script(root, "render_candidate_overlays_v2.py")], args)))
     if "select" in stages:
