@@ -326,6 +326,16 @@ def selected_from_rule(root: Path, args: argparse.Namespace) -> list[str]:
     return [str(item).strip().upper() for item in data.get("accepted_candidates", []) if str(item).strip()]
 
 
+def selected_from_manifest(candidate_manifest: dict[str, Any]) -> list[str]:
+    for key in ("default_selected_candidates", "selected_candidates", "accepted_candidates"):
+        values = candidate_manifest.get(key, [])
+        if isinstance(values, list):
+            out = [str(item).strip().upper() for item in values if str(item).strip()]
+            if out:
+                return out
+    return []
+
+
 def relative_path(from_dir: Path, target: Path) -> str:
     try:
         return target.relative_to(from_dir).as_posix()
@@ -395,7 +405,7 @@ def main() -> int:
     candidates = candidate_manifest["candidates"]
     candidate_by_id = {str(item["candidate_id"]).upper(): item for item in candidates}
 
-    selected_ids = parse_id_list(args.selected_candidates) or selected_from_rule(root, args)
+    selected_ids = parse_id_list(args.selected_candidates) or selected_from_rule(root, args) or selected_from_manifest(candidate_manifest)
     selected_ids = [cid for cid in selected_ids if cid in candidate_by_id]
 
     view_manifest_path = render_manifest_path(root, args, sample_id)
@@ -485,7 +495,7 @@ def main() -> int:
         "candidate_manifest": relative_to_dataset(root, candidate_manifest_path),
         "selected_candidates": selected_ids,
         "views": manifest_views,
-        "notes": "Images are for human inspection only; v2 candidate labels require manual review before checked use.",
+        "notes": "Images are for human inspection only; candidate labels require manual review before checked use.",
     }
     write_json(output_dir / "review_visualization_manifest.json", output_manifest, args.overwrite)
     html_text = build_html(output_manifest, output_dir, selected_ids)
