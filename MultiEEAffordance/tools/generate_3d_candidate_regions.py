@@ -11,8 +11,8 @@ This is the first stage of the v2 pipeline:
 
 The generator is intentionally high-recall. It proposes interpretable regions
 such as smooth patches, extreme bands, thin structures, high-curvature points,
-small protrusions, and existing weak-label channels. These candidates are not
-ground truth.
+small protrusions, loop/handle components, expanded seed regions, and existing
+weak-label channels. These candidates are not ground truth.
 """
 
 from __future__ import annotations
@@ -73,7 +73,19 @@ def parse_args() -> argparse.Namespace:
         default=0.70,
         help="Drop candidates larger than this fraction of the object.",
     )
-    parser.add_argument("--max-candidates", type=int, default=18, help="Maximum candidates kept per pilot row.")
+    parser.add_argument("--max-candidates", type=int, default=36, help="Maximum candidates kept per pilot row.")
+    parser.add_argument(
+        "--seed-expand-hops",
+        type=int,
+        default=1,
+        help="kNN expansion hops used to turn sparse seed points into reviewable region candidates.",
+    )
+    parser.add_argument(
+        "--component-max-candidates",
+        type=int,
+        default=8,
+        help="Maximum connected seed components converted to separate part-level candidates.",
+    )
     parser.add_argument("--view-dilation-radius", type=int, default=3, help="2D dilation radius for visual components.")
     parser.add_argument("--body-row-threshold-ratio", type=float, default=0.18, help="Dense-row threshold for body top.")
     parser.add_argument("--body-top-margin", type=int, default=8, help="Margin above estimated body top.")
@@ -208,6 +220,63 @@ def quantile_mask(values: np.ndarray, q: float, side: str) -> np.ndarray:
     if side == "ge":
         return values >= threshold
     raise ValueError(f"Unknown side: {side}")
+
+
+def knn_expand_mask(mask: np.ndarray, knn: np.ndarray, hops: int) -> np.ndarray:
+    """Expand sparse seed points on the point-cloud kNN graph."""
+    out = mask.astype(bool).copy()
+    frontier = out.copy()
+    hops = max(0, int(hops))
+    n = out.shape[0]
+    for _ in range(hops):
+        ids = np.where(frontier)[0]
+        if ids.size == 0 or knn.size == 0:
+            break
+        nbrs = knn[ids].reshape(-1)
+        nbrs = nbrs[(nbrs >= 0) & (nbrs < n)]
+        new_frontier = np.zeros((n,), dtype=bool)
+        new_frontier[nbrs] = True
+        new_frontier &= ~out
+        if not np.any(new_frontier):
+            break
+        out |= new_frontier
+        frontier = new_frontier
+    return out.astype(np.uint8)
+
+
+def graph_components_from_seed(seed: np.ndarray, knn: np.ndarray, min_points: int, max_points: int) -> list[np.ndarray]:
+    """Split a seed mask into connected components on the kNN graph."""
+    seed = seed.astype(bool)
+    ids = np.where(seed)[0]
+    if ids.size == 0:
+        return []
+    visited = np.zeros(seed.shape[0], dtype=bool)
+    components: list[np.ndarray] = []
+    for start in ids.tolist():
+        if visited[start]:
+            continue
+        q: deque[int] = deque([start])
+        visited[start] = True
+        comp: list[int] = []
+        while q:
+            cur = q.popleft()
+            comp.append(cur)
+            for nbr in knn[cur].tolist():
+                if nbr < 0 or nbr >= seed.shape[0] or visited[nbr] or not seed[nbr]:
+                    continue
+                visited[nbr] = True
+                q.append(int(nbr))
+        if min_points <= len(comp) <= max_points:
+            components.append(np.asarray(comp, dtype=np.int64))
+    components.sort(key=lambda arr: int(arr.size), reverse=True)
+    return components
+
+
+def mask_from_ids(n: int, ids: np.ndarray) -> np.ndarray:
+    mask = np.zeros((n,), dtype=np.uint8)
+    safe = ids[(ids >= 0) & (ids < n)].astype(np.int64)
+    mask[safe] = 1
+    return mask
 
 
 def dilate_bool(mask: np.ndarray, radius: int) -> np.ndarray:
@@ -371,6 +440,7 @@ def candidate_record(
     recommended_tasks: list[str],
     xyz: np.ndarray,
     quality_hint: str = "weak",
+    priority: float = 50.0,
 ) -> dict[str, Any]:
     point_count = int(mask.sum())
     return {
@@ -384,6 +454,7 @@ def candidate_record(
         "point_fraction": float(point_count / max(1, mask.shape[0])),
         "bbox_extent_ratio": bbox_extent_ratio(xyz, mask.astype(bool)),
         "quality_hint": quality_hint,
+        "priority": float(priority),
         "provenance": "geometry_proposal_v2",
     }
 
@@ -400,6 +471,7 @@ def add_candidate(
     min_points: int,
     max_fraction: float,
     quality_hint: str = "weak",
+    priority: float = 50.0,
 ) -> None:
     mask = mask.astype(np.uint8)
     n = mask.shape[0]
@@ -426,8 +498,42 @@ def add_candidate(
         recommended_tasks=recommended_tasks,
         xyz=xyz,
         quality_hint=quality_hint,
+        priority=priority,
     )
     items.append((mask, meta))
+
+
+def add_expanded_candidate(
+    items: list[tuple[np.ndarray, dict[str, Any]]],
+    seed_mask: np.ndarray,
+    knn: np.ndarray,
+    hops: int,
+    name: str,
+    family: str,
+    description: str,
+    recommended_executors: list[str],
+    recommended_tasks: list[str],
+    xyz: np.ndarray,
+    min_points: int,
+    max_fraction: float,
+    quality_hint: str = "expanded_seed",
+    priority: float = 25.0,
+) -> None:
+    expanded = knn_expand_mask(seed_mask.astype(bool), knn, hops)
+    add_candidate(
+        items,
+        expanded,
+        name,
+        family,
+        description,
+        recommended_executors,
+        recommended_tasks,
+        xyz,
+        min_points,
+        max_fraction,
+        quality_hint=quality_hint,
+        priority=priority,
+    )
 
 
 def axis_name(axis: int) -> str:
@@ -449,6 +555,7 @@ def generate_candidates(
     planarity = features["planarity"]
     items: list[tuple[np.ndarray, dict[str, Any]]] = []
     task = row.get("task", "")
+    expand_hops = max(0, int(args.seed_expand_hops))
 
     view_ids = render_component_candidate_ids(
         root=Path(args.dataset_root).resolve(),
@@ -460,8 +567,23 @@ def generate_candidates(
     detached = view_ids.get("detached_upper_or_side_component", np.asarray([], dtype=np.int64))
     small_visual = view_ids.get("small_visual_component", np.asarray([], dtype=np.int64))
     if above_main.size:
-        mask = np.zeros((n,), dtype=np.uint8)
-        mask[above_main[(above_main >= 0) & (above_main < n)]] = 1
+        mask = mask_from_ids(n, above_main)
+        add_expanded_candidate(
+            items,
+            mask,
+            knn,
+            expand_hops,
+            "above_main_body_structure_expanded",
+            "visual_component_expanded",
+            "kNN-expanded upper structure proposal; intended to make sparse handles, loops, rings, or top protrusions reviewable.",
+            ["hook", "gripper", "dexterous_hand"],
+            ["pick_up", "lift_carry", "open_pull"],
+            xyz,
+            args.min_points,
+            min(float(args.max_candidate_fraction), 0.36),
+            quality_hint="expanded_visual_proposal",
+            priority=8.0,
+        )
         add_candidate(
             items,
             mask,
@@ -474,10 +596,26 @@ def generate_candidates(
             args.min_points,
             min(float(args.max_candidate_fraction), 0.30),
             quality_hint="targeted_visual_proposal",
+            priority=12.0,
         )
     if detached.size:
-        mask = np.zeros((n,), dtype=np.uint8)
-        mask[detached[(detached >= 0) & (detached < n)]] = 1
+        mask = mask_from_ids(n, detached)
+        add_expanded_candidate(
+            items,
+            mask,
+            knn,
+            expand_hops,
+            "detached_upper_or_side_component_expanded",
+            "visual_component_expanded",
+            "kNN-expanded detached visual component; useful when a handle, ring, knob, or protruding part is sparse in point render.",
+            ["hook", "gripper", "dexterous_hand"],
+            ["pick_up", "lift_carry", "open_pull", "press_push"],
+            xyz,
+            args.min_points,
+            min(float(args.max_candidate_fraction), 0.40),
+            quality_hint="expanded_visual_proposal",
+            priority=9.0,
+        )
         add_candidate(
             items,
             mask,
@@ -490,10 +628,26 @@ def generate_candidates(
             args.min_points,
             min(float(args.max_candidate_fraction), 0.35),
             quality_hint="targeted_visual_proposal",
+            priority=13.0,
         )
     if small_visual.size:
-        mask = np.zeros((n,), dtype=np.uint8)
-        mask[small_visual[(small_visual >= 0) & (small_visual < n)]] = 1
+        mask = mask_from_ids(n, small_visual)
+        add_expanded_candidate(
+            items,
+            mask,
+            knn,
+            expand_hops,
+            "small_visual_component_expanded",
+            "visual_component_expanded",
+            "kNN-expanded small visual component; high-recall proposal for small functional parts.",
+            ["hook", "gripper", "dexterous_hand"],
+            ["pick_up", "lift_carry", "open_pull", "press_push"],
+            xyz,
+            args.min_points,
+            min(float(args.max_candidate_fraction), 0.40),
+            quality_hint="expanded_visual_proposal",
+            priority=14.0,
+        )
         add_candidate(
             items,
             mask,
@@ -506,6 +660,7 @@ def generate_candidates(
             args.min_points,
             min(float(args.max_candidate_fraction), 0.35),
             quality_hint="targeted_visual_proposal",
+            priority=18.0,
         )
 
     if weak_mask is not None:
@@ -515,6 +670,25 @@ def generate_candidates(
             if executor in {"gripper", "dexterous_hand"}:
                 recommended.extend(["hook", "dexterous_hand", "gripper"])
             recommended = list(dict.fromkeys(recommended))
+            add_expanded_candidate(
+                items,
+                source,
+                knn,
+                expand_hops,
+                f"existing_{executor}_weak_mask_expanded",
+                "expanded_existing_weak_mask",
+                (
+                    f"kNN-expanded checked/weak mask channel for {executor}; useful when the existing prior is sparse "
+                    "but spatially close to a functional part."
+                ),
+                recommended,
+                [task] if task else [],
+                xyz,
+                args.min_points,
+                args.max_candidate_fraction,
+                quality_hint="expanded_source_prior",
+                priority=28.0,
+            )
             add_candidate(
                 items,
                 source,
@@ -530,12 +704,156 @@ def generate_candidates(
                 args.min_points,
                 args.max_candidate_fraction,
                 quality_hint="source_prior",
+                priority=34.0,
             )
 
     smooth = curvature <= np.quantile(curvature, 0.35)
     planar = planarity >= np.quantile(planarity, 0.60)
     high_curv = curvature >= np.quantile(curvature, 0.82)
     linear = linearity >= np.quantile(linearity, 0.82)
+    edge_linear_seed = high_curv | linear
+
+    edge_linear_components = graph_components_from_seed(
+        edge_linear_seed,
+        knn,
+        min_points=max(args.min_points, 8),
+        max_points=max(args.min_points, int(n * 0.35)),
+    )
+    component_limit = max(0, int(args.component_max_candidates))
+    component_records: list[tuple[np.ndarray, float]] = []
+    for comp_idx, ids in enumerate(edge_linear_components[:component_limit], start=1):
+        seed = mask_from_ids(n, ids)
+        expanded = knn_expand_mask(seed, knn, expand_hops)
+        ext = bbox_extent_ratio(xyz, expanded.astype(bool))
+        sorted_ext = sorted([float(v) for v in ext], reverse=True)
+        elongation = sorted_ext[0] / (sorted_ext[1] + 1e-6) if len(sorted_ext) > 1 else 999.0
+        balance_bonus = max(0.0, 4.0 - min(4.0, elongation))
+        if int(expanded.sum()) <= int(n * 0.35):
+            component_records.append((expanded, float(ids.size) + balance_bonus * 20.0))
+        add_candidate(
+            items,
+            expanded,
+            f"loop_or_handle_component_{comp_idx:02d}_expanded",
+            "expanded_loop_or_handle",
+            (
+                "kNN-expanded connected high-curvature/linear component; designed for complete handles, rings, "
+                "holes, loops, lips, or similar functional structures."
+            ),
+            ["hook", "gripper", "dexterous_hand"],
+            ["pick_up", "lift_carry", "open_pull", "press_push"],
+            xyz,
+            args.min_points,
+            min(float(args.max_candidate_fraction), 0.42),
+            quality_hint="part_level_expanded_candidate",
+            priority=20.0 + comp_idx * 0.1,
+        )
+        add_candidate(
+            items,
+            seed,
+            f"loop_or_handle_component_{comp_idx:02d}_seed",
+            "loop_or_hole_boundary",
+            "Connected high-curvature/linear seed component before expansion; useful for precise boundary review.",
+            ["hook", "gripper", "dexterous_hand"],
+            ["pick_up", "lift_carry", "open_pull", "press_push"],
+            xyz,
+            args.min_points,
+            min(float(args.max_candidate_fraction), 0.35),
+            quality_hint="part_level_seed_candidate",
+            priority=44.0 + comp_idx * 0.1,
+        )
+
+    if len(component_records) >= 2:
+        component_records.sort(key=lambda item: item[1], reverse=True)
+        paired_mask = np.zeros((n,), dtype=np.uint8)
+        for comp_mask, _ in component_records[:2]:
+            paired_mask |= comp_mask.astype(np.uint8)
+        add_candidate(
+            items,
+            paired_mask,
+            "paired_loop_or_handle_components",
+            "paired_loop_or_handle",
+            (
+                "Union of two strong loop/handle-like components. This is a high-recall proposal for paired handles, "
+                "double rings, scissor finger holes, and symmetric grasp/hook structures."
+            ),
+            ["hook", "gripper", "dexterous_hand"],
+            ["pick_up", "lift_carry", "open_pull"],
+            xyz,
+            args.min_points,
+            min(float(args.max_candidate_fraction), 0.55),
+            quality_hint="paired_part_candidate",
+            priority=16.0,
+        )
+
+    for axis in range(3):
+        values = xyz[:, axis]
+        median = float(np.median(values))
+        for side, spatial_mask in [("low", values <= median), ("high", values >= median)]:
+            seed = edge_linear_seed & spatial_mask
+            add_expanded_candidate(
+                items,
+                seed,
+                knn,
+                expand_hops,
+                f"edge_linear_half_{axis_name(axis)}_{side}_expanded",
+                "expanded_axis_part_component",
+                (
+                    f"kNN-expanded high-curvature/linear points in the {side} half of the {axis_name(axis)} axis. "
+                    "This high-recall split helps expose paired handles, double rings, and symmetric functional parts "
+                    "that may be connected through a central joint."
+                ),
+                ["hook", "gripper", "dexterous_hand"],
+                ["pick_up", "lift_carry", "open_pull", "press_push"],
+                xyz,
+                args.min_points,
+                min(float(args.max_candidate_fraction), 0.34),
+                quality_hint="axis_split_expanded_candidate",
+                priority=36.0 + axis * 0.2 + (0.0 if side == "low" else 0.1),
+            )
+
+    for axis in range(3):
+        values = xyz[:, axis]
+        for side, extreme in [("low", quantile_mask(values, 0.18, "le")), ("high", quantile_mask(values, 0.82, "ge"))]:
+            seed = edge_linear_seed & extreme
+            add_expanded_candidate(
+                items,
+                seed,
+                knn,
+                expand_hops,
+                f"edge_linear_extreme_{axis_name(axis)}_{side}_expanded",
+                "expanded_extreme_part_component",
+                (
+                    f"kNN-expanded high-curvature/linear points near the {side} extreme of the {axis_name(axis)} axis. "
+                    "Useful for handles, loops, lips, knobs, and side/end functional parts."
+                ),
+                ["hook", "gripper", "dexterous_hand"],
+                ["pick_up", "lift_carry", "open_pull", "press_push"],
+                xyz,
+                args.min_points,
+                min(float(args.max_candidate_fraction), 0.32),
+                quality_hint="extreme_expanded_candidate",
+                priority=22.0 + axis * 0.2 + (0.0 if side == "low" else 0.1),
+            )
+
+    add_expanded_candidate(
+        items,
+        edge_linear_seed,
+        knn,
+        expand_hops,
+        "edge_linear_seed_expanded",
+        "expanded_functional_seed",
+        (
+            "Expanded union of high-curvature and linear seeds. This is a broad fallback for manual review when "
+            "individual part components miss a functional handle, ring, lip, or boundary."
+        ),
+        ["hook", "gripper", "dexterous_hand"],
+        ["pick_up", "lift_carry", "open_pull", "press_push"],
+        xyz,
+        args.min_points,
+        min(float(args.max_candidate_fraction), 0.62),
+        quality_hint="broad_review_fallback",
+        priority=32.0,
+    )
 
     add_candidate(
         items,
@@ -548,6 +866,7 @@ def generate_candidates(
         xyz,
         args.min_points,
         args.max_candidate_fraction,
+        priority=55.0,
     )
     add_candidate(
         items,
@@ -560,6 +879,7 @@ def generate_candidates(
         xyz,
         args.min_points,
         args.max_candidate_fraction,
+        priority=48.0,
     )
     add_candidate(
         items,
@@ -572,6 +892,7 @@ def generate_candidates(
         xyz,
         args.min_points,
         args.max_candidate_fraction,
+        priority=49.0,
     )
 
     for axis in range(3):
@@ -591,6 +912,7 @@ def generate_candidates(
                 xyz,
                 args.min_points,
                 args.max_candidate_fraction,
+                priority=60.0,
             )
             add_candidate(
                 items,
@@ -603,6 +925,7 @@ def generate_candidates(
                 xyz,
                 args.min_points,
                 args.max_candidate_fraction,
+                priority=52.0,
             )
             add_candidate(
                 items,
@@ -615,6 +938,7 @@ def generate_candidates(
                 xyz,
                 args.min_points,
                 args.max_candidate_fraction,
+                priority=53.0,
             )
 
     # Button/knob-like heuristic: compact high-curvature or protruding points.
@@ -634,6 +958,7 @@ def generate_candidates(
         xyz,
         args.min_points,
         args.max_candidate_fraction,
+        priority=42.0,
     )
 
     # A conservative central-body candidate for dexterous wrapping; rules will
@@ -655,10 +980,12 @@ def generate_candidates(
         args.min_points,
         args.max_candidate_fraction,
         quality_hint="needs_strict_review",
+        priority=80.0,
     )
 
     if not items:
         raise ValueError("No candidate regions generated; relax thresholds or inspect point cloud.")
+    items.sort(key=lambda item: (float(item[1].get("priority", 50.0)), -int(item[1].get("point_count", 0))))
     items = items[: max(1, int(args.max_candidates))]
     masks = np.stack([item[0] for item in items], axis=0).astype(np.uint8)
     metas = [item[1] for item in items]
@@ -737,6 +1064,8 @@ def generate_for_row(
             "min_points": int(args.min_points),
             "max_candidate_fraction": float(args.max_candidate_fraction),
             "max_candidates": int(args.max_candidates),
+            "seed_expand_hops": int(args.seed_expand_hops),
+            "component_max_candidates": int(args.component_max_candidates),
         },
         "notes": (
             "General 3D geometry proposals only. They are high-recall candidates, "

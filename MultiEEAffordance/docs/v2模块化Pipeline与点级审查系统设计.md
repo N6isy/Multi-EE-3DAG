@@ -24,6 +24,22 @@
 | 候选审查可视化 | `visualize_v2_candidates.py` | 候选区域和选中候选 | `index.html`、单候选图、已选候选图 | 辅助人工判断候选质量 |
 | 点级人工精修 | `serve_v2_annotation_app.py` | 待审查样本、候选 mask | refined mask、审查记录 JSONL | 人工增删点并保存新 mask |
 
+## 2.1 v2.1 高召回候选生成器升级
+
+人工审查反馈表明，旧候选生成器容易产生“稀疏 seed 点”，例如只覆盖剪刀单侧指环的一部分，无法作为可审查 mask。v2.1 将候选生成目标从“找少量几何种子”升级为“生成可供人工选择和点级精修的部件级候选”。
+
+新增策略：
+
+| 策略 | 新候选族 | 目的 |
+| --- | --- | --- |
+| kNN seed 扩张 | `visual_component_expanded`、`expanded_existing_weak_mask` | 将稀疏把手/环/凸起 seed 扩成可审查区域 |
+| 高曲率/线性连通部件 | `expanded_loop_or_handle`、`loop_or_hole_boundary` | 捕捉把手、孔洞边界、环、细杆、凸缘 |
+| 成对结构候选 | `paired_loop_or_handle` | 覆盖剪刀双指环、成对把手、双环结构 |
+| 空间半区/极值区扩张 | `expanded_axis_part_component`、`expanded_extreme_part_component` | 当两个功能部件在 kNN 图中连在一起时，仍能拆出左右/上下/端部候选 |
+| 宽松 fallback | `expanded_functional_seed` | 当精细候选漏掉目标时，提供人工可删减的高召回备用区域 |
+
+注意：v2.1 的候选仍然不是 ground truth。它们的目标是提高人工审查前的候选覆盖率，后续仍需经过 VLM 投票、规则过滤和人工确认。
+
 ## 3. 一键式 Pipeline 管理
 
 新增脚本：

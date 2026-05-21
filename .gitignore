@@ -60,3 +60,6 @@ external/
 
 # Logs
 *.log
+
+# Local temporary validation outputs
+_tmp_candidate_test/

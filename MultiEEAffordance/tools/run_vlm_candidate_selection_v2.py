@@ -144,7 +144,9 @@ Decision principles:
 5. If a candidate spatially overlaps the semantic target part from the part plan, select it or mark it uncertain even if its original weak-label source came from another executor.
 6. If the view is ambiguous, put the candidate into uncertain_candidates instead of selected_candidates.
 7. Reject broad fallback/body regions unless they are clearly the functional operation area for this task.
-8. Do not output pixel coordinates, boxes, or segmentation masks.
+8. Expanded or paired candidates are intentionally denser for human review. Prefer them when they cover a complete functional part better than sparse seed candidates.
+9. If no candidate covers an obvious functional part, explain the missing part in the reason and leave the wrong candidates rejected.
+10. Do not output pixel coordinates, boxes, or segmentation masks.
 
 Return strict JSON only:
 {{

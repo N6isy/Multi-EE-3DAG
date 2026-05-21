@@ -27,6 +27,16 @@ PALETTE = [
     (190, 125, 255),
     (170, 230, 90),
     (255, 255, 255),
+    (64, 190, 255),
+    (255, 170, 210),
+    (180, 255, 210),
+    (255, 180, 90),
+    (170, 130, 255),
+    (90, 245, 180),
+    (245, 110, 110),
+    (230, 240, 120),
+    (120, 225, 245),
+    (220, 180, 255),
 ]
 
 
@@ -60,7 +70,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--pilot-id", default=None, help="Render only one pilot row.")
     parser.add_argument("--limit", type=int, default=None, help="Limit selected pilot rows.")
-    parser.add_argument("--max-candidates", type=int, default=10, help="Maximum candidates shown to VLM.")
+    parser.add_argument("--max-candidates", type=int, default=14, help="Maximum candidates shown to VLM.")
     parser.add_argument("--point-radius", type=int, default=4, help="Overlay point radius.")
     parser.add_argument("--alpha", type=float, default=0.78, help="Overlay opacity.")
     parser.add_argument("--selector-panel", action=argparse.BooleanOptionalAction, default=True)

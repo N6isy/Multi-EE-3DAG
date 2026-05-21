@@ -94,29 +94,51 @@ def family_score(executor: str, family: str, task: str) -> tuple[float, list[str
     family = family.lower()
     reasons: list[str] = []
     score = 0.0
+    hook_like = {
+        "thin_structure",
+        "edge_or_boundary",
+        "extreme_edge_or_lip",
+        "protruding_or_thin_part",
+        "small_protrusion",
+        "visual_component_expanded",
+        "expanded_loop_or_handle",
+        "loop_or_hole_boundary",
+        "paired_loop_or_handle",
+        "expanded_functional_seed",
+        "expanded_axis_part_component",
+        "expanded_extreme_part_component",
+        "expanded_existing_weak_mask",
+        "visual_detached_structure",
+        "visual_detached_component",
+        "visual_small_component",
+    }
+    smooth_like = {"smooth_surface", "smooth_extreme_patch", "central_body"}
     if executor == "suction":
         if family in {"smooth_surface", "smooth_extreme_patch", "existing_weak_mask"}:
             score += 0.55
             reasons.append("平滑/低曲率或已有 suction 先验，符合吸附候选方向")
-        if family in {"thin_structure", "edge_or_boundary", "extreme_edge_or_lip", "protruding_or_thin_part"}:
+        if family in hook_like:
             score -= 0.45
             reasons.append("细杆、边缘或高曲率结构通常不适合吸盘密封")
     elif executor == "hook":
-        if family in {"thin_structure", "edge_or_boundary", "extreme_edge_or_lip", "protruding_or_thin_part", "small_protrusion"}:
+        if family in hook_like:
             score += 0.50
             reasons.append("边界、细长或凸出结构可能提供插入/挂接/扣住条件")
-        if family in {"smooth_surface", "smooth_extreme_patch", "central_body"}:
+        if family == "paired_loop_or_handle":
+            score += 0.18
+            reasons.append("成对环/把手候选对 hook 的插入和机械约束尤其重要")
+        if family in smooth_like:
             score -= 0.35
             reasons.append("普通平滑面或主体区域通常不能形成 hook 机械互锁")
     elif executor == "gripper":
-        if family in {"thin_structure", "edge_or_boundary", "extreme_edge_or_lip", "protruding_or_thin_part", "small_protrusion"}:
+        if family in hook_like:
             score += 0.45
             reasons.append("细长、边缘或凸起结构更可能形成夹爪接触")
         if family in {"smooth_surface", "central_body"}:
             score -= 0.20
             reasons.append("大平面或主体中心需要相对接触面支持，否则不能直接当夹爪正例")
     elif executor == "dexterous_hand":
-        if family in {"thin_structure", "protruding_or_thin_part", "small_protrusion", "edge_or_boundary", "central_body", "existing_weak_mask"}:
+        if family in hook_like or family in {"central_body", "existing_weak_mask"}:
             score += 0.38
             reasons.append("可能对应多指包覆、捏取、按压或精细操作区域")
         if family in {"smooth_surface", "smooth_extreme_patch"} and task not in {"press_push"}:
@@ -125,7 +147,7 @@ def family_score(executor: str, family: str, task: str) -> tuple[float, list[str
     if task == "press_push" and executor == "dexterous_hand" and family in {"small_protrusion", "smooth_surface", "smooth_extreme_patch"}:
         score += 0.18
         reasons.append("press_push 任务允许按钮、开关或可推压面作为灵巧手候选")
-    if task in {"open_pull", "lift_carry"} and executor == "hook" and family in {"edge_or_boundary", "extreme_edge_or_lip", "thin_structure"}:
+    if task in {"open_pull", "lift_carry"} and executor == "hook" and family in hook_like:
         score += 0.12
         reasons.append("open_pull/lift_carry 更强调拉力或提拉约束，边界/环/柄类候选优先")
     return score, reasons
