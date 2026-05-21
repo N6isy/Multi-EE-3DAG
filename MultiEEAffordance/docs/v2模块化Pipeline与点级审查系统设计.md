@@ -243,3 +243,49 @@ python MultiEEAffordance/tools/serve_v2_annotation_app.py \
 - 候选组合已经支持勾选，但暂未实现候选级 reject 原因结构化记录；
 - 暂未实现框选/套索选择，只支持点击单点增删；
 - refined mask 仍需要二次质量检查，不能直接等同 verified 数据。
+
+## 9. v2.2 VLM Coverage Check 与 Missing-Candidate 补候选
+
+v2.1 解决了“候选太稀疏”的一部分问题，但仍然存在一个关键风险：VLM 只能在已经给出的候选编号中投票。如果候选生成器完全漏掉了目标部件，例如剪刀的另一侧指环、杯柄内侧、把手孔洞或按钮区域，那么 VLM 选择阶段无法凭空创建新候选，只能在错误候选中做选择。
+
+v2.2 新增 `run_vlm_coverage_check_v2.py`，把 VLM 的职责进一步拆开：
+
+| 阶段 | 输入 | 输出 | 作用 |
+| --- | --- | --- | --- |
+| coverage check | clean render、candidate overlay、part plan、任务和末端执行器定义 | `combined_coverage_check.json` | 判断“目标功能部件是否被当前候选覆盖” |
+| missing proposal | VLM 输出的未覆盖部件粗框和正点 | 2D box / points | 只作为缺失候选线索，不作为真值 |
+| 2D -> 3D supplement | point-index map、VLM box / points | `M1/M2...` 新候选 | 将未覆盖区域回投成新的 3D candidate |
+| rerender + reselect | 更新后的 candidate pool | 新 overlay 与 VLM selection | 让补出的候选进入正常投票、规则过滤和人工审查 |
+
+新的判断逻辑：
+
+```text
+已有候选是否覆盖目标部件？
+  ├─ 覆盖充分：继续 VLM candidate selection
+  ├─ 部分覆盖：报告缺失部分，补 M 类候选，再重新 render/select
+  ├─ 未覆盖：报告“目标部件未被候选覆盖”，补 M 类候选，再重新 render/select
+  └─ 不确定：记录 uncertain，不强行补候选
+```
+
+补候选的候选 ID 使用 `M1`、`M2` 等前缀，候选族为 `vlm_coverage_missing_region`。这些候选会被插入候选池前部，目的是保证下一轮 overlay 能显示出来，方便 VLM 和人工审查看到。注意：`M1/M2` 仍然只是候选，不是 ground truth；它们必须继续经过 VLM 选择、规则过滤和人工点级审查。
+
+推荐运行方式：
+
+```bash
+CUDA_VISIBLE_DEVICES=1,2 python MultiEEAffordance/tools/run_v2_pipeline.py \
+  --dataset-root MultiEEAffordance \
+  --config configs/qwen3vl_sam2_pilot.yaml \
+  --limit 10 \
+  --stages generate,render,coverage,select,filter,build \
+  --min-selected-votes 4 \
+  --allow-empty \
+  --overwrite
+```
+
+该命令会自动执行：
+
+```text
+generate -> views -> render -> coverage -> render_after_coverage -> select -> filter -> build
+```
+
+其中 `render_after_coverage` 是自动插入的复渲染阶段，用于把新补的 `M1/M2...` 候选显示给后续 VLM selection。

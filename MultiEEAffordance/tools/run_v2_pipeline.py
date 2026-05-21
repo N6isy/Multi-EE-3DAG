@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Run the modular v2 candidate-labeling pipeline.
 
-This wrapper keeps the candidate-generation, view-rendering, VLM-selection,
-rule-filtering, mask-building, and review-visualization steps in one reproducible command.
+This wrapper keeps the candidate-generation, view-rendering, VLM-coverage,
+VLM-selection, rule-filtering, mask-building, and review-visualization steps
+in one reproducible command.
 It does not replace the individual scripts; it records and runs them in order.
 """
 
@@ -17,7 +18,7 @@ from pathlib import Path
 from typing import Any
 
 
-DEFAULT_STAGES = ["generate", "views", "render", "select", "filter", "build", "visualize"]
+DEFAULT_STAGES = ["generate", "views", "render", "coverage", "select", "filter", "build", "visualize"]
 
 
 def parse_args() -> argparse.Namespace:
@@ -35,6 +36,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--selected-candidates", default="", help="Manual candidate ids for mask building/review visualization.")
     parser.add_argument("--include-uncertain", action="store_true", help="Include uncertain candidates when building masks.")
     parser.add_argument("--allow-empty", action="store_true", help="Allow empty candidate mask.")
+    parser.add_argument(
+        "--no-supplement-missing",
+        action="store_true",
+        help="Run coverage checks without appending missing candidates.",
+    )
     parser.add_argument("--overwrite", action="store_true", help="Pass --overwrite to child scripts.")
     parser.add_argument("--dry-run", action="store_true", help="Print commands without running them.")
     parser.add_argument(
@@ -72,12 +78,22 @@ def build_commands(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
     root = Path(args.dataset_root)
     stages = stage_list(args.stages)
     commands: list[tuple[str, list[str]]] = []
+    render_cmd = add_common([sys.executable, script(root, "render_candidate_overlays_v2.py")], args)
     if "generate" in stages:
         commands.append(("generate", add_common([sys.executable, script(root, "generate_3d_candidate_regions.py")], args)))
     if "views" in stages or "render" in stages:
         commands.append(("views", add_common([sys.executable, script(root, "render_vlm_friendly_views.py")], args)))
     if "render" in stages:
-        commands.append(("render", add_common([sys.executable, script(root, "render_candidate_overlays_v2.py")], args)))
+        commands.append(("render", render_cmd))
+    if "coverage" in stages:
+        cmd = add_common([sys.executable, script(root, "run_vlm_coverage_check_v2.py"), "--config", args.config], args)
+        if args.no_supplement_missing:
+            cmd.append("--no-supplement-missing")
+        commands.append(("coverage", cmd))
+        if "render" in stages and any(stage in stages for stage in ("select", "filter", "build", "visualize")):
+            # Coverage may prepend M1/M2... missing candidates to candidates.npz.
+            # Rerender before VLM selection so those new candidates are visible.
+            commands.append(("render_after_coverage", render_cmd))
     if "select" in stages:
         cmd = add_common([sys.executable, script(root, "run_vlm_candidate_selection_v2.py"), "--config", args.config], args)
         commands.append(("select", cmd))
@@ -160,6 +176,7 @@ def main() -> int:
         "stages": stage_list(args.stages),
         "selected_candidates": args.selected_candidates,
         "min_selected_votes": args.min_selected_votes,
+        "supplement_missing": not args.no_supplement_missing,
         "status": "dry_run" if args.dry_run else "ok",
         "runs": run_log,
     }

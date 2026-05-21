@@ -146,7 +146,8 @@ Decision principles:
 7. Reject broad fallback/body regions unless they are clearly the functional operation area for this task.
 8. Expanded or paired candidates are intentionally denser for human review. Prefer them when they cover a complete functional part better than sparse seed candidates.
 9. If no candidate covers an obvious functional part, explain the missing part in the reason and leave the wrong candidates rejected.
-10. Do not output pixel coordinates, boxes, or segmentation masks.
+10. Candidates named like M1/M2 or family=vlm_coverage_missing_region come from a previous coverage check. Treat them like normal proposals: select them only if they really cover the functional target part.
+11. Do not output pixel coordinates, boxes, or segmentation masks.
 
 Return strict JSON only:
 {{

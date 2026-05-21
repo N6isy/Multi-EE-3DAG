@@ -113,6 +113,9 @@ def family_score(executor: str, family: str, task: str) -> tuple[float, list[str
         "visual_small_component",
     }
     smooth_like = {"smooth_surface", "smooth_extreme_patch", "central_body"}
+    if family == "vlm_coverage_missing_region":
+        score += 0.42
+        reasons.append("VLM coverage check 指出该区域可能是当前候选池漏掉的任务相关目标部件")
     if executor == "suction":
         if family in {"smooth_surface", "smooth_extreme_patch", "existing_weak_mask"}:
             score += 0.55
