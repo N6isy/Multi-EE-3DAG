@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -22,7 +23,7 @@ from typing import Any
 from PIL import Image
 
 from path_utils import resolve_portable_path
-from run_qwen3vl_sam2_pilot import EXECUTOR_DEFINITIONS, TASK_DEFINITIONS, extract_json, load_qwen_model, load_yaml, qwen_device
+from run_qwen3vl_sam2_pilot import EXECUTOR_DEFINITIONS, TASK_DEFINITIONS, load_qwen_model, load_yaml, qwen_device
 
 
 def parse_args() -> argparse.Namespace:
@@ -44,6 +45,11 @@ def parse_args() -> argparse.Namespace:
         type=float,
         default=0.35,
         help="Target boxes larger than this image fraction are discarded when positive points exist.",
+    )
+    parser.add_argument(
+        "--strict-json",
+        action="store_true",
+        help="Abort on malformed Qwen JSON instead of recording the failed view and continuing.",
     )
     return parser.parse_args()
 
@@ -76,6 +82,73 @@ def write_json(path: Path, data: dict[str, Any], overwrite: bool) -> None:
     with path.open("w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
         f.write("\n")
+
+
+def extract_json_block(text: str) -> str:
+    stripped = text.strip()
+    if stripped.startswith("```"):
+        stripped = re.sub(r"^```(?:json)?", "", stripped, flags=re.IGNORECASE).strip()
+        stripped = re.sub(r"```$", "", stripped).strip()
+    start = stripped.find("{")
+    if start < 0:
+        raise json.JSONDecodeError("No JSON object start found", stripped, 0)
+    depth = 0
+    in_string = False
+    escaped = False
+    for idx in range(start, len(stripped)):
+        ch = stripped[idx]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                in_string = False
+            continue
+        if ch == '"':
+            in_string = True
+        elif ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return stripped[start : idx + 1]
+    block = stripped[start:]
+    if depth > 0:
+        block += "}" * depth
+    return block
+
+
+def repair_common_json_issues(text: str) -> str:
+    repaired = text.strip()
+    repaired = repaired.replace("\u201c", '"').replace("\u201d", '"')
+    repaired = repaired.replace("\u2018", "'").replace("\u2019", "'")
+    repaired = re.sub(r",\s*([}\]])", r"\1", repaired)
+    repaired = re.sub(r"\bTrue\b", "true", repaired)
+    repaired = re.sub(r"\bFalse\b", "false", repaired)
+    repaired = re.sub(r"\bNone\b", "null", repaired)
+    return repaired
+
+
+def safe_extract_json(text: str, strict: bool) -> dict[str, Any]:
+    block = extract_json_block(text)
+    attempts = [block, repair_common_json_issues(block)]
+    errors: list[str] = []
+    for candidate in attempts:
+        try:
+            return json.loads(candidate)
+        except json.JSONDecodeError as exc:
+            errors.append(str(exc))
+    if strict:
+        raise json.JSONDecodeError(errors[-1], attempts[-1], 0)
+    return {
+        "target_regions": [],
+        "reject_regions": [],
+        "coverage_warning": "qwen_json_parse_failed",
+        "_parse_error": " | ".join(errors),
+        "_raw_text": text,
+        "_json_block": block[:4000],
+    }
 
 
 def selected_rows(root: Path, args: argparse.Namespace) -> list[dict[str, str]]:
@@ -246,7 +319,7 @@ Return strict JSON only:
 """
 
 
-def run_qwen_json(model: Any, processor: Any, image_path: Path, prompt: str, cfg: dict[str, Any]) -> dict[str, Any]:
+def run_qwen_json(model: Any, processor: Any, image_path: Path, prompt: str, cfg: dict[str, Any], strict_json: bool) -> dict[str, Any]:
     import torch
 
     qwen_cfg = cfg.get("qwen3vl", {})
@@ -276,8 +349,8 @@ def run_qwen_json(model: Any, processor: Any, image_path: Path, prompt: str, cfg
         generated = model.generate(**inputs, **gen_kwargs)
     trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated)]
     text = processor.batch_decode(trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-    raw = extract_json(text)
-    raw["_raw_text"] = text
+    raw = safe_extract_json(text, strict_json)
+    raw.setdefault("_raw_text", text)
     return raw
 
 
@@ -346,7 +419,7 @@ def run_for_row(root: Path, args: argparse.Namespace, cfg: dict[str, Any], row: 
                 "raw_qwen3vl_response": {},
             }
         else:
-            raw = run_qwen_json(model, processor, image_path, build_prompt(row, plan, view, width, height), cfg)
+            raw = run_qwen_json(model, processor, image_path, build_prompt(row, plan, view, width, height), cfg, args.strict_json)
             grounding = normalize_grounding(
                 raw,
                 view,
@@ -364,6 +437,7 @@ def run_for_row(root: Path, args: argparse.Namespace, cfg: dict[str, Any], row: 
                 "target_regions": len(grounding.get("target_regions", [])),
                 "reject_regions": len(grounding.get("reject_regions", [])),
                 "coverage_warning": grounding.get("coverage_warning", ""),
+                "parse_error": grounding.get("raw_qwen3vl_response", {}).get("_parse_error", ""),
             }
         )
 
