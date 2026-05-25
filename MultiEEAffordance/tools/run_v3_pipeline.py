@@ -26,6 +26,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--config", default="configs/qwen3vl_sam2_pilot.yaml", help="Qwen config relative to dataset root.")
     parser.add_argument("--pilot-csv", default="processed/metadata/vlm_pilot_samples_v0_1.csv")
     parser.add_argument(
+        "--samples",
+        default="",
+        help="Samples JSONL used by render/build stages. If omitted, infer it from queue rows or queue summary when possible.",
+    )
+    parser.add_argument(
         "--include-tasks",
         default=",".join(DEFAULT_ACTIVE_TASKS),
         help="Comma-separated tasks to keep, or 'all'. Default excludes lift_carry.",
@@ -148,11 +153,42 @@ def relative_to_dataset(root: Path, path: Path) -> str:
         return str(path)
 
 
+def read_json(path: Path) -> dict[str, Any]:
+    with path.open("r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def infer_samples_path(args: argparse.Namespace, dataset_root: Path, input_csv: Path, rows: list[dict[str, str]]) -> str:
+    if str(args.samples or "").strip():
+        return args.samples
+    for row in rows:
+        for key in ("samples_path", "source_samples_path", "input_samples"):
+            value = str(row.get(key) or "").strip()
+            if value:
+                return value
+    input_rel = relative_to_dataset(dataset_root, input_csv)
+    for summary_path in sorted(input_csv.parent.glob("*summary*.json")):
+        try:
+            summary = read_json(summary_path)
+        except Exception:
+            continue
+        output_csv = str(summary.get("output_csv") or "")
+        if output_csv == input_rel or Path(output_csv).name == input_csv.name:
+            input_samples = str(summary.get("input_samples") or "")
+            if input_samples:
+                return input_samples
+    fallback = dataset_root / "processed/metadata/samples_v3_large_batch_v0_1.jsonl"
+    if fallback.exists():
+        return relative_to_dataset(dataset_root, fallback)
+    return "processed/metadata/samples_checked_v0_1.jsonl"
+
+
 def prepare_pilot_csv(args: argparse.Namespace, dataset_root: Path) -> dict[str, Any]:
     include_tasks = parse_task_filter(args.include_tasks, allow_all=True)
     exclude_tasks = parse_task_filter(args.exclude_tasks, allow_all=False) or set()
     input_csv = resolve_path(dataset_root, args.pilot_csv)
     rows = read_csv(input_csv)
+    args.effective_samples = infer_samples_path(args, dataset_root, input_csv, rows)
     if include_tasks is None and not exclude_tasks and str(args.include_decisions).lower() == "all":
         args.effective_pilot_csv = args.pilot_csv
         args.effective_empty_review_csv = ""
@@ -160,6 +196,7 @@ def prepare_pilot_csv(args: argparse.Namespace, dataset_root: Path) -> dict[str,
             "input_pilot_csv": relative_to_dataset(dataset_root, input_csv),
             "effective_pilot_csv": args.pilot_csv,
             "empty_review_csv": "",
+            "samples": args.effective_samples,
             "task_filter_active": False,
             "decision_filter_active": False,
             "include_tasks": "all",
@@ -206,6 +243,7 @@ def prepare_pilot_csv(args: argparse.Namespace, dataset_root: Path) -> dict[str,
         "input_pilot_csv": relative_to_dataset(dataset_root, input_csv),
         "effective_pilot_csv": args.effective_pilot_csv,
         "empty_review_csv": args.effective_empty_review_csv,
+        "samples": args.effective_samples,
         "task_filter_active": True,
         "decision_filter_active": str(args.include_decisions).lower() != "all",
         "include_decisions": args.include_decisions,
@@ -239,7 +277,10 @@ def build_commands(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
     stages = stage_list(args.stages)
     commands: list[tuple[str, list[str]]] = []
     if "views" in stages or any(stage in stages for stage in ("plan", "ground", "project", "grow", "render", "coverage", "build")):
-        commands.append(("views", add_common([sys.executable, script(root, "render_vlm_friendly_views.py")], args)))
+        cmd = add_common([sys.executable, script(root, "render_vlm_friendly_views.py")], args)
+        if getattr(args, "effective_samples", ""):
+            cmd.extend(["--samples", args.effective_samples])
+        commands.append(("views", cmd))
     if "plan" in stages:
         cmd = add_common([sys.executable, script(root, "run_v3_semantic_part_planner.py"), "--config", args.config], args)
         if args.planner_dry_run:
@@ -345,6 +386,8 @@ def build_commands(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
     if "build" in stages:
         cmd = add_common([sys.executable, script(root, "build_v3_candidate_masks.py")], args)
         cmd.extend(["--include-tasks", args.include_tasks, "--exclude-tasks", args.exclude_tasks])
+        if getattr(args, "effective_samples", ""):
+            cmd.extend(["--samples", args.effective_samples])
         if getattr(args, "effective_empty_review_csv", ""):
             cmd.extend(["--empty-pilot-csv", args.effective_empty_review_csv])
         if args.selected_candidates:

@@ -182,11 +182,24 @@ def render_one_sample(
     root: Path,
     samples: list[dict[str, Any]],
     sample_id: str,
+    fallback_row: dict[str, Any] | None,
     output_root: Path,
     views: list[str],
     args: argparse.Namespace,
 ) -> dict[str, Any]:
-    sample = find_sample(samples, sample_id)
+    try:
+        sample = find_sample(samples, sample_id)
+    except KeyError:
+        if not fallback_row or not fallback_row.get("point_cloud_path"):
+            raise
+        sample = {
+            "sample_id": sample_id,
+            "object_id": fallback_row.get("object_id", ""),
+            "object_category": fallback_row.get("object_category", ""),
+            "task": fallback_row.get("task", ""),
+            "task_instruction": fallback_row.get("task_instruction", ""),
+            "point_cloud_path": fallback_row["point_cloud_path"],
+        }
     points_path = resolve_path(root, sample["point_cloud_path"])
     points_xyz = normalize_points(load_points(points_path))
     sample_dir = output_root / sample_id
@@ -256,20 +269,26 @@ def main() -> int:
         raise ValueError("No pilot rows selected.")
 
     selected: list[str] = []
+    selected_rows: dict[str, dict[str, str]] = {}
     seen: set[str] = set()
     for row in pilot_rows:
         sample_id = row["sample_id"]
         if sample_id not in seen:
             seen.add(sample_id)
             selected.append(sample_id)
+            selected_rows[sample_id] = row
 
     views = [item.strip().lower() for item in args.views.split(",") if item.strip()]
     if not views:
         raise ValueError("At least one view is required.")
 
-    samples = read_jsonl(resolve_path(root, args.samples))
+    samples_path = resolve_path(root, args.samples)
+    samples = read_jsonl(samples_path) if samples_path.exists() else []
     output_root = resolve_path(root, args.output_root)
-    rendered = [render_one_sample(root, samples, sample_id, output_root, views, args) for sample_id in selected]
+    rendered = [
+        render_one_sample(root, samples, sample_id, selected_rows.get(sample_id), output_root, views, args)
+        for sample_id in selected
+    ]
     print(json.dumps({"rendered_samples": len(rendered), "rows": rendered}, indent=2, ensure_ascii=False))
     return 0
 

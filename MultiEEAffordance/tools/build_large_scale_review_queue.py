@@ -27,6 +27,7 @@ FIELDNAMES = [
     "object_task_feasible",
     "executor_feasible",
     "negative_reason",
+    "samples_path",
     "pilot_reason",
     "point_cloud_path",
     "source_mask_path",
@@ -69,6 +70,12 @@ def parse_args() -> argparse.Namespace:
         help="Filter clearly impossible object-task pairs before expensive VLM stages.",
     )
     parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument(
+        "--limit-strategy",
+        choices=["round_robin_category_task_executor", "round_robin_category_task", "round_robin_category", "sequential"],
+        default="round_robin_category_task_executor",
+        help="How to choose rows when --limit is set. Round-robin modes keep early batches diverse.",
+    )
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args()
 
@@ -131,6 +138,42 @@ def parse_task_filter(value: str) -> set[str] | None:
     if unknown:
         raise ValueError(f"Unknown tasks: {unknown}. Known tasks: {sorted(KNOWN_TASKS)}")
     return tasks
+
+
+def apply_limit(rows: list[dict[str, str]], limit: int | None, strategy: str) -> list[dict[str, str]]:
+    if limit is None or len(rows) <= limit:
+        return rows
+    if strategy == "sequential":
+        return rows[:limit]
+    grouped: dict[str, list[dict[str, str]]] = {}
+    order: list[str] = []
+    for row in rows:
+        if strategy == "round_robin_category":
+            key = row.get("object_category") or "unknown"
+        elif strategy == "round_robin_category_task":
+            key = f"{row.get('object_category') or 'unknown'}|{row.get('task') or 'unknown'}"
+        else:
+            key = (
+                f"{row.get('object_category') or 'unknown'}|"
+                f"{row.get('task') or 'unknown'}|"
+                f"{row.get('executor') or 'unknown'}"
+            )
+        if key not in grouped:
+            grouped[key] = []
+            order.append(key)
+        grouped[key].append(row)
+    selected: list[dict[str, str]] = []
+    while len(selected) < limit:
+        progressed = False
+        for key in order:
+            if grouped[key]:
+                selected.append(grouped[key].pop(0))
+                progressed = True
+                if len(selected) >= limit:
+                    break
+        if not progressed:
+            break
+    return selected
 
 
 def sample_needs_review(row: dict[str, Any], quality_scope: str) -> bool:
@@ -236,9 +279,9 @@ def build_queue(args: argparse.Namespace) -> dict[str, Any]:
             if not feasible and args.empty_policy == "skip":
                 skipped[f"executor_infeasible_skipped:{executor}"] += 1
                 continue
-            pilot_id = f"{args.pilot_prefix}_{len(out_rows) + 1:06d}"
             sample_id = str(sample.get("sample_id") or "")
             negative_reason = executor_negative_reason(sample, executor, feasible)
+            samples_path = relative_to_dataset(root, input_path)
             decision = "review" if feasible else "empty_review_required"
             issue_type = "large_scale_review" if feasible else "executor_infeasible_empty_label"
             review_mode = "point_refine" if feasible else "confirm_empty"
@@ -253,7 +296,7 @@ def build_queue(args: argparse.Namespace) -> dict[str, Any]:
             )
             out_rows.append(
                 {
-                    "pilot_id": pilot_id,
+                    "pilot_id": "",
                     "sample_id": sample_id,
                     "object_category": category,
                     "task": task,
@@ -264,6 +307,7 @@ def build_queue(args: argparse.Namespace) -> dict[str, Any]:
                     "object_task_feasible": "true",
                     "executor_feasible": "true" if feasible else "false",
                     "negative_reason": negative_reason,
+                    "samples_path": samples_path,
                     "pilot_reason": pilot_reason,
                     "point_cloud_path": str(sample.get("point_cloud_path") or ""),
                     "source_mask_path": str(sample.get("multi_channel_mask_path") or ""),
@@ -271,10 +315,9 @@ def build_queue(args: argparse.Namespace) -> dict[str, Any]:
                     "render_output_dir": f"processed/vlm_semantic_part/renders/{sample_id}",
                 }
             )
-            if args.limit is not None and len(out_rows) >= args.limit:
-                break
-        if args.limit is not None and len(out_rows) >= args.limit:
-            break
+    out_rows = apply_limit(out_rows, args.limit, args.limit_strategy)
+    for index, row in enumerate(out_rows, start=1):
+        row["pilot_id"] = f"{args.pilot_prefix}_{index:06d}"
 
     output_csv = resolve_path(root, args.output_csv)
     write_csv(output_csv, out_rows, args.overwrite)
@@ -292,6 +335,7 @@ def build_queue(args: argparse.Namespace) -> dict[str, Any]:
         "executor_scope": args.executor_scope,
         "quality_scope": args.quality_scope,
         "empty_policy": args.empty_policy,
+        "limit_strategy": args.limit_strategy,
         "common_sense_filter": bool(args.common_sense_filter),
         "counts_by_task": dict(sorted(Counter(row["task"] for row in out_rows).items())),
         "counts_by_executor": dict(sorted(Counter(row["executor"] for row in out_rows).items())),
