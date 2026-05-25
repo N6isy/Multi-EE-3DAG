@@ -326,6 +326,71 @@ def build_empty_for_row(root: Path, args: argparse.Namespace, row: dict[str, str
     return sample, summary
 
 
+def build_failed_candidate_row(
+    root: Path,
+    args: argparse.Namespace,
+    row: dict[str, str],
+    sample_by_id: dict[str, dict[str, Any]],
+    exc: Exception,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    pilot_id = row["pilot_id"]
+    sample_id = row["sample_id"]
+    executor = row.get("executor", "")
+    if executor not in EXECUTOR_ORDER:
+        raise ValueError(f"Unknown executor '{executor}' for failed candidate row {pilot_id}") from exc
+    sample = merge_sample(row, sample_by_id)
+    base_mask_value = row.get("checked_mask_path") or sample.get("multi_channel_mask_path") or row.get("source_mask_path")
+    base_mask_path = resolve_portable_path(root, base_mask_value)
+    if not base_mask_path.exists():
+        raise FileNotFoundError(f"Base mask not found for failed candidate row {pilot_id}: {base_mask_path}") from exc
+    base_mask = np.load(base_mask_path)
+    if base_mask.ndim != 2 or base_mask.shape[1] != len(EXECUTOR_ORDER):
+        raise ValueError(f"Expected base mask shape [N,4], got {base_mask.shape}: {base_mask_path}") from exc
+    out_mask = base_mask.astype(np.uint8).copy()
+    channel = EXECUTOR_ORDER.index(executor)
+    out_mask[:, channel] = 0
+    out_mask_path = resolve_path(root, args.output_mask_root) / f"{sample_id}_{pilot_id}_v3_candidate_build_error.npy"
+    if out_mask_path.exists() and not args.overwrite:
+        raise FileExistsError(f"Output mask exists. Use --overwrite: {out_mask_path}") from exc
+    out_mask_path.parent.mkdir(parents=True, exist_ok=True)
+    np.save(out_mask_path, out_mask)
+
+    error_text = f"{type(exc).__name__}: {exc}"
+    update = {
+        "pilot_id": pilot_id,
+        "executor": executor,
+        "source": "v3_candidate_build_failed_empty_placeholder",
+        "candidate_manifest": "",
+        "rule_filter_path": "",
+        "selected_candidates": [],
+        "positive_points": 0,
+        "requires_human_review": True,
+        "review_mode": "point_refine",
+        "build_error": error_text,
+    }
+    sample["multi_channel_mask_path"] = relative_to_dataset(root, out_mask_path)
+    sample["executor_order"] = EXECUTOR_ORDER
+    sample["quality_flag"] = "weak"
+    sample["split"] = "val"
+    sample["v3_candidate_update"] = update
+    sample["v2_candidate_update"] = dict(update)
+    sample["notes"] = (
+        str(sample.get("notes", ""))
+        + f" | v3_candidate_build_error: no automatic candidate was available for {executor}; human review should inspect manually."
+    )
+    summary = {
+        "pilot_id": pilot_id,
+        "sample_id": sample_id,
+        "executor": executor,
+        "selected_candidates": [],
+        "positive_points": 0,
+        "output_mask_path": relative_to_dataset(root, out_mask_path),
+        "review_mode": "point_refine",
+        "build_error": error_text,
+    }
+    return sample, summary
+
+
 def main() -> int:
     args = parse_args()
     root = Path(args.dataset_root).resolve()
@@ -354,7 +419,12 @@ def main() -> int:
         row_iter = rows
         empty_iter = empty_rows
     for row in row_iter:
-        sample, summary = build_for_row(root, args, row, sample_by_id)
+        try:
+            sample, summary = build_for_row(root, args, row, sample_by_id)
+        except Exception as exc:
+            if not args.allow_empty:
+                raise
+            sample, summary = build_failed_candidate_row(root, args, row, sample_by_id, exc)
         output_rows.append(sample)
         summaries.append(summary)
     for row in empty_iter:

@@ -62,6 +62,35 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--image-size", type=int, default=768, help="Square output image size.")
     parser.add_argument("--splat-radius", type=int, default=8, help="Visual splat radius for surface-like rendering.")
     parser.add_argument("--index-radius", type=int, default=1, help="Exact sparse point-index radius for diagnostics.")
+    parser.add_argument(
+        "--densify-midpoints",
+        action="store_true",
+        help="Add render-only midpoint samples between nearby original points before VLM rendering.",
+    )
+    parser.add_argument(
+        "--densify-distance",
+        type=float,
+        default=0.0,
+        help="Absolute midpoint-link distance in normalized coordinates. 0 means auto from nearest-neighbor spacing.",
+    )
+    parser.add_argument(
+        "--densify-threshold-multiplier",
+        type=float,
+        default=2.2,
+        help="Auto threshold = median nearest-neighbor distance * this multiplier.",
+    )
+    parser.add_argument(
+        "--densify-max-neighbors",
+        type=int,
+        default=3,
+        help="Maximum midpoint links generated per original point.",
+    )
+    parser.add_argument(
+        "--densify-max-midpoints",
+        type=int,
+        default=20000,
+        help="Safety limit for render-only midpoint samples.",
+    )
     parser.add_argument("--fill-radius", type=int, default=10, help="Image-space nearest-point fill radius for small holes.")
     parser.add_argument("--padding", type=float, default=0.08, help="Projection padding ratio.")
     parser.add_argument("--smooth", action="store_true", help="Apply extra RGB smoothing to the natural render.")
@@ -118,6 +147,109 @@ def load_points_with_normals(path: Path) -> tuple[np.ndarray, np.ndarray | None]
     xyz = arr[:, :3].astype(np.float32)
     normals = arr[:, 3:6].astype(np.float32) if arr.shape[1] == 6 else None
     return xyz, normals
+
+
+def nearest_neighbor_spacing(points_xyz: np.ndarray) -> float:
+    n = points_xyz.shape[0]
+    if n < 2:
+        return 0.0
+    min_d2 = np.full(n, np.inf, dtype=np.float32)
+    chunk = 512
+    for start in range(0, n, chunk):
+        stop = min(n, start + chunk)
+        diff = points_xyz[start:stop, None, :] - points_xyz[None, :, :]
+        d2 = np.sum(diff * diff, axis=2)
+        row_ids = np.arange(start, stop)
+        d2[np.arange(stop - start), row_ids] = np.inf
+        min_d2[start:stop] = np.min(d2, axis=1)
+    finite = min_d2[np.isfinite(min_d2)]
+    if finite.size == 0:
+        return 0.0
+    return float(np.sqrt(np.median(finite)))
+
+
+def densify_midpoints(
+    points_xyz: np.ndarray,
+    normals: np.ndarray | None,
+    args: argparse.Namespace,
+) -> tuple[np.ndarray, np.ndarray | None, np.ndarray, dict[str, Any]]:
+    n = points_xyz.shape[0]
+    source_indices = np.arange(n, dtype=np.int64)
+    if not args.densify_midpoints or n < 2:
+        return points_xyz, normals, source_indices, {
+            "enabled": bool(args.densify_midpoints),
+            "original_points": int(n),
+            "midpoint_count": 0,
+            "render_points": int(n),
+        }
+
+    spacing = nearest_neighbor_spacing(points_xyz)
+    threshold = float(args.densify_distance) if args.densify_distance > 0 else spacing * float(args.densify_threshold_multiplier)
+    if threshold <= 0:
+        return points_xyz, normals, source_indices, {
+            "enabled": True,
+            "original_points": int(n),
+            "midpoint_count": 0,
+            "render_points": int(n),
+            "nearest_neighbor_spacing": float(spacing),
+            "distance_threshold": float(threshold),
+            "warning": "Degenerate threshold; no midpoint samples were generated.",
+        }
+
+    max_neighbors = max(1, int(args.densify_max_neighbors))
+    max_midpoints = max(0, int(args.densify_max_midpoints))
+    threshold2 = threshold * threshold
+    midpoint_list: list[np.ndarray] = []
+    midpoint_sources: list[int] = []
+    midpoint_normals: list[np.ndarray] = []
+
+    for idx in range(n):
+        diff = points_xyz - points_xyz[idx]
+        d2 = np.sum(diff * diff, axis=1)
+        candidates = np.where((d2 > 0) & (d2 <= threshold2) & (np.arange(n) > idx))[0]
+        if candidates.size == 0:
+            continue
+        order = np.argsort(d2[candidates])[:max_neighbors]
+        for neighbor in candidates[order]:
+            midpoint_list.append(((points_xyz[idx] + points_xyz[neighbor]) * 0.5).astype(np.float32))
+            midpoint_sources.append(int(idx))
+            if normals is not None:
+                normal = normals[idx] + normals[neighbor]
+                norm = float(np.linalg.norm(normal))
+                midpoint_normals.append((normal / max(norm, 1e-8)).astype(np.float32))
+            if len(midpoint_list) >= max_midpoints:
+                break
+        if len(midpoint_list) >= max_midpoints:
+            break
+
+    if not midpoint_list:
+        return points_xyz, normals, source_indices, {
+            "enabled": True,
+            "original_points": int(n),
+            "midpoint_count": 0,
+            "render_points": int(n),
+            "nearest_neighbor_spacing": float(spacing),
+            "distance_threshold": float(threshold),
+        }
+
+    midpoints = np.vstack(midpoint_list).astype(np.float32)
+    render_points = np.vstack([points_xyz, midpoints]).astype(np.float32)
+    render_source_indices = np.concatenate([source_indices, np.array(midpoint_sources, dtype=np.int64)])
+    render_normals = None
+    if normals is not None:
+        render_normals = np.vstack([normals, np.vstack(midpoint_normals).astype(np.float32)])
+    stats = {
+        "enabled": True,
+        "original_points": int(n),
+        "midpoint_count": int(midpoints.shape[0]),
+        "render_points": int(render_points.shape[0]),
+        "nearest_neighbor_spacing": float(spacing),
+        "distance_threshold": float(threshold),
+        "max_neighbors": int(max_neighbors),
+        "max_midpoints": int(max_midpoints),
+        "notes": "Midpoints are render-only samples. They map back to original endpoint point indices.",
+    }
+    return render_points, render_normals, render_source_indices, stats
 
 
 def select_sample_ids(root: Path, args: argparse.Namespace) -> list[str]:
@@ -180,6 +312,7 @@ def splat_index_map(
     py: np.ndarray,
     depth: np.ndarray,
     normals: np.ndarray | None,
+    source_indices: np.ndarray | None,
     image_size: int,
     radius: int,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -206,7 +339,7 @@ def splat_index_map(
                 if radius > 0 and d2 > radius2:
                     continue
                 if z > depth_map[yy, xx]:
-                    index_map[yy, xx] = int(idx)
+                    index_map[yy, xx] = int(source_indices[idx]) if source_indices is not None else int(idx)
                     depth_map[yy, xx] = z
                     dist_map[yy, xx] = float(np.sqrt(d2)) / max(1, radius)
                     if normals is not None:
@@ -424,15 +557,36 @@ def make_panel(natural_rgb: np.ndarray, conf_rgb: np.ndarray, source_map: np.nda
 
 
 def render_view(
+    original_points_xyz: np.ndarray,
+    original_normals: np.ndarray | None,
     points_xyz: np.ndarray,
     normals: np.ndarray | None,
+    source_indices: np.ndarray,
     view: str,
     args: argparse.Namespace,
 ) -> dict[str, np.ndarray]:
     px, py, depth, view_normals = project_points(points_xyz, normals, view, args.image_size, args.padding)
-    exact_index, exact_depth, _, _ = splat_index_map(px, py, depth, view_normals, args.image_size, args.index_radius)
+    orig_px, orig_py, orig_depth, orig_view_normals = project_points(
+        original_points_xyz, original_normals, view, args.image_size, args.padding
+    )
+    exact_source = np.arange(original_points_xyz.shape[0], dtype=np.int64)
+    exact_index, exact_depth, _, _ = splat_index_map(
+        orig_px,
+        orig_py,
+        orig_depth,
+        orig_view_normals,
+        exact_source,
+        args.image_size,
+        args.index_radius,
+    )
     index_map, depth_map, dist_map, normal_map = splat_index_map(
-        px, py, depth, view_normals, args.image_size, args.splat_radius
+        px,
+        py,
+        depth,
+        view_normals,
+        source_indices,
+        args.image_size,
+        args.splat_radius,
     )
     index_map, depth_map, dist_map, normal_map, source_map, confidence = fill_small_holes(
         index_map,
@@ -475,6 +629,7 @@ def render_sample(
     point_path = resolve_path(root, sample["point_cloud_path"])
     xyz_raw, normals = load_points_with_normals(point_path)
     xyz = normalize_points(xyz_raw)
+    render_xyz, render_normals, render_source_indices, densify_stats = densify_midpoints(xyz, normals, args)
     sample_dir = resolve_path(root, args.output_root) / sample_id
     if sample_dir.exists() and any(sample_dir.iterdir()) and not args.overwrite:
         raise FileExistsError(f"Output directory exists. Use --overwrite: {sample_dir}")
@@ -488,6 +643,8 @@ def render_sample(
         "task": sample.get("task", ""),
         "point_cloud_path": sample.get("point_cloud_path", ""),
         "num_points": int(xyz.shape[0]),
+        "num_render_points": int(render_xyz.shape[0]),
+        "densify_midpoints": densify_stats,
         "image_size": int(args.image_size),
         "splat_radius": int(args.splat_radius),
         "index_radius": int(args.index_radius),
@@ -500,7 +657,7 @@ def render_sample(
     }
 
     for view in views:
-        rendered = render_view(xyz, normals, view, args)
+        rendered = render_view(xyz, normals, render_xyz, render_normals, render_source_indices, view, args)
         natural_path = sample_dir / f"{view}_natural.png"
         conf_path = sample_dir / f"{view}_confidence.png"
         point_index_path = sample_dir / f"{view}_point_index.npy"

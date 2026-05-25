@@ -347,7 +347,13 @@ def run_qwen_json_two_images(
         generated = model.generate(**inputs, **gen_kwargs)
     trimmed = [out_ids[len(in_ids) :] for in_ids, out_ids in zip(inputs.input_ids, generated)]
     text = processor.batch_decode(trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0]
-    raw = extract_json(text)
+    try:
+        raw = extract_json(text)
+    except Exception as exc:
+        return {
+            "_raw_text": text,
+            "_parse_error": f"{type(exc).__name__}: {exc}",
+        }
     raw["_raw_text"] = text
     return raw
 
@@ -398,6 +404,19 @@ def normalize_points(value: Any, width: int, height: int) -> list[list[int]]:
 
 
 def normalize_coverage(raw: dict[str, Any], view: str, width: int, height: int, max_proposals: int) -> dict[str, Any]:
+    if raw.get("_parse_error"):
+        return {
+            "view": view,
+            "expected_target_parts": [],
+            "visible_target_parts": [],
+            "candidate_coverage": [],
+            "coverage_status": "uncertain",
+            "uncovered_target_parts": [],
+            "missing_region_proposals": [],
+            "should_trigger_missing_candidate": False,
+            "reason": f"VLM response JSON parse failed: {raw.get('_parse_error')}",
+            "raw_qwen3vl_response": raw,
+        }
     status = str(raw.get("coverage_status", "uncertain")).strip().lower()
     if status not in {"covered", "partially_covered", "not_covered", "uncertain"}:
         status = "uncertain"
@@ -439,6 +458,24 @@ def normalize_coverage(raw: dict[str, Any], view: str, width: int, height: int, 
         "should_trigger_missing_candidate": trigger,
         "reason": str(raw.get("reason", raw.get("notes", ""))),
         "raw_qwen3vl_response": raw,
+    }
+
+
+def coverage_error(view: str, exc: Exception) -> dict[str, Any]:
+    return {
+        "view": view,
+        "expected_target_parts": [],
+        "visible_target_parts": [],
+        "candidate_coverage": [],
+        "coverage_status": "uncertain",
+        "uncovered_target_parts": [],
+        "missing_region_proposals": [],
+        "should_trigger_missing_candidate": False,
+        "reason": f"coverage view failed: {type(exc).__name__}: {exc}",
+        "raw_qwen3vl_response": {
+            "_error_type": type(exc).__name__,
+            "_error": str(exc),
+        },
     }
 
 
@@ -703,33 +740,36 @@ def run_for_row(
     coverage_by_view: list[dict[str, Any]] = []
     for view_entry in overlay_manifest.get("views", []):
         view = str(view_entry["view"])
-        clean_path = image_path_from_overlay_entry(root, view_entry, overlay_manifest_path.parent, "source_image_path")
-        selector_value = view_entry.get("selector_path") or view_entry.get("overlay_path")
-        selector_path = resolve_portable_path(root, selector_value, overlay_manifest_path.parent)
-        if not selector_path.exists():
-            raise FileNotFoundError(f"Selector/overlay image not found: {selector_path}")
-        with Image.open(clean_path) as image:
-            width, height = image.size
-        if args.validate_only:
-            coverage_by_view.append({"view": view, "validated": True})
-            continue
-        if args.dry_run:
-            coverage = {
-                "view": view,
-                "expected_target_parts": expected_target_parts(row, part_plan),
-                "visible_target_parts": [],
-                "candidate_coverage": [],
-                "coverage_status": "uncertain",
-                "uncovered_target_parts": [],
-                "missing_region_proposals": [],
-                "should_trigger_missing_candidate": False,
-                "reason": "dry_run",
-                "raw_qwen3vl_response": {},
-            }
-        else:
-            prompt = build_prompt(row, view, overlay_manifest.get("candidates", []), part_plan, (width, height))
-            raw = run_qwen_json_two_images(model, processor, clean_path, selector_path, prompt, cfg)
-            coverage = normalize_coverage(raw, view, width, height, args.max_missing_proposals_per_view)
+        try:
+            clean_path = image_path_from_overlay_entry(root, view_entry, overlay_manifest_path.parent, "source_image_path")
+            selector_value = view_entry.get("selector_path") or view_entry.get("overlay_path")
+            selector_path = resolve_portable_path(root, selector_value, overlay_manifest_path.parent)
+            if not selector_path.exists():
+                raise FileNotFoundError(f"Selector/overlay image not found: {selector_path}")
+            with Image.open(clean_path) as image:
+                width, height = image.size
+            if args.validate_only:
+                coverage_by_view.append({"view": view, "validated": True})
+                continue
+            if args.dry_run:
+                coverage = {
+                    "view": view,
+                    "expected_target_parts": expected_target_parts(row, part_plan),
+                    "visible_target_parts": [],
+                    "candidate_coverage": [],
+                    "coverage_status": "uncertain",
+                    "uncovered_target_parts": [],
+                    "missing_region_proposals": [],
+                    "should_trigger_missing_candidate": False,
+                    "reason": "dry_run",
+                    "raw_qwen3vl_response": {},
+                }
+            else:
+                prompt = build_prompt(row, view, overlay_manifest.get("candidates", []), part_plan, (width, height))
+                raw = run_qwen_json_two_images(model, processor, clean_path, selector_path, prompt, cfg)
+                coverage = normalize_coverage(raw, view, width, height, args.max_missing_proposals_per_view)
+        except Exception as exc:
+            coverage = coverage_error(view, exc)
         view_path = output_dir / f"{view}_coverage.json"
         write_json(view_path, coverage, args.overwrite)
         coverage_by_view.append(
@@ -741,15 +781,23 @@ def run_for_row(
 
     supplement_result: dict[str, Any] = {"added_candidates": []}
     if not args.validate_only and args.supplement_missing and any(item.get("should_trigger_missing_candidate") for item in coverage_by_view):
-        supplement_result = supplement_missing_candidates(
-            root=root,
-            args=args,
-            row=row,
-            candidate_manifest_path=candidate_manifest_path,
-            overlay_manifest_path=overlay_manifest_path,
-            coverage_by_view=coverage_by_view,
-            coverage_output_path=coverage_output_path,
-        )
+        try:
+            supplement_result = supplement_missing_candidates(
+                root=root,
+                args=args,
+                row=row,
+                candidate_manifest_path=candidate_manifest_path,
+                overlay_manifest_path=overlay_manifest_path,
+                coverage_by_view=coverage_by_view,
+                coverage_output_path=coverage_output_path,
+            )
+        except Exception as exc:
+            supplement_result = {
+                "added_candidates": [],
+                "status": "failed_nonfatal",
+                "error_type": type(exc).__name__,
+                "error": str(exc),
+            }
 
     combined = {
         "version": "v2.2",
@@ -787,6 +835,35 @@ def run_for_row(
     return combined
 
 
+def row_error_result(root: Path, args: argparse.Namespace, row: dict[str, str], exc: Exception) -> dict[str, Any]:
+    pilot_id = row.get("pilot_id", "unknown_pilot") or "unknown_pilot"
+    output_dir = resolve_path(root, args.output_root) / pilot_id
+    output_dir.mkdir(parents=True, exist_ok=True)
+    coverage_output_path = output_dir / "combined_coverage_check.json"
+    combined = {
+        "version": "v2.2",
+        "pipeline": "vlm_coverage_check_and_missing_candidate_supplement",
+        "pilot_id": pilot_id,
+        "sample_id": row.get("sample_id", ""),
+        "object_category": row.get("object_category", ""),
+        "task": row.get("task", ""),
+        "executor": row.get("executor", ""),
+        "candidate_manifest": "",
+        "overlay_manifest": "",
+        "part_plan": None,
+        "view_results": [],
+        "coverage_by_view": [],
+        "supplement_result": {"added_candidates": []},
+        "coverage_check": relative_to_dataset(root, coverage_output_path),
+        "status": "failed_nonfatal",
+        "error_type": type(exc).__name__,
+        "error": str(exc),
+        "notes": "Coverage check failed for this row, but the batch continued. Human review should treat it as needing manual inspection.",
+    }
+    write_json(coverage_output_path, combined, True)
+    return combined
+
+
 def main() -> int:
     args = parse_args()
     root = Path(args.dataset_root).resolve()
@@ -803,11 +880,19 @@ def main() -> int:
     except Exception:
         row_iter = rows
     print(f"[coverage] rows={len(rows)} estimated_view_calls={len(rows) * 8}", flush=True)
-    outputs = [run_for_row(root, args, cfg, row, model, processor) for row in row_iter]
+    outputs: list[dict[str, Any]] = []
+    error_count = 0
+    for row in row_iter:
+        try:
+            outputs.append(run_for_row(root, args, cfg, row, model, processor))
+        except Exception as exc:
+            error_count += 1
+            outputs.append(row_error_result(root, args, row, exc))
     print(
         json.dumps(
             {
                 "rows": len(outputs),
+                "errors": error_count,
                 "validate_only": args.validate_only,
                 "dry_run": args.dry_run,
                 "supplement_missing": args.supplement_missing,
@@ -817,6 +902,8 @@ def main() -> int:
                         "sample_id": item["sample_id"],
                         "coverage_check": item.get("coverage_check", ""),
                         "added_candidates": item.get("supplement_result", {}).get("added_candidates", []),
+                        "status": item.get("status", "ok"),
+                        "error": item.get("error", ""),
                     }
                     for item in outputs
                 ],

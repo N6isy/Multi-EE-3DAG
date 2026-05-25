@@ -54,6 +54,9 @@ point_index/confidence/source 负责“让 2D 区域可回投”。
 python MultiEEAffordance/experiments/natural_surface_vlm/render_natural_surface_views.py \
   --dataset-root MultiEEAffordance \
   --pilot-id vlm_pilot_005 \
+  --densify-midpoints \
+  --densify-threshold-multiplier 2.2 \
+  --densify-max-neighbors 3 \
   --splat-radius 10 \
   --fill-radius 12 \
   --blur-radius 1.6 \
@@ -117,6 +120,10 @@ python MultiEEAffordance/experiments/natural_surface_vlm/project_natural_masks_t
 | 参数 | 建议 | 作用 |
 | --- | --- | --- |
 | `--splat-radius` | 8 到 14 | 越大越连续，但细节可能被糊成一片 |
+| `--densify-midpoints` | 建议尝试 | 在相邻点之间生成渲染用中点，让 handle / ring 等细结构更连续 |
+| `--densify-threshold-multiplier` | 1.6 到 3.0 | 自动距离阈值 = 中位最近邻距离 × 该倍率 |
+| `--densify-max-neighbors` | 2 到 4 | 每个原始点最多连接几个邻近点 |
+| `--densify-distance` | 默认 0 | 若手动指定，则使用归一化坐标下的绝对距离阈值 |
 | `--fill-radius` | 8 到 16 | 填小孔，让图更自然；过大可能扩张到背景 |
 | `--blur-radius` | 1.0 到 2.0 | 弱化圆点颗粒感，让 VLM 输入更接近连续表面 |
 | `--edge-mode` | `silhouette` | 默认只画外轮廓，避免内部裂纹干扰 VLM |
@@ -128,13 +135,13 @@ python MultiEEAffordance/experiments/natural_surface_vlm/project_natural_masks_t
 如果图像仍然像“颗粒球”：
 
 ```bash
---splat-radius 12 --fill-radius 14 --blur-radius 1.8 --edge-mode silhouette --smooth
+--densify-midpoints --densify-threshold-multiplier 2.5 --splat-radius 12 --fill-radius 14 --blur-radius 1.8 --edge-mode silhouette --smooth
 ```
 
 如果细结构被糊掉，例如 handle 变粗或与主体粘连：
 
 ```bash
---splat-radius 7 --fill-radius 8 --blur-radius 1.0 --edge-mode silhouette
+--densify-midpoints --densify-threshold-multiplier 1.6 --densify-max-neighbors 2 --splat-radius 7 --fill-radius 8 --blur-radius 1.0 --edge-mode silhouette
 ```
 
 如果需要诊断深度断裂和孔洞位置，而不是给 VLM 看，可以临时使用：
