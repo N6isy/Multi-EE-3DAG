@@ -1,0 +1,56 @@
+{
+  "zip": "MultiEEAffordance/raw/3d_affordancenet/full-shape.zip",
+  "source_split": "val",
+  "target_split": "val",
+  "objects_loaded": 2285,
+  "objects_converted": 420,
+  "samples_written": 1260,
+  "tasks": {
+    "pick_up": 420,
+    "open_pull": 420,
+    "press_push": 420
+  },
+  "categories": {
+    "Door": 20,
+    "Clock": 20,
+    "Dishwasher": 16,
+    "Earphone": 20,
+    "Vase": 20,
+    "Knife": 20,
+    "Bowl": 18,
+    "Bag": 12,
+    "Faucet": 20,
+    "Scissors": 6,
+    "Display": 20,
+    "Chair": 20,
+    "Bottle": 20,
+    "Microwave": 18,
+    "StorageFurniture": 20,
+    "Refrigerator": 18,
+    "Mug": 19,
+    "Keyboard": 15,
+    "Table": 20,
+    "Bed": 18,
+    "Hat": 20,
+    "Laptop": 20,
+    "TrashCan": 20
+  },
+  "feasible_counts_by_task": {
+    "pick_up": {
+      "gripper": 130,
+      "dexterous_hand": 130,
+      "suction": 58
+    },
+    "open_pull": {
+      "gripper": 110,
+      "suction": 43,
+      "hook": 77,
+      "dexterous_hand": 110
+    },
+    "press_push": {
+      "suction": 20,
+      "dexterous_hand": 36
+    }
+  },
+  "manifest": "MultiEEAffordance/manifests/3d_affordancenet_full_shape_val_batch_v3_manifest.jsonl"
+}
