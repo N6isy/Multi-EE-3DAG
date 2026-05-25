@@ -115,7 +115,49 @@ python MultiEEAffordance/experiments/natural_surface_vlm/project_natural_masks_t
 | `*_multi_channel_mask.npy` | 写入指定 executor 通道的 `[N,4]` candidate mask |
 | `projection_summary.json` | 回投统计和路径记录 |
 
-## 6. 参数如何调
+## 6. 独立测试 Qwen3-VL 是否看懂自然化图
+
+如果只想验证“自然化渲染图能不能让 VLM 更好地识别任务部件”，不要改 v3 pipeline，直接运行独立 probe：
+
+```bash
+CUDA_VISIBLE_DEVICES=1,2 python MultiEEAffordance/experiments/natural_surface_vlm/run_natural_vlm_probe.py \
+  --dataset-root MultiEEAffordance \
+  --config configs/qwen3vl_sam2_pilot.yaml \
+  --pilot-id vlm_pilot_005 \
+  --image-key natural_render_path \
+  --probe-mode semantic_and_localize \
+  --overwrite
+```
+
+输出目录：
+
+```text
+processed/natural_surface_vlm/vlm_probe/vlm_pilot_005/
+```
+
+重点查看：
+
+| 文件 | 含义 |
+| --- | --- |
+| `combined_probe_summary.json` | 多视角汇总，统计 VLM 是否认为目标部件可见、可定位 |
+| `view_probe_results.json` | 每个视角的语义判断和粗定位结果 |
+| `*_semantic.json` | 当前视角下 VLM 识别出的目标部件、reject 部件和机制解释 |
+| `*_localization.json` | 当前视角下 VLM 给出的粗 box / positive point |
+| `*_probe_overlay.png` | 将 VLM 的粗定位画回自然化图，便于人工判断是否靠谱 |
+| `index.html` | 浏览器查看的汇总页面 |
+
+判断标准：
+
+| 检查项 | 说明 |
+| --- | --- |
+| `ranked_target_parts` 是否包含目标部件 | 例如 `Bag / lift_carry / hook` 应该出现 `bag handle / handle loop / handle inner rim` |
+| `ranked_reject_parts` 是否排除主体 | 例如不应把 `bag body panel` 当成 hook 正例 |
+| `localizable_views` 是否足够 | 如果语义正确但定位差，说明自然化图改善了理解，但仍需更强 grounding |
+| overlay 是否紧贴目标部件 | box/point 应落在 handle，不应覆盖整块 bag body |
+
+该 probe 不生成 3D mask，也不写入 v2/v3 candidate 目录，只用于判断这个自然化渲染想法是否值得继续接入后续 Grounding/SAM2。
+
+## 7. 参数如何调
 
 | 参数 | 建议 | 作用 |
 | --- | --- | --- |
@@ -150,7 +192,7 @@ python MultiEEAffordance/experiments/natural_surface_vlm/project_natural_masks_t
 --edge-mode depth
 ```
 
-## 7. 判断是否成功
+## 8. 判断是否成功
 
 人工检查时重点看三件事：
 
@@ -162,7 +204,7 @@ python MultiEEAffordance/experiments/natural_surface_vlm/project_natural_masks_t
 
 如果自然化图看起来更像物体，但 `confidence.npy` 显示目标区域主要来自低置信度填补，则不能直接作为高质量候选，需要人工复核或调低 `fill-radius`。
 
-## 8. 当前定位
+## 9. 当前定位
 
 本实验仍然只是 candidate proposal 生成路线，不改变项目的基本标注原则：
 
