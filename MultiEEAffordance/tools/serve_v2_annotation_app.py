@@ -560,25 +560,25 @@ APP_HTML = r"""<!doctype html>
   <title>Multi-EE v2 点级审查系统</title>
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; background: #f5f7fb; color: #202635; font-family: Arial, "Microsoft YaHei", sans-serif; }
-    header { height: 52px; padding: 0 16px; background: #17202e; color: white; display: flex; align-items: center; justify-content: space-between; }
+    body { margin: 0; background: #f4f8ff; color: #172033; font-family: Arial, "Microsoft YaHei", sans-serif; }
+    header { height: 52px; padding: 0 16px; background: linear-gradient(90deg, #0f2f57, #1d5fbf); color: white; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 12px rgba(15,47,87,.18); }
     header h1 { margin: 0; font-size: 17px; }
     .app { display: grid; grid-template-columns: 330px minmax(620px, 1fr) 380px; height: calc(100vh - 52px); }
-    aside, .panel { overflow: auto; background: #fff; border-right: 1px solid #d8e0eb; }
+    aside, .panel { overflow: auto; background: #fff; border-right: 1px solid #d7e5f6; }
     aside { padding: 12px; }
-    .viewer { position: relative; background: #f9fbff; overflow: hidden; }
-    .panel { border-right: 0; border-left: 1px solid #d8e0eb; padding: 14px; }
+    .viewer { position: relative; background: radial-gradient(circle at 50% 42%, #ffffff 0, #f7fbff 48%, #eef6ff 100%); overflow: hidden; }
+    .panel { border-right: 0; border-left: 1px solid #d7e5f6; padding: 14px; }
     input, select, textarea, button { font-family: inherit; font-size: 13px; }
-    input, select, textarea { width: 100%; padding: 8px; border: 1px solid #c9d2df; border-radius: 6px; background: white; }
+    input, select, textarea { width: 100%; padding: 8px; border: 1px solid #d7e5f6; border-radius: 6px; background: white; }
     textarea { min-height: 88px; resize: vertical; }
-    button { border: 1px solid #c13d3d; background: #d54444; color: white; border-radius: 6px; padding: 8px 10px; cursor: pointer; }
-    button.secondary { background: #eef2f7; color: #263043; border-color: #cbd3df; }
-    button.active { background: #1f2a3d; border-color: #1f2a3d; }
-    .brush-control { display: flex; align-items: center; gap: 7px; padding: 6px 9px; background: rgba(255,255,255,.92); border: 1px solid #d8e0eb; border-radius: 7px; font-size: 12px; color: #334155; }
+    button { border: 1px solid #2563eb; background: #2563eb; color: white; border-radius: 6px; padding: 8px 10px; cursor: pointer; }
+    button.secondary { background: #fff; color: #1d5fbf; border-color: #d7e5f6; }
+    button.active { background: #0f2f57; border-color: #0f2f57; }
+    .brush-control { display: flex; align-items: center; gap: 7px; padding: 6px 9px; background: rgba(255,255,255,.92); border: 1px solid #d7e5f6; border-radius: 7px; font-size: 12px; color: #334155; }
     .brush-control input { width: 92px; padding: 0; }
     .sample-list { display: flex; flex-direction: column; gap: 7px; margin-top: 10px; }
-    .sample { border: 1px solid #d8e0eb; border-radius: 8px; padding: 9px; cursor: pointer; }
-    .sample.active { border-color: #d54444; box-shadow: 0 0 0 2px rgba(213,68,68,.12); }
+    .sample { border: 1px solid #d7e5f6; border-radius: 8px; padding: 9px; cursor: pointer; }
+    .sample.active { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,.13); }
     .sample.loading { border-color: #2563eb; background: #eff6ff; }
     .sample-id { font-size: 11px; color: #526070; word-break: break-all; }
     .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
@@ -588,11 +588,11 @@ APP_HTML = r"""<!doctype html>
     .tag.refine_needed { background: #ffedd5; }
     canvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
     .toolbar { position: absolute; left: 12px; top: 12px; right: 12px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; z-index: 2; }
-    .hud { position: absolute; left: 12px; bottom: 12px; background: rgba(23,32,46,.82); color: white; padding: 9px 11px; border-radius: 7px; font-size: 12px; line-height: 1.55; }
-    .box { border: 1px solid #d8e0eb; background: #f8fafc; border-radius: 8px; padding: 10px; margin-bottom: 12px; font-size: 12px; line-height: 1.55; color: #475569; }
+    .hud { position: absolute; left: 12px; bottom: 12px; background: rgba(15,47,87,.86); color: white; padding: 9px 11px; border-radius: 7px; font-size: 12px; line-height: 1.55; }
+    .box { border: 1px solid #d7e5f6; background: #f8fbff; border-radius: 8px; padding: 10px; margin-bottom: 12px; font-size: 12px; line-height: 1.55; color: #475569; }
     .candidate-list { display: flex; flex-direction: column; gap: 7px; margin: 8px 0 10px; }
-    .candidate-item { border: 1px solid #d8e0eb; border-radius: 8px; padding: 8px; background: #fff; cursor: pointer; }
-    .candidate-item.selected { border-color: #d54444; background: #fff7f7; }
+    .candidate-item { border: 1px solid #d7e5f6; border-radius: 8px; padding: 8px; background: #fff; cursor: pointer; }
+    .candidate-item.selected { border-color: #2563eb; background: #eff6ff; }
     .candidate-item.focused { border-color: #1f6feb; background: #eef6ff; box-shadow: 0 0 0 2px rgba(31,111,235,.12); }
     .candidate-item.locked { border-color: #0f766e; background: #ecfdf5; box-shadow: 0 0 0 2px rgba(15,118,110,.14); }
     .candidate-main { display: flex; gap: 8px; align-items: flex-start; }
@@ -603,9 +603,9 @@ APP_HTML = r"""<!doctype html>
     .field { margin-bottom: 11px; }
     .field label { display: block; color: #526070; font-size: 12px; margin-bottom: 5px; }
     .row { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
-    .savebar { position: sticky; bottom: -14px; background: #fff; border-top: 1px solid #d8e0eb; padding-top: 12px; display: flex; gap: 8px; }
+    .savebar { position: sticky; bottom: -14px; background: #fff; border-top: 1px solid #d7e5f6; padding-top: 12px; display: flex; gap: 8px; }
     .msg { margin-top: 8px; min-height: 18px; color: #0f766e; font-size: 12px; }
-    code { color: #b42323; }
+    code { color: #1d5fbf; }
   </style>
 </head>
 <body>
@@ -1134,11 +1134,11 @@ function drawNow() {
     if (mode === "delete" && !on) preview = null;
     ctx.beginPath();
     if (focusedCandidateIds.size) {
-      ctx.fillStyle = preview || (on ? "#d83c3c" : "#aeb8c6");
+      ctx.fillStyle = preview || (on ? "#2563eb" : "#aeb8c6");
       ctx.globalAlpha = preview ? 0.98 : (on ? 0.34 : 0.16);
       ctx.arc(p.x, p.y, preview ? 5.2 : (on ? 3.2 : 2.0), 0, Math.PI * 2);
     } else {
-      ctx.fillStyle = on ? "#d83c3c" : (preview || "#aeb8c6");
+      ctx.fillStyle = on ? "#2563eb" : (preview || "#aeb8c6");
       ctx.globalAlpha = on ? 0.96 : (preview ? 0.72 : 0.34);
       ctx.arc(p.x, p.y, on ? 4.4 : (preview ? 3.4 : 2.4), 0, Math.PI * 2);
     }

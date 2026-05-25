@@ -273,6 +273,7 @@ def build_commands(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
         commands.append(("render", cmd))
     if "build" in stages:
         cmd = add_common([sys.executable, script(root, "build_v3_candidate_masks.py")], args)
+        cmd.extend(["--include-tasks", args.include_tasks, "--exclude-tasks", args.exclude_tasks])
         if args.selected_candidates:
             cmd.extend(["--selected-candidates", args.selected_candidates])
         if args.allow_empty:
