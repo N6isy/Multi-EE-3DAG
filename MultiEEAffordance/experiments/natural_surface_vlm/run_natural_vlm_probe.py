@@ -116,6 +116,29 @@ def parse_args() -> argparse.Namespace:
         default="semantic_and_localize",
         help="Semantic tests target understanding; localize asks for rough 2D boxes/points.",
     )
+    parser.add_argument(
+        "--no-refine-localization",
+        action="store_true",
+        help="Disable foreground/upper-structure refinement for VLM boxes and points.",
+    )
+    parser.add_argument(
+        "--refine-min-confidence",
+        type=float,
+        default=0.25,
+        help="Minimum natural-render confidence for foreground refinement.",
+    )
+    parser.add_argument(
+        "--refine-snap-radius",
+        type=int,
+        default=48,
+        help="Maximum pixel distance for snapping VLM points to valid foreground.",
+    )
+    parser.add_argument(
+        "--upper-margin",
+        type=int,
+        default=24,
+        help="Extra pixels below detected body top included for upper handle/ring/loop refinement.",
+    )
     parser.add_argument("--overwrite", action="store_true", help="Overwrite outputs.")
     parser.add_argument("--dry-run", action="store_true", help="Write deterministic placeholder probe outputs.")
     parser.add_argument("--validate-only", action="store_true", help="Validate paths without loading Qwen.")
@@ -430,6 +453,163 @@ def normalize_localization(raw: dict[str, Any], view: str, image_size: int) -> d
     }
 
 
+def load_refine_maps(root: Path, manifest_dir: Path, entry: dict[str, Any]) -> tuple[Any, Any, Any]:
+    import numpy as np
+
+    index_path = resolve_path(root, entry["point_index_path"], base_dir=manifest_dir)
+    confidence_path = resolve_path(root, entry["confidence_path"], base_dir=manifest_dir)
+    source_path = resolve_path(root, entry["source_path"], base_dir=manifest_dir)
+    if not index_path.exists() or not confidence_path.exists() or not source_path.exists():
+        raise FileNotFoundError(f"Missing natural render refinement maps for view: {entry.get('view')}")
+    return np.load(index_path), np.load(confidence_path), np.load(source_path)
+
+
+def target_prefers_upper_structure(semantic: dict[str, Any] | None, row: dict[str, str]) -> bool:
+    if semantic is None:
+        return False
+    words = " ".join(
+        normalize_list(semantic.get("target_positive_parts", []), 20)
+        + normalize_list(semantic.get("target_grounding_queries", []), 20)
+        + [str(semantic.get("target_region_description", ""))]
+    ).lower()
+    keywords = ("handle", "loop", "ring", "hole", "inner rim", "top", "upper")
+    if any(key in words for key in keywords):
+        return True
+    executor = row.get("executor", "").lower()
+    return executor == "hook" and any(key in words for key in ("catch", "interlock", "enter"))
+
+
+def upper_structure_mask(valid: Any, margin: int) -> Any:
+    import numpy as np
+
+    row_counts = valid.sum(axis=1)
+    if row_counts.size == 0 or row_counts.max() <= 0:
+        return valid.copy()
+    # Rows with many foreground pixels are likely the main body. Anything
+    # clearly above that body top is treated as an upper/detached structure.
+    threshold = max(12, int(row_counts.max() * 0.22))
+    dense_rows = np.where(row_counts >= threshold)[0]
+    if dense_rows.size == 0:
+        return valid.copy()
+    body_top = int(dense_rows.min())
+    cutoff = min(valid.shape[0] - 1, body_top + max(0, int(margin)))
+    mask = np.zeros_like(valid, dtype=bool)
+    mask[: cutoff + 1, :] = valid[: cutoff + 1, :]
+    if mask.sum() < 4:
+        return valid.copy()
+    return mask
+
+
+def snap_point_to_mask(point: list[int], mask: Any, radius: int) -> list[int] | None:
+    import numpy as np
+
+    x, y = int(point[0]), int(point[1])
+    h, w = mask.shape
+    x0, x1 = max(0, x - radius), min(w - 1, x + radius)
+    y0, y1 = max(0, y - radius), min(h - 1, y + radius)
+    ys, xs = np.where(mask[y0 : y1 + 1, x0 : x1 + 1])
+    if xs.size == 0:
+        return None
+    xs = xs + x0
+    ys = ys + y0
+    d2 = (xs - x) * (xs - x) + (ys - y) * (ys - y)
+    best = int(np.argmin(d2))
+    return [int(xs[best]), int(ys[best])]
+
+
+def bbox_from_mask(mask: Any, padding: int = 4) -> list[int] | None:
+    import numpy as np
+
+    ys, xs = np.where(mask)
+    if xs.size == 0:
+        return None
+    h, w = mask.shape
+    return [
+        max(0, int(xs.min()) - padding),
+        max(0, int(ys.min()) - padding),
+        min(w - 1, int(xs.max()) + padding),
+        min(h - 1, int(ys.max()) + padding),
+    ]
+
+
+def refine_localization(
+    root: Path,
+    manifest_dir: Path,
+    entry: dict[str, Any],
+    localization: dict[str, Any],
+    semantic: dict[str, Any] | None,
+    row: dict[str, str],
+    args: argparse.Namespace,
+) -> dict[str, Any]:
+    import numpy as np
+
+    if args.no_refine_localization or not localization.get("can_localize"):
+        return localization
+    index_map, confidence, source = load_refine_maps(root, manifest_dir, entry)
+    valid = (index_map >= 0) & (source > 0) & (confidence >= float(args.refine_min_confidence))
+    if not np.any(valid):
+        localization["refine"] = {"enabled": True, "status": "no_valid_foreground"}
+        return localization
+
+    prefer_upper = target_prefers_upper_structure(semantic, row)
+    target_mask = upper_structure_mask(valid, args.upper_margin) if prefer_upper else valid
+    if target_mask.sum() < 4:
+        target_mask = valid
+
+    refined_boxes: list[list[int]] = []
+    for box in localization.get("boxes", []):
+        x1, y1, x2, y2 = box
+        local = np.zeros_like(target_mask, dtype=bool)
+        local[y1 : y2 + 1, x1 : x2 + 1] = target_mask[y1 : y2 + 1, x1 : x2 + 1]
+        if local.sum() < 4:
+            local[y1 : y2 + 1, x1 : x2 + 1] = valid[y1 : y2 + 1, x1 : x2 + 1]
+        refined = bbox_from_mask(local)
+        if refined is not None:
+            refined_boxes.append(refined)
+
+    refined_points: list[list[int]] = []
+    for point in localization.get("positive_points", []):
+        snapped = snap_point_to_mask(point, target_mask, int(args.refine_snap_radius))
+        if snapped is None:
+            snapped = snap_point_to_mask(point, valid, int(args.refine_snap_radius))
+        if snapped is not None and snapped not in refined_points:
+            refined_points.append(snapped)
+
+    refined_negative: list[list[int]] = []
+    for point in localization.get("negative_points", []):
+        # Negative points are often meant to exclude body/background, so keep
+        # them close to any foreground instead of forcing them into upper parts.
+        snapped = snap_point_to_mask(point, valid, int(args.refine_snap_radius))
+        if snapped is not None and snapped not in refined_negative:
+            refined_negative.append(snapped)
+
+    before = {
+        "boxes": localization.get("boxes", []),
+        "positive_points": localization.get("positive_points", []),
+        "negative_points": localization.get("negative_points", []),
+    }
+    localization["boxes"] = refined_boxes or localization.get("boxes", [])
+    localization["positive_points"] = refined_points or localization.get("positive_points", [])
+    localization["negative_points"] = refined_negative or localization.get("negative_points", [])
+    localization["refine"] = {
+        "enabled": True,
+        "prefer_upper_structure": bool(prefer_upper),
+        "min_confidence": float(args.refine_min_confidence),
+        "snap_radius": int(args.refine_snap_radius),
+        "upper_margin": int(args.upper_margin),
+        "valid_pixels": int(valid.sum()),
+        "target_pixels": int(target_mask.sum()),
+        "before": before,
+        "after": {
+            "boxes": localization.get("boxes", []),
+            "positive_points": localization.get("positive_points", []),
+            "negative_points": localization.get("negative_points", []),
+        },
+    }
+    localization["notes"] = (localization.get("notes", "") + " | foreground_refined").strip(" |")
+    return localization
+
+
 def dry_semantic(row: dict[str, str], view: str) -> dict[str, Any]:
     hint = category_hint(row)
     return normalize_semantic(
@@ -621,6 +801,7 @@ def run_for_row(root: Path, args: argparse.Namespace, cfg: dict[str, Any], row: 
                 else:
                     raw = run_qwen_json(model, processor, image_path, localization_prompt(row, view, image_size, semantic), cfg)
                     localization = normalize_localization(raw, view, image_size)
+                    localization = refine_localization(root, manifest_dir, entry, localization, semantic, row, args)
                 write_json(output_dir / f"{view}_localization.json", localization, args.overwrite)
                 overlay_path = output_dir / f"{view}_probe_overlay.png"
                 draw_overlay(image_path, overlay_path, localization)

@@ -120,7 +120,7 @@ def render_manifest_path(root: Path, args: argparse.Namespace, sample_id: str) -
 
 
 def image_path_from_view(root: Path, entry: dict[str, Any], base_dir: Path) -> Path:
-    for key in ("dense_render_path", "render_path", "selector_path", "silhouette_path"):
+    for key in ("natural_render_path", "dense_render_path", "render_path", "selector_path", "silhouette_path"):
         value = entry.get(key)
         if value:
             path = resolve_portable_path(root, value, base_dir)

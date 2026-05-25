@@ -13,8 +13,22 @@ from pathlib import Path
 from typing import Any
 
 
-DEFAULT_STAGES = ["views", "plan", "ground", "project", "grow", "render", "build"]
-ALL_STAGES = DEFAULT_STAGES + ["coverage", "visualize"]
+DEFAULT_STAGES = ["views", "plan", "part_propose", "render", "part_select", "part_filter", "build"]
+GROUNDING_STAGES = ["views", "plan", "ground", "project", "grow", "render", "build"]
+ALL_STAGES = [
+    "views",
+    "plan",
+    "part_propose",
+    "render",
+    "part_select",
+    "part_filter",
+    "build",
+    "ground",
+    "project",
+    "grow",
+    "coverage",
+    "visualize",
+]
 KNOWN_TASKS = ["pick_up", "lift_carry", "open_pull", "press_push"]
 DEFAULT_ACTIVE_TASKS = ["pick_up", "open_pull", "press_push"]
 EMPTY_DECISIONS = {"empty", "empty_review_required", "confirm_empty", "skip_vlm_empty"}
@@ -58,6 +72,26 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--pilot-id", default=None)
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--stages", default=",".join(DEFAULT_STAGES), help=f"Comma-separated stages: {','.join(ALL_STAGES)}")
+    parser.add_argument(
+        "--candidate-source",
+        choices=["part3d", "grounding"],
+        default="part3d",
+        help="part3d uses 3D part proposals plus VLM candidate selection; grounding keeps the old VLM coordinate path.",
+    )
+    parser.add_argument(
+        "--view-renderer",
+        choices=["natural", "dense", "both"],
+        default="natural",
+        help="Render mode for VLM views. Natural is the v3 default; dense preserves the old point render.",
+    )
+    parser.add_argument("--natural-renders-root", default="processed/vlm_candidate_v3/natural_renders")
+    parser.add_argument("--dense-renders-root", default="processed/vlm_semantic_part/renders")
+    parser.add_argument(
+        "--part-proposal-backend",
+        choices=["natural_cc", "sam3d", "partslippp"],
+        default="natural_cc",
+        help="3D part proposal backend. External SAM3D/PartSLIP++ adapters are reserved but not required.",
+    )
     parser.add_argument("--selected-candidates", default="", help="Optional manual candidate ids for build/visualize.")
     parser.add_argument("--allow-empty", action="store_true")
     parser.add_argument("--box-shrink-ratio", type=float, default=0.0, help="Pass to 2D-to-3D projection.")
@@ -77,6 +111,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--k-neighbors", type=int, default=24, help="kNN neighborhood size for v3 growth.")
     parser.add_argument("--min-points", type=int, default=4, help="Minimum points per grown candidate.")
     parser.add_argument("--max-candidates", type=int, default=12, help="Maximum candidates shown in overlay rendering.")
+    parser.add_argument("--min-selected-votes", type=int, default=1, help="Minimum VLM selected votes for part_filter.")
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--planner-dry-run", action="store_true", help="Run VLM-dependent stages as dry-run placeholders.")
@@ -95,6 +130,17 @@ def stage_list(value: str) -> list[str]:
     if invalid:
         raise ValueError(f"Invalid v3 stages: {invalid}. Available: {allowed}")
     return stages
+
+
+def effective_stages(args: argparse.Namespace) -> list[str]:
+    default_text = ",".join(DEFAULT_STAGES)
+    if args.candidate_source == "grounding" and str(args.stages or "") == default_text:
+        return list(GROUNDING_STAGES)
+    return stage_list(args.stages)
+
+
+def active_renders_root(args: argparse.Namespace) -> str:
+    return args.dense_renders_root if args.view_renderer == "dense" else args.natural_renders_root
 
 
 def parse_task_filter(value: str, allow_all: bool) -> set[str] | None:
@@ -223,8 +269,8 @@ def prepare_pilot_csv(args: argparse.Namespace, dataset_root: Path) -> dict[str,
         )
     filtered = [row for row in task_filtered if decision_selected(row, args.include_decisions)]
     empty_rows = [row for row in task_filtered if not decision_selected(row, args.include_decisions)]
-    stages = stage_list(args.stages)
-    if not filtered and any(stage in stages for stage in ("views", "plan", "ground", "project", "grow", "render", "coverage")):
+    stages = effective_stages(args)
+    if not filtered and any(stage in stages for stage in ("views", "plan", "ground", "project", "grow", "part_propose", "render", "part_select", "part_filter", "coverage")):
         raise ValueError(
             "No non-empty rows remain for VLM/candidate stages after decision filtering. "
             "Empty-review rows are passed to build only."
@@ -274,15 +320,50 @@ def add_common(cmd: list[str], args: argparse.Namespace) -> list[str]:
 
 def build_commands(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
     root = Path(args.dataset_root)
-    stages = stage_list(args.stages)
+    stages = effective_stages(args)
     commands: list[tuple[str, list[str]]] = []
-    if "views" in stages or any(stage in stages for stage in ("plan", "ground", "project", "grow", "render", "coverage", "build")):
-        cmd = add_common([sys.executable, script(root, "render_vlm_friendly_views.py")], args)
-        if getattr(args, "effective_samples", ""):
-            cmd.extend(["--samples", args.effective_samples])
-        commands.append(("views", cmd))
+    if "views" in stages or any(stage in stages for stage in ("plan", "ground", "project", "grow", "part_propose", "render", "part_select", "part_filter", "coverage", "build")):
+        if args.view_renderer in {"dense", "both"}:
+            cmd = add_common([sys.executable, script(root, "render_vlm_friendly_views.py"), "--output-root", args.dense_renders_root], args)
+            if getattr(args, "effective_samples", ""):
+                cmd.extend(["--samples", args.effective_samples])
+            commands.append(("views_dense", cmd))
+        if args.view_renderer in {"natural", "both"}:
+            cmd = add_common(
+                [
+                    sys.executable,
+                    script(root, "render_natural_surface_views.py"),
+                    "--output-root",
+                    args.natural_renders_root,
+                    "--splat-radius",
+                    "10",
+                    "--fill-radius",
+                    "10",
+                    "--blur-radius",
+                    "1.4",
+                    "--densify-threshold-multiplier",
+                    "2.2",
+                    "--densify-max-neighbors",
+                    "2",
+                    "--densify-midpoints",
+                ],
+                args,
+            )
+            if getattr(args, "effective_samples", ""):
+                cmd.extend(["--samples", args.effective_samples])
+            commands.append(("views_natural", cmd))
     if "plan" in stages:
-        cmd = add_common([sys.executable, script(root, "run_v3_semantic_part_planner.py"), "--config", args.config], args)
+        cmd = add_common(
+            [
+                sys.executable,
+                script(root, "run_v3_semantic_part_planner.py"),
+                "--config",
+                args.config,
+                "--renders-root",
+                active_renders_root(args),
+            ],
+            args,
+        )
         if args.planner_dry_run:
             cmd.append("--dry-run")
         commands.append(("plan", cmd))
@@ -293,6 +374,8 @@ def build_commands(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
                 script(root, "run_v3_target_reject_grounding.py"),
                 "--config",
                 args.config,
+                "--renders-root",
+                active_renders_root(args),
                 "--max-target-box-area-fraction",
                 str(args.max_target_box_area_fraction),
             ],
@@ -309,6 +392,8 @@ def build_commands(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
                     [
                         sys.executable,
                         script(root, "project_v3_grounding_to_3d.py"),
+                        "--renders-root",
+                        active_renders_root(args),
                         "--box-shrink-ratio",
                         str(args.box_shrink_ratio),
                         "--point-radius",
@@ -347,6 +432,31 @@ def build_commands(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
                 ),
             )
         )
+    if "part_propose" in stages:
+        cmd = add_common(
+            [
+                sys.executable,
+                script(root, "propose_v3_part_candidates.py"),
+                "--backend",
+                args.part_proposal_backend,
+                "--renders-root",
+                active_renders_root(args),
+                "--fallback-renders-root",
+                args.dense_renders_root,
+                "--k-neighbors",
+                str(args.k_neighbors),
+                "--min-points",
+                str(args.min_points),
+                "--max-candidates",
+                str(max(args.max_candidates, 18)),
+                "--seed-expand-hops",
+                str(args.expand_hops),
+            ],
+            args,
+        )
+        if getattr(args, "effective_samples", ""):
+            cmd.extend(["--samples", args.effective_samples])
+        commands.append(("part_propose", cmd))
     if "render" in stages:
         cmd = add_common(
             [
@@ -354,6 +464,10 @@ def build_commands(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
                 script(root, "render_candidate_overlays_v2.py"),
                 "--candidate-root",
                 "processed/vlm_candidate_v3/3d_candidates",
+                "--renders-root",
+                active_renders_root(args),
+                "--fallback-renders-root",
+                args.dense_renders_root,
                 "--output-root",
                 "processed/vlm_candidate_v3/candidate_overlays",
                 "--max-candidates",
@@ -362,6 +476,44 @@ def build_commands(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
             args,
         )
         commands.append(("render", cmd))
+    if "part_select" in stages:
+        cmd = add_common(
+            [
+                sys.executable,
+                script(root, "run_vlm_candidate_selection_v2.py"),
+                "--config",
+                args.config,
+                "--overlay-root",
+                "processed/vlm_candidate_v3/candidate_overlays",
+                "--selection-root",
+                "processed/vlm_candidate_v3/vlm_selection",
+                "--part-plan-root",
+                "processed/vlm_candidate_v3/semantic_plans",
+                "--update-candidate-manifest",
+            ],
+            args,
+        )
+        if args.planner_dry_run:
+            cmd.append("--dry-run")
+        commands.append(("part_select", cmd))
+    if "part_filter" in stages:
+        cmd = add_common(
+            [
+                sys.executable,
+                script(root, "filter_candidates_by_executor_rules.py"),
+                "--candidate-root",
+                "processed/vlm_candidate_v3/3d_candidates",
+                "--selection-root",
+                "processed/vlm_candidate_v3/vlm_selection",
+                "--output-root",
+                "processed/vlm_candidate_v3/rule_filter",
+                "--min-selected-votes",
+                str(args.min_selected_votes),
+                "--update-candidate-manifest",
+            ],
+            args,
+        )
+        commands.append(("part_filter", cmd))
     if "coverage" in stages:
         cmd = add_common(
             [
@@ -374,7 +526,7 @@ def build_commands(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
                 "--overlay-root",
                 "processed/vlm_candidate_v3/candidate_overlays",
                 "--part-plan-root",
-                "processed/vlm_candidate_v3/semantic_plans",
+                    "processed/vlm_candidate_v3/semantic_plans",
                 "--output-root",
                 "processed/vlm_candidate_v3/coverage_check",
             ],
@@ -453,7 +605,7 @@ def main() -> int:
                     "created_at": datetime.now(timezone.utc).isoformat(),
                     "dataset_root": str(dataset_root),
                     "pilot_id": args.pilot_id,
-                    "stages": stage_list(args.stages),
+            "stages": effective_stages(args),
                     "pilot_filter": pilot_filter,
                     "status": "failed",
                     "runs": run_log,
@@ -465,7 +617,7 @@ def main() -> int:
         "created_at": datetime.now(timezone.utc).isoformat(),
         "dataset_root": str(dataset_root),
         "pilot_id": args.pilot_id,
-        "stages": stage_list(args.stages),
+        "stages": effective_stages(args),
         "pilot_filter": pilot_filter,
         "selected_candidates": args.selected_candidates,
         "planner_dry_run": args.planner_dry_run,
@@ -482,6 +634,11 @@ def main() -> int:
             "k_neighbors": args.k_neighbors,
             "min_points": args.min_points,
             "max_candidates": args.max_candidates,
+            "candidate_source": args.candidate_source,
+            "view_renderer": args.view_renderer,
+            "active_renders_root": active_renders_root(args),
+            "part_proposal_backend": args.part_proposal_backend,
+            "min_selected_votes": args.min_selected_votes,
         },
         "status": "dry_run" if args.dry_run else "ok",
         "runs": run_log,

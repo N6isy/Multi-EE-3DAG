@@ -32,12 +32,12 @@
 
 | 输出 | 用途 |
 | --- | --- |
-| `*_natural.png` | 给 VLM / Grounding / SAM2 使用的自然化渲染图 |
-| `*_point_index.npy` | 每个有效像素对应的原始 3D 点索引 |
-| `*_exact_point_index.npy` | 小半径稀疏点索引图，用于诊断真实点位置 |
-| `*_confidence.npy` | 每个像素回投可信度，直接点最高，填补像素较低 |
-| `*_source.npy` | 像素来源：0 背景，1 原始点 splat，2 邻近填补 |
-| `*_panel.png` | 人工检查图：自然化渲染、回投置信度、前景放大 |
+| `<view>/natural_render.png` | 给 VLM / Grounding / SAM2 使用的自然化渲染图 |
+| `<view>/point_index.npy` | 每个有效像素对应的原始 3D 点索引 |
+| `<view>/exact_point_index.npy` | 小半径稀疏点索引图，用于诊断真实点位置 |
+| `<view>/confidence.npy` | 每个像素回投可信度，直接点最高，填补像素较低 |
+| `<view>/source.npy` | 像素来源：0 背景，1 原始点 splat，2 邻近填补 |
+| `<view>/panel.png` | 人工检查图：自然化渲染、回投置信度、前景放大 |
 
 这样做的关键原则是：
 
@@ -69,16 +69,59 @@ python MultiEEAffordance/experiments/natural_surface_vlm/render_natural_surface_
 
 ```text
 MultiEEAffordance/processed/natural_surface_vlm/renders/<sample_id>/
+  view_manifest.json
+  yaw000_elev20/
+    natural_render.png
+    point_index.npy
+    exact_point_index.npy
+    confidence.npy
+    source.npy
+    panel.png
 ```
 
 建议优先查看：
 
 ```text
-yaw000_elev20_panel.png
-yaw045_elev20_panel.png
-yaw180_elev20_panel.png
+yaw000_elev20/panel.png
+yaw045_elev20/panel.png
+yaw180_elev20/panel.png
 view_manifest.json
 ```
+
+## 4.1 接入 v3 主 pipeline
+
+从 2026-05-25 起，自然化渲染已从独立实验模块接入正式 v3 候选生成主链路。正式入口是：
+
+```bash
+python MultiEEAffordance/tools/render_natural_surface_views.py \
+  --dataset-root MultiEEAffordance \
+  --pilot-csv processed/metadata/v3_large_scale_review_queue_v0_1.csv \
+  --samples processed/metadata/samples_v3_large_batch_v0_1.jsonl \
+  --overwrite
+```
+
+正式 v3 默认输出目录为：
+
+```text
+processed/vlm_candidate_v3/natural_renders/<sample_id>/<view>/
+```
+
+`run_v3_pipeline.py` 也已支持新的候选主链路：
+
+```bash
+CUDA_VISIBLE_DEVICES=1,2 python MultiEEAffordance/tools/run_v3_pipeline.py \
+  --dataset-root MultiEEAffordance \
+  --config configs/qwen3vl_sam2_pilot.yaml \
+  --pilot-csv processed/metadata/v3_large_scale_review_queue_v0_1.csv \
+  --samples processed/metadata/samples_v3_large_batch_v0_1.jsonl \
+  --candidate-source part3d \
+  --view-renderer natural \
+  --stages views,plan,part_propose,render,part_select,part_filter,build \
+  --allow-empty \
+  --overwrite
+```
+
+这条新路径中，VLM 不再作为像素级 box/point 生成器。它先在 `plan` 阶段判断 target/reject 语义部件，再在 `part_select` 阶段从候选 ID 中选择；候选点本身由 `part_propose` 通过自然化前景、连通组件、几何结构和 source weak mask 等信息生成，最终仍然只回到原始点云索引，形成 `[N,4]` candidate mask。
 
 ## 5. 2D mask 回投示例
 
@@ -126,6 +169,8 @@ CUDA_VISIBLE_DEVICES=1,2 python MultiEEAffordance/experiments/natural_surface_vl
   --pilot-id vlm_pilot_005 \
   --image-key natural_render_path \
   --probe-mode semantic_and_localize \
+  --refine-min-confidence 0.25 \
+  --refine-snap-radius 48 \
   --overwrite
 ```
 
@@ -145,6 +190,18 @@ processed/natural_surface_vlm/vlm_probe/vlm_pilot_005/
 | `*_localization.json` | 当前视角下 VLM 给出的粗 box / positive point |
 | `*_probe_overlay.png` | 将 VLM 的粗定位画回自然化图，便于人工判断是否靠谱 |
 | `index.html` | 浏览器查看的汇总页面 |
+
+默认会对 VLM 粗定位做一层轻量后处理：
+
+```text
+VLM box/point -> snap 到可回投前景 -> 若目标词包含 handle/loop/ring/hole/top，则优先裁剪到主体上方结构
+```
+
+后处理只用于这个 probe 的诊断输出，不会修改 v3 pipeline。若想看 Qwen3-VL 原始定位，可加：
+
+```bash
+--no-refine-localization
+```
 
 判断标准：
 

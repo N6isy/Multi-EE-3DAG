@@ -56,6 +56,17 @@ def parse_args() -> argparse.Namespace:
         default=True,
         help="When VLM selection exists, require enough VLM votes before a candidate can be accepted.",
     )
+    parser.add_argument(
+        "--update-candidate-manifest",
+        action="store_true",
+        help="Write accepted candidate ids back to candidate_manifest.default_selected_candidates.",
+    )
+    parser.add_argument(
+        "--manifest-selection-policy",
+        choices=["accept_only", "accept_or_uncertain"],
+        default="accept_only",
+        help="Which rule-filter candidates become default_selected_candidates when updating the manifest.",
+    )
     parser.add_argument("--overwrite", action="store_true", help="Overwrite outputs.")
     return parser.parse_args()
 
@@ -360,7 +371,27 @@ def filter_for_row(root: Path, args: argparse.Namespace, row: dict[str, str]) ->
     }
     output_dir = resolve_path(root, args.output_root) / pilot_id
     write_json(output_dir / "rule_filter.json", output, args.overwrite)
+    if args.update_candidate_manifest:
+        manifest = read_json(candidate_manifest_path)
+        default_ids = list(accepted)
+        if args.manifest_selection_policy == "accept_or_uncertain" and not default_ids:
+            default_ids = list(uncertain)
+        manifest["default_selected_candidates"] = default_ids
+        manifest["rule_filter_path"] = relative_to_dataset(root, output_dir / "rule_filter.json")
+        manifest["rule_filter_default_policy"] = args.manifest_selection_policy
+        manifest["rule_filter_accepted_candidates"] = accepted
+        manifest["rule_filter_uncertain_candidates"] = uncertain
+        write_json(candidate_manifest_path, manifest, overwrite=True)
     return output
+
+
+def progress_rows(rows: list[dict[str, str]], desc: str):
+    try:
+        from tqdm import tqdm
+
+        return tqdm(rows, desc=desc, unit="row")
+    except Exception:
+        return rows
 
 
 def main() -> int:
@@ -373,7 +404,7 @@ def main() -> int:
         rows = rows[: args.limit]
     if not rows:
         raise ValueError("No pilot rows selected.")
-    outputs = [filter_for_row(root, args, row) for row in rows]
+    outputs = [filter_for_row(root, args, row) for row in progress_rows(rows, "rule filter")]
     summary = [
         {
             "pilot_id": item["pilot_id"],

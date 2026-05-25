@@ -658,13 +658,15 @@ def render_sample(
 
     for view in views:
         rendered = render_view(xyz, normals, render_xyz, render_normals, render_source_indices, view, args)
-        natural_path = sample_dir / f"{view}_natural.png"
-        conf_path = sample_dir / f"{view}_confidence.png"
-        point_index_path = sample_dir / f"{view}_point_index.npy"
-        exact_index_path = sample_dir / f"{view}_exact_point_index.npy"
-        depth_path = sample_dir / f"{view}_depth.npy"
-        source_path = sample_dir / f"{view}_source.npy"
-        confidence_path = sample_dir / f"{view}_confidence.npy"
+        view_dir = sample_dir / view
+        view_dir.mkdir(parents=True, exist_ok=True)
+        natural_path = view_dir / "natural_render.png"
+        conf_path = view_dir / "confidence.png"
+        point_index_path = view_dir / "point_index.npy"
+        exact_index_path = view_dir / "exact_point_index.npy"
+        depth_path = view_dir / "depth.npy"
+        source_path = view_dir / "source.npy"
+        confidence_path = view_dir / "confidence.npy"
         Image.fromarray(rendered["natural_rgb"], mode="RGB").save(natural_path)
         Image.fromarray(rendered["confidence_rgb"], mode="RGB").save(conf_path)
         np.save(point_index_path, rendered["point_index"])
@@ -675,7 +677,7 @@ def render_sample(
 
         panel_path = None
         if not args.no_panel:
-            panel_path = sample_dir / f"{view}_panel.png"
+            panel_path = view_dir / "panel.png"
             make_panel(rendered["natural_rgb"], rendered["confidence_rgb"], rendered["source"]).save(panel_path)
 
         manifest["views"].append(

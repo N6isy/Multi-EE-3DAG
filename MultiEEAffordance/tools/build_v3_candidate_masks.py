@@ -146,6 +146,32 @@ def parse_id_list(value: str) -> list[str]:
     return out
 
 
+def safe_dict(value: Any) -> dict[str, Any]:
+    """Return a defensive shallow dict for metadata fields.
+
+    Large-scale converted queues may carry fields such as ``negative_reason`` as
+    a plain string in the CSV row.  Calling ``dict("reason")`` raises
+    ``dictionary update sequence element #0 has length 1; 2 is required`` and
+    used to stop the whole build.  Non-object metadata is ignored here and kept
+    in per-row notes/summaries instead of being treated as a mapping.
+    """
+    if isinstance(value, dict):
+        return dict(value)
+    if value in (None, ""):
+        return {}
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            return {}
+        return dict(parsed) if isinstance(parsed, dict) else {}
+    try:
+        candidate = dict(value)
+    except (TypeError, ValueError):
+        return {}
+    return candidate
+
+
 def merge_sample(row: dict[str, str], sample_by_id: dict[str, dict[str, Any]]) -> dict[str, Any]:
     sample = dict(sample_by_id.get(row.get("sample_id", ""), {}))
     for key, value in row.items():
@@ -197,9 +223,9 @@ def build_for_row(root: Path, args: argparse.Namespace, row: dict[str, str], sam
     out_mask_path.parent.mkdir(parents=True, exist_ok=True)
     np.save(out_mask_path, out_mask)
 
-    feasibility = dict(sample.get("feasibility", {}))
-    label_source = dict(sample.get("label_source", {}))
-    negative_reason = dict(sample.get("negative_reason", {}))
+    feasibility = safe_dict(sample.get("feasibility"))
+    label_source = safe_dict(sample.get("label_source"))
+    negative_reason = safe_dict(sample.get("negative_reason"))
     feasibility[executor] = bool(int(target_mask.sum()) > 0)
     label_source[executor] = "mixed"
     negative_reason[executor] = None if feasibility[executor] else f"v3_no_selected_{executor}_candidate"
@@ -282,9 +308,9 @@ def build_empty_for_row(root: Path, args: argparse.Namespace, row: dict[str, str
     out_mask_path.parent.mkdir(parents=True, exist_ok=True)
     np.save(out_mask_path, out_mask)
 
-    feasibility = dict(sample.get("feasibility", {}))
-    label_source = dict(sample.get("label_source", {}))
-    negative_reason = dict(sample.get("negative_reason", {}))
+    feasibility = safe_dict(sample.get("feasibility"))
+    label_source = safe_dict(sample.get("label_source"))
+    negative_reason = safe_dict(sample.get("negative_reason"))
     feasibility[executor] = False
     label_source[executor] = "unavailable"
     negative_reason[executor] = row.get("negative_reason") or negative_reason.get(executor) or f"no_{executor}_feasible_region"
@@ -356,6 +382,12 @@ def build_failed_candidate_row(
     np.save(out_mask_path, out_mask)
 
     error_text = f"{type(exc).__name__}: {exc}"
+    feasibility = safe_dict(sample.get("feasibility"))
+    label_source = safe_dict(sample.get("label_source"))
+    negative_reason = safe_dict(sample.get("negative_reason"))
+    feasibility[executor] = False
+    label_source[executor] = "unavailable"
+    negative_reason[executor] = error_text
     update = {
         "pilot_id": pilot_id,
         "executor": executor,
@@ -370,6 +402,9 @@ def build_failed_candidate_row(
     }
     sample["multi_channel_mask_path"] = relative_to_dataset(root, out_mask_path)
     sample["executor_order"] = EXECUTOR_ORDER
+    sample["feasibility"] = feasibility
+    sample["label_source"] = label_source
+    sample["negative_reason"] = negative_reason
     sample["quality_flag"] = "weak"
     sample["split"] = "val"
     sample["v3_candidate_update"] = update
@@ -410,6 +445,7 @@ def main() -> int:
     sample_by_id = {str(row.get("sample_id")): row for row in checked_samples}
     output_rows: list[dict[str, Any]] = []
     summaries: list[dict[str, Any]] = []
+    build_errors: list[dict[str, Any]] = []
     try:
         from tqdm import tqdm
 
@@ -425,10 +461,36 @@ def main() -> int:
             if not args.allow_empty:
                 raise
             sample, summary = build_failed_candidate_row(root, args, row, sample_by_id, exc)
+            build_errors.append(
+                {
+                    "pilot_id": row.get("pilot_id", ""),
+                    "sample_id": row.get("sample_id", ""),
+                    "executor": row.get("executor", ""),
+                    "stage": "build_candidates",
+                    "error": f"{type(exc).__name__}: {exc}",
+                }
+            )
         output_rows.append(sample)
         summaries.append(summary)
     for row in empty_iter:
-        sample, summary = build_empty_for_row(root, args, row, sample_by_id)
+        try:
+            sample, summary = build_empty_for_row(root, args, row, sample_by_id)
+        except Exception as exc:
+            if not args.allow_empty:
+                raise
+            sample, summary = build_failed_candidate_row(root, args, row, sample_by_id, exc)
+            summary["review_mode"] = "failed_needs_review"
+            sample["v3_candidate_update"]["review_mode"] = "failed_needs_review"
+            sample["v2_candidate_update"]["review_mode"] = "failed_needs_review"
+            build_errors.append(
+                {
+                    "pilot_id": row.get("pilot_id", ""),
+                    "sample_id": row.get("sample_id", ""),
+                    "executor": row.get("executor", ""),
+                    "stage": "build_empty",
+                    "error": f"{type(exc).__name__}: {exc}",
+                }
+            )
         output_rows.append(sample)
         summaries.append(summary)
 
@@ -447,6 +509,7 @@ def main() -> int:
         "rows": len(summaries),
         "output_samples": relative_to_dataset(root, output_samples),
         "summaries": summaries,
+        "build_errors": build_errors,
         "notes": "v3 candidate masks are review candidates, not checked ground truth.",
     }
     write_json(resolve_path(root, args.summary_json), summary, args.overwrite)

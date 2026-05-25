@@ -172,7 +172,7 @@ def progress_rows(rows: list[dict[str, str]], desc: str):
 
 
 def render_image_path(root: Path, entry: dict[str, Any], base_dir: Path) -> Path:
-    for key in ("dense_render_path", "selector_path", "silhouette_path", "render_path"):
+    for key in ("natural_render_path", "dense_render_path", "selector_path", "silhouette_path", "render_path"):
         value = entry.get(key)
         if value:
             path = resolve_portable_path(root, value, base_dir)

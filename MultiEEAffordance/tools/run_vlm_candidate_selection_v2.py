@@ -55,6 +55,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--overwrite", action="store_true", help="Overwrite outputs.")
     parser.add_argument("--dry-run", action="store_true", help="Validate and write empty selections without loading Qwen.")
     parser.add_argument("--validate-only", action="store_true", help="Validate inputs only.")
+    parser.add_argument(
+        "--update-candidate-manifest",
+        action="store_true",
+        help="Write selected candidate ids back to candidate_manifest.default_selected_candidates.",
+    )
     return parser.parse_args()
 
 
@@ -235,10 +240,44 @@ def normalize_selection(raw: dict[str, Any], valid_ids: set[str], view: str) -> 
 
 
 def load_part_plan(root: Path, args: argparse.Namespace, pilot_id: str) -> dict[str, Any] | None:
-    path = resolve_path(root, args.part_plan_root) / pilot_id / "combined_part_plan.json"
-    if not path.exists():
-        return None
-    return read_json(path)
+    plan_dir = resolve_path(root, args.part_plan_root) / pilot_id
+    for name in ("combined_part_plan.json", "combined_semantic_plan.json"):
+        path = plan_dir / name
+        if path.exists():
+            return read_json(path)
+    return None
+
+
+def update_candidate_manifest_defaults(
+    root: Path,
+    manifest_value: str,
+    base_dir: Path,
+    selected_candidates: list[str],
+    uncertain_candidates: list[str],
+    selection_path: Path,
+    overwrite: bool,
+) -> None:
+    manifest_path = resolve_portable_path(root, manifest_value, base_dir)
+    manifest = read_json(manifest_path)
+    manifest["default_selected_candidates"] = selected_candidates
+    manifest["vlm_selected_candidates"] = selected_candidates
+    manifest["vlm_uncertain_candidates"] = uncertain_candidates
+    manifest["vlm_selection_path"] = relative_to_dataset(root, selection_path)
+    manifest["selection_default_policy"] = (
+        "selected_candidates_only; uncertain candidates remain visible for human review but are not auto-filled"
+    )
+    # Updating the manifest is intentionally an in-place metadata refresh; the
+    # candidate masks themselves are not regenerated here.
+    write_json(manifest_path, manifest, overwrite=True)
+
+
+def progress_rows(rows: list[dict[str, str]], desc: str):
+    try:
+        from tqdm import tqdm
+
+        return tqdm(rows, desc=desc, unit="row")
+    except Exception:
+        return rows
 
 
 def select_rows(root: Path, args: argparse.Namespace) -> list[dict[str, str]]:
@@ -353,6 +392,16 @@ def run_for_row(
         "notes": "VLM selection is a proposal. It must be checked by executor rules and human review.",
     }
     write_json(output_dir / "combined_selection.json", combined, args.overwrite)
+    if args.update_candidate_manifest and not args.dry_run and not args.validate_only:
+        update_candidate_manifest_defaults(
+            root=root,
+            manifest_value=overlay_manifest["candidate_manifest"],
+            base_dir=overlay_manifest_path.parent,
+            selected_candidates=combined["selected_candidates"],
+            uncertain_candidates=combined["uncertain_candidates"],
+            selection_path=output_dir / "combined_selection.json",
+            overwrite=args.overwrite,
+        )
     return combined
 
 
@@ -365,7 +414,7 @@ def main() -> int:
     processor = None
     if not args.validate_only and not args.dry_run:
         model, processor = load_qwen_model(cfg, root)
-    outputs = [run_for_row(root, args, cfg, row, model, processor) for row in rows]
+    outputs = [run_for_row(root, args, cfg, row, model, processor) for row in progress_rows(rows, "candidate select")]
     print(json.dumps({"rows": len(outputs), "validate_only": args.validate_only, "dry_run": args.dry_run, "outputs": outputs}, indent=2, ensure_ascii=False))
     return 0
 
