@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import traceback
 from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -64,8 +65,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--top-k-candidates",
         type=int,
-        default=8,
+        default=5,
         help="Number of ranked candidates shown in the review UI. Use 0 to show all.",
+    )
+    parser.add_argument(
+        "--candidate-min-selected-votes",
+        type=int,
+        default=2,
+        help="Only show non-default candidates with at least this many VLM selected votes. Use 0 to show low-confidence rule-only candidates.",
     )
     return parser.parse_args()
 
@@ -158,6 +165,18 @@ def safe_name(value: str) -> str:
     return "".join(out).strip("_") or "sample"
 
 
+def sample_key(row: dict[str, Any]) -> str:
+    explicit = str(row.get("row_key") or "").strip()
+    if explicit:
+        return explicit
+    pilot_id = str(row.get("pilot_id") or "").strip()
+    sample_id = str(row.get("sample_id") or "").strip()
+    update = row.get("v2_candidate_update", {}) if isinstance(row.get("v2_candidate_update", {}), dict) else {}
+    executor = str(update.get("executor") or row.get("executor") or "").strip()
+    parts = [part for part in (pilot_id, sample_id, executor) if part]
+    return "|".join(parts) or sample_id
+
+
 class AnnotationStore:
     def __init__(
         self,
@@ -169,6 +188,7 @@ class AnnotationStore:
         max_points: int,
         allow_partial_save: bool,
         top_k_candidates: int,
+        candidate_min_selected_votes: int,
     ):
         self.dataset_root = dataset_root
         self.samples_path = samples_path
@@ -178,26 +198,33 @@ class AnnotationStore:
         self.max_points = int(max_points)
         self.allow_partial_save = allow_partial_save
         self.top_k_candidates = int(top_k_candidates)
+        self.candidate_min_selected_votes = int(candidate_min_selected_votes)
         self.payload_cache: dict[str, dict[str, Any]] = {}
         self.reload()
 
     def reload(self) -> None:
         self.payload_cache.clear()
         self.samples = read_jsonl(self.samples_path)
-        self.samples_by_id = {str(row["sample_id"]): row for row in self.samples}
-        self.refined_by_id: dict[str, dict[str, Any]] = {}
+        self.samples_by_key = {sample_key(row): row for row in self.samples}
+        self.sample_keys_by_id: dict[str, list[str]] = {}
+        for row in self.samples:
+            self.sample_keys_by_id.setdefault(str(row.get("sample_id", "")), []).append(sample_key(row))
+        self.refined_by_key: dict[str, dict[str, Any]] = {}
         if self.output_samples_path.exists():
             for row in read_jsonl(self.output_samples_path):
-                self.refined_by_id[str(row.get("sample_id", ""))] = row
+                self.refined_by_key[sample_key(row)] = row
 
     def list_samples(self) -> dict[str, Any]:
         rows = []
         for sample in self.samples:
+            key = sample_key(sample)
             sample_id = str(sample["sample_id"])
             update = sample.get("v2_candidate_update", {})
-            refined = self.refined_by_id.get(sample_id, {})
+            refined = self.refined_by_key.get(key, {})
             rows.append(
                 {
+                    "row_key": key,
+                    "pilot_id": sample.get("pilot_id", ""),
                     "sample_id": sample_id,
                     "object_category": sample.get("object_category", ""),
                     "task": sample.get("task", ""),
@@ -233,9 +260,28 @@ class AnnotationStore:
                 "candidates": [],
                 "default_selected_candidates": update.get("selected_candidates", []),
             }
-        data = np.load(npz_path, allow_pickle=True)
-        candidate_ids = [str(item).upper() for item in data["candidate_ids"].tolist()]
-        candidate_masks = data["candidate_masks"].astype(np.uint8)
+        try:
+            data = np.load(npz_path, allow_pickle=True)
+            candidate_ids = [str(item).upper() for item in data["candidate_ids"].tolist()]
+            candidate_masks = data["candidate_masks"].astype(np.uint8)
+        except Exception as exc:
+            return {
+                "available": False,
+                "error": f"failed to load candidate_npz: {npz_path.relative_to(self.dataset_root).as_posix()} ({exc})",
+                "candidates": [],
+                "default_selected_candidates": update.get("selected_candidates", []),
+            }
+        max_visible_index = int(visible_indices.max()) if visible_indices.size else -1
+        if candidate_masks.ndim != 2 or candidate_masks.shape[1] <= max_visible_index:
+            return {
+                "available": False,
+                "error": (
+                    "candidate mask shape does not match point cloud: "
+                    f"candidate_masks={candidate_masks.shape}, max_visible_index={max_visible_index}"
+                ),
+                "candidates": [],
+                "default_selected_candidates": update.get("selected_candidates", []),
+            }
         rule_value = update.get("rule_filter_path", "")
         rule: dict[str, Any] = {}
         rule_path = resolve_portable_path(self.dataset_root, rule_value) if rule_value else Path("")
@@ -294,9 +340,15 @@ class AnnotationStore:
         candidates.sort(key=lambda item: item["_rank"])
         for item in candidates:
             item.pop("_rank", None)
+        total_candidates = len(candidates)
         if self.top_k_candidates > 0:
             pinned = [item for item in candidates if item["candidate_id"] in default_selected_set]
-            rest = [item for item in candidates if item["candidate_id"] not in default_selected_set]
+            rest = [
+                item
+                for item in candidates
+                if item["candidate_id"] not in default_selected_set
+                and int(item.get("selected_votes", 0) or 0) >= self.candidate_min_selected_votes
+            ]
             candidates = (pinned + rest)[: self.top_k_candidates]
         return {
             "available": True,
@@ -306,30 +358,71 @@ class AnnotationStore:
             "accepted_candidates": sorted(accepted),
             "uncertain_candidates": sorted(uncertain),
             "candidates": candidates,
+            "shown_candidate_count": len(candidates),
+            "total_candidate_count": total_candidates,
+            "candidate_min_selected_votes": self.candidate_min_selected_votes,
             "notes": "Candidates are ranked proposals. Reviewers choose a subset, then refine points manually.",
         }
 
-    def sample_payload(self, sample_id: str) -> dict[str, Any]:
-        cached = self.payload_cache.get(sample_id)
+    def load_masks(self, sample: dict[str, Any], executor: str, n_points: int) -> tuple[np.ndarray, str]:
+        channel = EXECUTOR_ORDER.index(executor)
+        candidates = [
+            sample.get("multi_channel_mask_path", ""),
+            sample.get("checked_mask_path", ""),
+            sample.get("source_mask_path", ""),
+        ]
+        errors: list[str] = []
+        for value in candidates:
+            if not value:
+                continue
+            path = resolve_path(self.dataset_root, value)
+            if not path.exists():
+                errors.append(f"missing {value}")
+                continue
+            try:
+                raw = np.load(path, allow_pickle=False)
+            except Exception as exc:
+                errors.append(f"failed to load {value}: {exc}")
+                continue
+            if raw.ndim == 2 and raw.shape == (n_points, len(EXECUTOR_ORDER)):
+                return raw.astype(np.uint8), str(value)
+            if raw.ndim == 1 and raw.shape[0] == n_points:
+                masks = np.zeros((n_points, len(EXECUTOR_ORDER)), dtype=np.uint8)
+                masks[:, channel] = (raw > 0).astype(np.uint8)
+                return masks, str(value)
+            errors.append(f"bad shape {value}: {raw.shape}")
+        raise ValueError("No usable mask found. " + "; ".join(errors))
+
+    def resolve_sample_key(self, key: str) -> str:
+        if key in self.samples_by_key or key in self.refined_by_key:
+            return key
+        matches = self.sample_keys_by_id.get(key, [])
+        if len(matches) == 1:
+            return matches[0]
+        if len(matches) > 1:
+            raise KeyError(f"Ambiguous sample_id '{key}'. Use row_key instead.")
+        return key
+
+    def sample_payload(self, key: str) -> dict[str, Any]:
+        key = self.resolve_sample_key(key)
+        cached = self.payload_cache.get(key)
         if cached is not None:
             return cached
-        sample = self.refined_by_id.get(sample_id) or self.samples_by_id.get(sample_id)
+        sample = self.refined_by_key.get(key) or self.samples_by_key.get(key)
         if sample is None:
-            raise KeyError(f"Unknown sample_id: {sample_id}")
+            raise KeyError(f"Unknown sample key: {key}")
+        sample_id = str(sample["sample_id"])
         points_path = resolve_path(self.dataset_root, sample["point_cloud_path"])
-        mask_path = resolve_path(self.dataset_root, sample["multi_channel_mask_path"])
         points = np.load(points_path, allow_pickle=False)
-        masks = np.load(mask_path, allow_pickle=False)
         if points.ndim != 2 or points.shape[1] not in (3, 6):
             raise ValueError(f"Invalid points shape for {sample_id}: {points.shape}")
-        if masks.ndim != 2 or masks.shape != (points.shape[0], len(EXECUTOR_ORDER)):
-            raise ValueError(f"Invalid mask shape for {sample_id}: {masks.shape}")
         update = sample.get("v2_candidate_update", {})
         executor = str(update.get("executor") or sample.get("executor") or "hook")
         if executor not in EXECUTOR_ORDER:
             executor = "hook"
         channel = EXECUTOR_ORDER.index(executor)
-        seed = abs(hash(sample_id)) % (2**32)
+        masks, mask_source_path = self.load_masks(sample, executor, points.shape[0])
+        seed = abs(hash(key)) % (2**32)
         indices = choose_indices(points.shape[0], self.max_points, seed)
         visible_all_points = int(indices.size) == int(points.shape[0])
         normalized = normalize_points(points)
@@ -338,6 +431,7 @@ class AnnotationStore:
         candidate_context = self.load_candidate_context(sample, indices)
         payload = {
             "sample": sample,
+            "row_key": key,
             "executor_order": EXECUTOR_ORDER,
             "target_executor": executor,
             "target_channel": channel,
@@ -352,17 +446,35 @@ class AnnotationStore:
                 "requires_human_review": update.get("requires_human_review", True),
                 "candidate_manifest": update.get("candidate_manifest", ""),
                 "rule_filter_path": update.get("rule_filter_path", ""),
+                "mask_source_path": mask_source_path,
             },
             "candidate_context": candidate_context,
         }
-        self.payload_cache[sample_id] = payload
+        self.payload_cache[key] = payload
         return payload
 
     def save_edit(self, payload: dict[str, Any]) -> dict[str, Any]:
+        key = str(payload.get("row_key", "") or "")
         sample_id = str(payload.get("sample_id", ""))
-        base_sample = self.refined_by_id.get(sample_id) or self.samples_by_id.get(sample_id)
+        if not key:
+            executor_hint = str(payload.get("executor", "") or "")
+            pilot_hint = str(payload.get("pilot_id", "") or "")
+            if pilot_hint:
+                key = "|".join(part for part in (pilot_hint, sample_id, executor_hint) if part)
+            else:
+                matches = [
+                    match
+                    for match in self.sample_keys_by_id.get(sample_id, [])
+                    if not executor_hint
+                    or str(self.samples_by_key.get(match, {}).get("v2_candidate_update", {}).get("executor") or self.samples_by_key.get(match, {}).get("executor") or "")
+                    == executor_hint
+                ]
+                key = matches[0] if len(matches) == 1 else self.resolve_sample_key(sample_id)
+        key = self.resolve_sample_key(key)
+        base_sample = self.refined_by_key.get(key) or self.samples_by_key.get(key)
         if base_sample is None:
-            raise KeyError(f"Unknown sample_id: {sample_id}")
+            raise KeyError(f"Unknown sample key: {key or sample_id}")
+        sample_id = str(base_sample["sample_id"])
         executor = str(payload.get("executor") or base_sample.get("v2_candidate_update", {}).get("executor") or "hook")
         if executor not in EXECUTOR_ORDER:
             raise ValueError(f"Unknown executor: {executor}")
@@ -373,8 +485,9 @@ class AnnotationStore:
         if not isinstance(positive_indices_raw, list):
             raise ValueError("positive_indices must be a list.")
         positive_indices = sorted({int(x) for x in positive_indices_raw if int(x) >= 0})
-        mask_path = resolve_path(self.dataset_root, base_sample["multi_channel_mask_path"])
-        masks = np.load(mask_path, allow_pickle=False).astype(np.uint8)
+        points_path = resolve_path(self.dataset_root, base_sample["point_cloud_path"])
+        points = np.load(points_path, allow_pickle=False)
+        masks, source_mask_path = self.load_masks(base_sample, executor, int(points.shape[0]))
         n = masks.shape[0]
         positive_indices = [idx for idx in positive_indices if idx < n]
         channel = EXECUTOR_ORDER.index(executor)
@@ -384,7 +497,7 @@ class AnnotationStore:
         refined[:, channel] = 0
         if positive_indices:
             refined[np.asarray(positive_indices, dtype=np.int64), channel] = 1
-        output_mask_path = self.output_mask_root / f"{safe_name(sample_id)}_{executor}_manual_refined.npy"
+        output_mask_path = self.output_mask_root / f"{safe_name(key or sample_id)}_manual_refined.npy"
         output_mask_path.parent.mkdir(parents=True, exist_ok=True)
         np.save(output_mask_path, refined)
 
@@ -396,9 +509,10 @@ class AnnotationStore:
         refined_sample["point_review_reviewer"] = str(payload.get("reviewer") or "")
         refined_sample["point_review_notes"] = str(payload.get("notes") or "")
         refined_sample["point_review_updated_at"] = now
+        refined_sample["row_key"] = key
         refined_sample["v2_point_edit"] = {
             "executor": executor,
-            "source_mask_path": base_sample["multi_channel_mask_path"],
+            "source_mask_path": source_mask_path,
             "output_mask_path": refined_sample["multi_channel_mask_path"],
             "selected_candidate_ids": [str(item).upper() for item in payload.get("selected_candidate_ids", [])],
             "positive_points_before": len(old_positive),
@@ -409,16 +523,17 @@ class AnnotationStore:
             "reviewer": str(payload.get("reviewer") or ""),
             "updated_at": now,
         }
-        self.refined_by_id[sample_id] = refined_sample
-        self.payload_cache.pop(sample_id, None)
+        self.refined_by_key[key] = refined_sample
+        self.payload_cache.pop(key, None)
         ordered = []
         for sample in self.samples:
-            sid = str(sample["sample_id"])
-            if sid in self.refined_by_id:
-                ordered.append(self.refined_by_id[sid])
+            row_key = sample_key(sample)
+            if row_key in self.refined_by_key:
+                ordered.append(self.refined_by_key[row_key])
         write_jsonl(self.output_samples_path, ordered)
         record = {
             "created_at": now,
+            "row_key": key,
             "sample_id": sample_id,
             "executor": executor,
             "reviewer": str(payload.get("reviewer") or ""),
@@ -434,7 +549,7 @@ class AnnotationStore:
             "output_mask_path": refined_sample["multi_channel_mask_path"],
         }
         append_jsonl(self.review_path, record)
-        return {"ok": True, "sample_id": sample_id, "record": record, "sample": refined_sample}
+        return {"ok": True, "row_key": key, "sample_id": sample_id, "record": record, "sample": refined_sample}
 
 
 APP_HTML = r"""<!doctype html>
@@ -619,16 +734,17 @@ function renderList() {
   const q = document.getElementById("search").value.toLowerCase();
   const list = document.getElementById("sampleList");
   list.innerHTML = "";
-  const filtered = samples.filter(s => `${s.sample_id} ${s.object_category} ${s.task} ${s.executor}`.toLowerCase().includes(q));
+  const filtered = samples.filter(s => `${s.pilot_id || ""} ${s.sample_id} ${s.object_category} ${s.task} ${s.executor}`.toLowerCase().includes(q));
   document.getElementById("topStatus").textContent = `${samples.length} samples | 显示 ${filtered.length}`;
   filtered.forEach(s => {
     const div = document.createElement("div");
     div.className = "sample"
-      + (current && current.sample.sample_id === s.sample_id ? " active" : "")
-      + (activeLoadingId === s.sample_id ? " loading" : "");
-    div.onclick = () => loadSample(s.sample_id);
+      + (current && current.row_key === s.row_key ? " active" : "")
+      + (activeLoadingId === s.row_key ? " loading" : "");
+    div.onclick = () => loadSample(s.row_key);
     div.innerHTML = `<div class="sample-id">${s.sample_id}</div>
       <div class="tags">
+        <span class="tag">${s.pilot_id || ""}</span>
         <span class="tag">${s.object_category}</span>
         <span class="tag">${s.task}</span>
         <span class="tag">${s.executor}</span>
@@ -644,7 +760,7 @@ async function loadSamples(loadFirst=true) {
   const data = await res.json();
   samples = data.samples;
   renderList();
-  if (loadFirst && samples.length && !current) await loadSample(samples[0].sample_id);
+  if (loadFirst && samples.length && !current) await loadSample(samples[0].row_key);
 }
 
 function invalidateProjectionCache() {
@@ -657,9 +773,9 @@ function invalidatePreviewColorCache() {
   previewColorCacheKey = "";
 }
 
-function applySamplePayload(sampleId, payload) {
+function applySamplePayload(rowKey, payload) {
   current = payload;
-  currentIndex = samples.findIndex(s => s.sample_id === sampleId);
+  currentIndex = samples.findIndex(s => s.row_key === rowKey);
   positives = new Set();
   candidateSets = new Map();
   candidateColorById = new Map();
@@ -685,17 +801,17 @@ function applySamplePayload(sampleId, payload) {
   resize();
 }
 
-async function loadSample(sampleId, force=false) {
+async function loadSample(rowKey, force=false) {
   const seq = ++loadSeq;
-  activeLoadingId = sampleId;
+  activeLoadingId = rowKey;
   renderList();
-  document.getElementById("message").textContent = `加载 ${sampleId} ...`;
+  document.getElementById("message").textContent = `加载 ${rowKey} ...`;
   if (pendingSampleController) {
     pendingSampleController.abort();
     pendingSampleController = null;
   }
-  if (!force && sampleCache.has(sampleId)) {
-    applySamplePayload(sampleId, sampleCache.get(sampleId));
+  if (!force && sampleCache.has(rowKey)) {
+    applySamplePayload(rowKey, sampleCache.get(rowKey));
     if (seq === loadSeq) {
       activeLoadingId = "";
       document.getElementById("message").textContent = "";
@@ -707,7 +823,7 @@ async function loadSample(sampleId, force=false) {
   pendingSampleController = controller;
   let res;
   try {
-    res = await fetch(`/api/sample?id=${encodeURIComponent(sampleId)}`, {signal: controller.signal});
+    res = await fetch(`/api/sample?key=${encodeURIComponent(rowKey)}`, {signal: controller.signal});
   } catch (err) {
     if (err.name === "AbortError") return;
     if (seq === loadSeq) {
@@ -725,8 +841,8 @@ async function loadSample(sampleId, force=false) {
   }
   const payload = await res.json();
   if (seq !== loadSeq) return;
-  sampleCache.set(sampleId, payload);
-  applySamplePayload(sampleId, payload);
+  sampleCache.set(rowKey, payload);
+  applySamplePayload(rowKey, payload);
   activeLoadingId = "";
   pendingSampleController = null;
   document.getElementById("message").textContent = "";
@@ -741,10 +857,15 @@ function fillPanel() {
   document.getElementById("executor").value = current.target_executor;
   document.getElementById("count").value = positives.size;
   const hint = current.review_hint || {};
+  const ctxInfo = current.candidate_context || {};
+  const candidateSummary = ctxInfo.available
+    ? `<br/>shown_candidates: <code>${ctxInfo.shown_candidate_count || 0}/${ctxInfo.total_candidate_count || 0}</code>, min_votes=<code>${ctxInfo.candidate_min_selected_votes ?? ""}</code>`
+    : "";
+  const candidateError = ctxInfo.error ? `<br/><span style="color:#b42318">candidate warning: ${ctxInfo.error}</span>` : "";
   document.getElementById("candidateHint").innerHTML =
     `<b>自动候选来源：</b><br/>
      selected_candidates: <code>${(hint.selected_candidates || []).join(",") || "(none)"}</code><br/>
-     positive_points_before: <code>${hint.positive_points ?? ""}</code><br/>
+     positive_points_before: <code>${hint.positive_points ?? ""}</code>${candidateSummary}${candidateError}<br/>
      这个页面保存的是人工点级 refinement，不会把自动候选直接当 GT。`;
   renderCandidateList();
 }
@@ -775,6 +896,12 @@ function renderCandidateList() {
   const box = document.getElementById("candidateList");
   box.innerHTML = "";
   if (!candidateInfo.length) {
+    const ctxInfo = current.candidate_context || {};
+    const extra = ctxInfo.available
+      ? `当前没有达到高置信阈值的候选。可用 --candidate-min-selected-votes 0 或增大 --top-k-candidates 查看低置信候选。`
+      : `没有可用候选上下文。${ctxInfo.error || ""}`;
+    box.innerHTML = `<div class="candidate-meta">${extra}<br/>仍可继续直接点级编辑当前 mask。</div>`;
+    return;
     box.innerHTML = `<div class="candidate-meta">没有可用候选上下文。可继续编辑当前 mask，但无法从 top-k 候选中勾选组合。</div>`;
     return;
   }
@@ -876,7 +1003,7 @@ function project(p) {
 function projectedPoints() {
   if (!current) return [];
   const key = [
-    current.sample.sample_id,
+    current.row_key,
     canvas.clientWidth,
     canvas.clientHeight,
     rotX.toFixed(5),
@@ -1026,6 +1153,8 @@ canvas.addEventListener("wheel", e => {
 async function saveEdit() {
   if (!current) return;
   const payload = {
+    row_key: current.row_key,
+    pilot_id: current.sample.pilot_id || "",
     sample_id: current.sample.sample_id,
     executor: current.target_executor,
     selected_candidate_ids: [...selectedCandidateIds].sort(),
@@ -1042,9 +1171,9 @@ async function saveEdit() {
   if (!res.ok || !data.ok) throw new Error(data.error || "save failed");
   document.getElementById("message").textContent =
     `已保存 refined mask：positive ${data.record.positive_points_before} -> ${data.record.positive_points_after}`;
-  sampleCache.delete(data.sample_id);
+  sampleCache.delete(data.row_key);
   await loadSamples(false);
-  await loadSample(data.sample_id, true);
+  await loadSample(data.row_key, true);
 }
 
 document.getElementById("search").oninput = renderList;
@@ -1062,8 +1191,8 @@ document.getElementById("showCandidatePreview").onchange = draw;
 document.getElementById("saveBtn").onclick = () => saveEdit().catch(err => alert(err.message));
 document.getElementById("reloadBtn").onclick = () => {
   if (!current) return;
-  sampleCache.delete(current.sample.sample_id);
-  loadSample(current.sample.sample_id, true).catch(err => alert(err.message));
+  sampleCache.delete(current.row_key);
+  loadSample(current.row_key, true).catch(err => alert(err.message));
 };
 window.addEventListener("resize", resize);
 setMode("toggle");
@@ -1107,11 +1236,12 @@ class Handler(BaseHTTPRequestHandler):
                 return
             if parsed.path == "/api/sample":
                 query = parse_qs(parsed.query)
-                sample_id = query.get("id", [""])[0]
-                self.send_json(self.store.sample_payload(sample_id))
+                key = query.get("key", query.get("id", [""]))[0]
+                self.send_json(self.store.sample_payload(key))
                 return
             self.send_json({"error": "not found"}, HTTPStatus.NOT_FOUND)
         except Exception as exc:
+            traceback.print_exc(file=sys.stderr)
             self.send_json({"error": str(exc)}, HTTPStatus.INTERNAL_SERVER_ERROR)
 
     def do_POST(self) -> None:
@@ -1123,6 +1253,7 @@ class Handler(BaseHTTPRequestHandler):
                 return
             self.send_json({"error": "not found"}, HTTPStatus.NOT_FOUND)
         except Exception as exc:
+            traceback.print_exc(file=sys.stderr)
             self.send_json({"error": str(exc)}, HTTPStatus.INTERNAL_SERVER_ERROR)
 
 
@@ -1138,6 +1269,7 @@ def main() -> int:
         max_points=args.max_points,
         allow_partial_save=args.allow_partial_save,
         top_k_candidates=args.top_k_candidates,
+        candidate_min_selected_votes=args.candidate_min_selected_votes,
     )
     Handler.store = store
     server = ThreadingHTTPServer((args.host, args.port), Handler)
