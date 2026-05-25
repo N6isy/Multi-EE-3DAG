@@ -54,8 +54,10 @@ point_index/confidence/source 负责“让 2D 区域可回投”。
 python MultiEEAffordance/experiments/natural_surface_vlm/render_natural_surface_views.py \
   --dataset-root MultiEEAffordance \
   --pilot-id vlm_pilot_005 \
-  --splat-radius 8 \
-  --fill-radius 5 \
+  --splat-radius 10 \
+  --fill-radius 12 \
+  --blur-radius 1.6 \
+  --edge-mode silhouette \
   --smooth \
   --overwrite
 ```
@@ -114,11 +116,32 @@ python MultiEEAffordance/experiments/natural_surface_vlm/project_natural_masks_t
 
 | 参数 | 建议 | 作用 |
 | --- | --- | --- |
-| `--splat-radius` | 6 到 12 | 越大越连续，但细节可能被糊成一片 |
-| `--fill-radius` | 3 到 8 | 填小孔，让图更自然；过大可能扩张到背景 |
+| `--splat-radius` | 8 到 14 | 越大越连续，但细节可能被糊成一片 |
+| `--fill-radius` | 8 到 16 | 填小孔，让图更自然；过大可能扩张到背景 |
+| `--blur-radius` | 1.0 到 2.0 | 弱化圆点颗粒感，让 VLM 输入更接近连续表面 |
+| `--edge-mode` | `silhouette` | 默认只画外轮廓，避免内部裂纹干扰 VLM |
+| `--fill-external-background` | 默认不开 | 开启后会向外填补背景，图更满但更容易产生胖边和假连接 |
 | `--smooth` | 建议打开 | 让图更接近自然表面，但不改变索引图 |
 | `--min-confidence` | 0.35 起步 | 回投时过滤过度填补的低可信像素 |
 | `--direct-only` | 调试时使用 | 只允许原始点 splat 像素回投，不用填补像素 |
+
+如果图像仍然像“颗粒球”：
+
+```bash
+--splat-radius 12 --fill-radius 14 --blur-radius 1.8 --edge-mode silhouette --smooth
+```
+
+如果细结构被糊掉，例如 handle 变粗或与主体粘连：
+
+```bash
+--splat-radius 7 --fill-radius 8 --blur-radius 1.0 --edge-mode silhouette
+```
+
+如果需要诊断深度断裂和孔洞位置，而不是给 VLM 看，可以临时使用：
+
+```bash
+--edge-mode depth
+```
 
 ## 7. 判断是否成功
 
@@ -141,4 +164,3 @@ VLM/SAM2 输出不是 ground truth；
 自然化渲染不是新几何真值；
 最终 mask 必须经过规则检查和人工审查。
 ```
-

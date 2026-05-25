@@ -62,9 +62,26 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--image-size", type=int, default=768, help="Square output image size.")
     parser.add_argument("--splat-radius", type=int, default=8, help="Visual splat radius for surface-like rendering.")
     parser.add_argument("--index-radius", type=int, default=1, help="Exact sparse point-index radius for diagnostics.")
-    parser.add_argument("--fill-radius", type=int, default=5, help="Image-space nearest-point fill radius for small holes.")
+    parser.add_argument("--fill-radius", type=int, default=10, help="Image-space nearest-point fill radius for small holes.")
     parser.add_argument("--padding", type=float, default=0.08, help="Projection padding ratio.")
-    parser.add_argument("--smooth", action="store_true", help="Apply mild RGB smoothing to the natural render.")
+    parser.add_argument("--smooth", action="store_true", help="Apply extra RGB smoothing to the natural render.")
+    parser.add_argument(
+        "--blur-radius",
+        type=float,
+        default=1.3,
+        help="Gaussian blur radius for the VLM render. Larger values reduce point-ball artifacts.",
+    )
+    parser.add_argument(
+        "--edge-mode",
+        choices=["none", "silhouette", "depth"],
+        default="silhouette",
+        help="Edge drawing mode. silhouette avoids dense internal crack lines; depth is more diagnostic.",
+    )
+    parser.add_argument(
+        "--fill-external-background",
+        action="store_true",
+        help="Allow fill to grow into external background. Disabled by default to keep silhouettes from becoming blobby.",
+    )
     parser.add_argument("--no-panel", action="store_true", help="Do not write diagnostic panel images.")
     parser.add_argument("--overwrite", action="store_true", help="Overwrite existing outputs.")
     return parser.parse_args()
@@ -204,7 +221,11 @@ def fill_small_holes(
     dist_map: np.ndarray,
     normal_map: np.ndarray,
     fill_radius: int,
+    fill_external_background: bool,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    original_valid = index_map >= 0
+    outside = external_background(original_valid) if not fill_external_background else np.zeros_like(original_valid)
+    fillable = (index_map < 0) & ~outside
     source_map = np.zeros(index_map.shape, dtype=np.uint8)
     source_map[index_map >= 0] = 1
     fill_dist = np.full(index_map.shape, 32767, dtype=np.int16)
@@ -224,7 +245,7 @@ def fill_small_holes(
         for dy, dx in ((-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (-1, 1), (1, -1), (1, 1)):
             yy = y + dy
             xx = x + dx
-            if yy < 0 or yy >= h or xx < 0 or xx >= w or index_map[yy, xx] >= 0:
+            if yy < 0 or yy >= h or xx < 0 or xx >= w or index_map[yy, xx] >= 0 or not fillable[yy, xx]:
                 continue
             index_map[yy, xx] = index_map[y, x]
             depth_map[yy, xx] = depth_map[y, x]
@@ -243,10 +264,45 @@ def fill_small_holes(
     return index_map, depth_map, dist_map, normal_map, source_map, confidence
 
 
-def edge_mask(valid: np.ndarray, depth_map: np.ndarray) -> np.ndarray:
+def external_background(valid: np.ndarray) -> np.ndarray:
+    background = ~valid
+    outside = np.zeros(valid.shape, dtype=bool)
+    queue: deque[tuple[int, int]] = deque()
+    h, w = valid.shape
+    for x in range(w):
+        for y in (0, h - 1):
+            if background[y, x] and not outside[y, x]:
+                outside[y, x] = True
+                queue.append((y, x))
+    for y in range(h):
+        for x in (0, w - 1):
+            if background[y, x] and not outside[y, x]:
+                outside[y, x] = True
+                queue.append((y, x))
+    while queue:
+        y, x = queue.popleft()
+        for dy, dx in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            yy = y + dy
+            xx = x + dx
+            if 0 <= yy < h and 0 <= xx < w and background[yy, xx] and not outside[yy, xx]:
+                outside[yy, xx] = True
+                queue.append((yy, xx))
+    return outside
+
+
+def silhouette_edge_mask(valid: np.ndarray) -> np.ndarray:
+    outside = external_background(valid)
     edge = np.zeros(valid.shape, dtype=bool)
-    edge[:-1, :] |= valid[:-1, :] != valid[1:, :]
-    edge[:, :-1] |= valid[:, :-1] != valid[:, 1:]
+    edge[:-1, :] |= valid[:-1, :] & outside[1:, :]
+    edge[1:, :] |= valid[1:, :] & outside[:-1, :]
+    edge[:, :-1] |= valid[:, :-1] & outside[:, 1:]
+    edge[:, 1:] |= valid[:, 1:] & outside[:, :-1]
+    return edge
+
+
+def depth_edge_mask(valid: np.ndarray, depth_map: np.ndarray) -> np.ndarray:
+    edge = np.zeros(valid.shape, dtype=bool)
+    edge |= silhouette_edge_mask(valid)
     finite = np.isfinite(depth_map)
     if np.any(finite):
         values = depth_map[finite]
@@ -267,6 +323,8 @@ def make_natural_rgb(
     source_map: np.ndarray,
     confidence: np.ndarray,
     smooth: bool,
+    blur_radius: float,
+    edge_mode: str,
 ) -> np.ndarray:
     valid = source_map > 0
     rgb = np.zeros((*source_map.shape, 3), dtype=np.uint8)
@@ -291,12 +349,24 @@ def make_natural_rgb(
     material[source_map == 2] = material[source_map == 2] * 0.96 + np.array([18, 22, 28], dtype=np.float32) * 0.04
     rgb[valid] = np.clip(material[valid], 0, 255).astype(np.uint8)
 
+    if blur_radius > 0:
+        image = Image.fromarray(rgb, mode="RGB").filter(ImageFilter.GaussianBlur(radius=float(blur_radius)))
+        rgb = np.asarray(image).copy()
+        rgb[~valid] = BACKGROUND
+
     if smooth:
         image = Image.fromarray(rgb, mode="RGB").filter(ImageFilter.SMOOTH_MORE)
         rgb = np.asarray(image).copy()
         rgb[~valid] = BACKGROUND
 
-    rgb[edge_mask(valid, depth_map)] = EDGE
+    if edge_mode == "silhouette":
+        edge = silhouette_edge_mask(valid)
+    elif edge_mode == "depth":
+        edge = depth_edge_mask(valid, depth_map)
+    else:
+        edge = np.zeros(valid.shape, dtype=bool)
+    if np.any(edge):
+        rgb[edge] = np.clip(rgb[edge].astype(np.float32) * 0.55 + EDGE.astype(np.float32) * 0.45, 0, 255).astype(np.uint8)
     return rgb
 
 
@@ -365,9 +435,22 @@ def render_view(
         px, py, depth, view_normals, args.image_size, args.splat_radius
     )
     index_map, depth_map, dist_map, normal_map, source_map, confidence = fill_small_holes(
-        index_map, depth_map, dist_map, normal_map, args.fill_radius
+        index_map,
+        depth_map,
+        dist_map,
+        normal_map,
+        args.fill_radius,
+        args.fill_external_background,
     )
-    natural_rgb = make_natural_rgb(depth_map, normal_map, source_map, confidence, args.smooth)
+    natural_rgb = make_natural_rgb(
+        depth_map,
+        normal_map,
+        source_map,
+        confidence,
+        args.smooth,
+        args.blur_radius,
+        args.edge_mode,
+    )
     conf_rgb = confidence_rgb(confidence)
     return {
         "natural_rgb": natural_rgb,
@@ -409,6 +492,9 @@ def render_sample(
         "splat_radius": int(args.splat_radius),
         "index_radius": int(args.index_radius),
         "fill_radius": int(args.fill_radius),
+        "fill_external_background": bool(args.fill_external_background),
+        "blur_radius": float(args.blur_radius),
+        "edge_mode": str(args.edge_mode),
         "notes": "Natural-like images are VLM inputs. point_index/confidence/source maps are used for 2D-to-3D projection.",
         "views": [],
     }

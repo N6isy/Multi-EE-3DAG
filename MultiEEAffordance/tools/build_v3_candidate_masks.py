@@ -16,6 +16,8 @@ from path_utils import relative_to_dataset, resolve_portable_path
 
 
 EXECUTOR_ORDER = ["gripper", "suction", "hook", "dexterous_hand"]
+KNOWN_TASKS = {"pick_up", "lift_carry", "open_pull", "press_push"}
+DEFAULT_ACTIVE_TASKS = {"pick_up", "open_pull", "press_push"}
 
 
 def parse_args() -> argparse.Namespace:
@@ -30,10 +32,35 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--summary-json", default="processed/metadata/v3_candidate_summary_v0_1.json")
     parser.add_argument("--pilot-id", default=None)
     parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument(
+        "--include-tasks",
+        default=",".join(sorted(DEFAULT_ACTIVE_TASKS)),
+        help="Comma-separated tasks to keep, or 'all'. Default excludes lift_carry.",
+    )
+    parser.add_argument(
+        "--exclude-tasks",
+        default="",
+        help="Comma-separated tasks to drop after include filtering.",
+    )
     parser.add_argument("--selected-candidates", default="", help="Comma-separated manual candidate ids.")
     parser.add_argument("--allow-empty", action="store_true")
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args()
+
+
+def parse_task_filter(value: str, allow_all: bool) -> set[str] | None:
+    raw = str(value or "").strip()
+    if not raw:
+        return set()
+    if raw.lower() == "all":
+        if allow_all:
+            return None
+        raise ValueError("'all' is only valid for --include-tasks")
+    tasks = {item.strip() for item in raw.split(",") if item.strip()}
+    unknown = sorted(tasks.difference(KNOWN_TASKS))
+    if unknown:
+        raise ValueError(f"Unknown tasks: {unknown}. Known tasks: {sorted(KNOWN_TASKS)}")
+    return tasks
 
 
 def resolve_path(root: Path, value: str | None) -> Path | None:
@@ -94,6 +121,12 @@ def write_jsonl(path: Path, rows: list[dict[str, Any]], overwrite: bool) -> None
 
 def selected_rows(root: Path, args: argparse.Namespace) -> list[dict[str, str]]:
     rows = read_csv(resolve_path(root, args.pilot_csv))
+    include_tasks = parse_task_filter(args.include_tasks, allow_all=True)
+    exclude_tasks = parse_task_filter(args.exclude_tasks, allow_all=False) or set()
+    if include_tasks is not None:
+        rows = [row for row in rows if row.get("task") in include_tasks]
+    if exclude_tasks:
+        rows = [row for row in rows if row.get("task") not in exclude_tasks]
     if args.pilot_id:
         rows = [row for row in rows if row.get("pilot_id") == args.pilot_id]
     if args.limit is not None:

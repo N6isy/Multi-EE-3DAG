@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import subprocess
 import sys
@@ -13,12 +14,30 @@ from typing import Any
 
 
 DEFAULT_STAGES = ["views", "plan", "ground", "project", "grow", "render", "build"]
+KNOWN_TASKS = ["pick_up", "lift_carry", "open_pull", "press_push"]
+DEFAULT_ACTIVE_TASKS = ["pick_up", "open_pull", "press_push"]
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run v3 target/reject candidate pipeline.")
     parser.add_argument("--dataset-root", default="MultiEEAffordance", help="Dataset root directory.")
     parser.add_argument("--config", default="configs/qwen3vl_sam2_pilot.yaml", help="Qwen config relative to dataset root.")
+    parser.add_argument("--pilot-csv", default="processed/metadata/vlm_pilot_samples_v0_1.csv")
+    parser.add_argument(
+        "--include-tasks",
+        default=",".join(DEFAULT_ACTIVE_TASKS),
+        help="Comma-separated tasks to keep, or 'all'. Default excludes lift_carry.",
+    )
+    parser.add_argument(
+        "--exclude-tasks",
+        default="",
+        help="Comma-separated tasks to drop after include filtering.",
+    )
+    parser.add_argument(
+        "--filtered-pilot-csv",
+        default="processed/vlm_candidate_v3/pipeline_runs/filtered_pilot_rows_latest.csv",
+        help="Filtered pilot CSV written relative to dataset root when task filtering is active.",
+    )
     parser.add_argument("--pilot-id", default=None)
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--stages", default=",".join(DEFAULT_STAGES), help=f"Comma-separated stages: {','.join(DEFAULT_STAGES + ['visualize'])}")
@@ -61,12 +80,101 @@ def stage_list(value: str) -> list[str]:
     return stages
 
 
+def parse_task_filter(value: str, allow_all: bool) -> set[str] | None:
+    raw = str(value or "").strip()
+    if not raw:
+        return set()
+    if raw.lower() == "all":
+        if allow_all:
+            return None
+        raise ValueError("'all' is only valid for --include-tasks")
+    tasks = {item.strip() for item in raw.split(",") if item.strip()}
+    unknown = sorted(tasks.difference(KNOWN_TASKS))
+    if unknown:
+        raise ValueError(f"Unknown tasks: {unknown}. Known tasks: {KNOWN_TASKS}")
+    return tasks
+
+
+def resolve_path(root: Path, value: str) -> Path:
+    path = Path(value)
+    return path if path.is_absolute() else root / path
+
+
+def read_csv(path: Path) -> list[dict[str, str]]:
+    if not path.exists():
+        raise FileNotFoundError(f"Pilot CSV not found: {path}")
+    with path.open("r", encoding="utf-8-sig", newline="") as f:
+        return list(csv.DictReader(f))
+
+
+def write_csv(path: Path, rows: list[dict[str, str]], fieldnames: list[str]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def relative_to_dataset(root: Path, path: Path) -> str:
+    try:
+        return path.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return str(path)
+
+
+def prepare_pilot_csv(args: argparse.Namespace, dataset_root: Path) -> dict[str, Any]:
+    include_tasks = parse_task_filter(args.include_tasks, allow_all=True)
+    exclude_tasks = parse_task_filter(args.exclude_tasks, allow_all=False) or set()
+    input_csv = resolve_path(dataset_root, args.pilot_csv)
+    rows = read_csv(input_csv)
+    if include_tasks is None and not exclude_tasks:
+        args.effective_pilot_csv = args.pilot_csv
+        return {
+            "input_pilot_csv": relative_to_dataset(dataset_root, input_csv),
+            "effective_pilot_csv": args.pilot_csv,
+            "task_filter_active": False,
+            "include_tasks": "all",
+            "exclude_tasks": [],
+            "rows_before_task_filter": len(rows),
+            "rows_after_task_filter": len(rows),
+        }
+
+    filtered = []
+    for row in rows:
+        task = str(row.get("task", ""))
+        if include_tasks is not None and task not in include_tasks:
+            continue
+        if task in exclude_tasks:
+            continue
+        filtered.append(row)
+    if not filtered:
+        raise ValueError(
+            "No pilot rows remain after task filtering. "
+            f"include_tasks={sorted(include_tasks) if include_tasks is not None else 'all'}, "
+            f"exclude_tasks={sorted(exclude_tasks)}"
+        )
+    out_csv = resolve_path(dataset_root, args.filtered_pilot_csv)
+    fieldnames = list(rows[0].keys()) if rows else []
+    write_csv(out_csv, filtered, fieldnames)
+    args.effective_pilot_csv = relative_to_dataset(dataset_root, out_csv)
+    return {
+        "input_pilot_csv": relative_to_dataset(dataset_root, input_csv),
+        "effective_pilot_csv": args.effective_pilot_csv,
+        "task_filter_active": True,
+        "include_tasks": sorted(include_tasks) if include_tasks is not None else "all",
+        "exclude_tasks": sorted(exclude_tasks),
+        "rows_before_task_filter": len(rows),
+        "rows_after_task_filter": len(filtered),
+    }
+
+
 def script(root: Path, name: str) -> str:
     return str(root / "tools" / name)
 
 
 def add_common(cmd: list[str], args: argparse.Namespace) -> list[str]:
     cmd.extend(["--dataset-root", args.dataset_root])
+    cmd.extend(["--pilot-csv", getattr(args, "effective_pilot_csv", args.pilot_csv)])
     if args.pilot_id:
         cmd.extend(["--pilot-id", args.pilot_id])
     if args.limit is not None:
@@ -205,6 +313,7 @@ def write_manifest(path: Path, data: dict[str, Any]) -> None:
 def main() -> int:
     args = parse_args()
     dataset_root = Path(args.dataset_root).resolve()
+    pilot_filter = prepare_pilot_csv(args, dataset_root)
     commands = build_commands(args)
     run_log: list[dict[str, Any]] = []
     for stage, cmd in commands:
@@ -228,6 +337,7 @@ def main() -> int:
                     "dataset_root": str(dataset_root),
                     "pilot_id": args.pilot_id,
                     "stages": stage_list(args.stages),
+                    "pilot_filter": pilot_filter,
                     "status": "failed",
                     "runs": run_log,
                 },
@@ -239,6 +349,7 @@ def main() -> int:
         "dataset_root": str(dataset_root),
         "pilot_id": args.pilot_id,
         "stages": stage_list(args.stages),
+        "pilot_filter": pilot_filter,
         "selected_candidates": args.selected_candidates,
         "planner_dry_run": args.planner_dry_run,
         "parameters": {
