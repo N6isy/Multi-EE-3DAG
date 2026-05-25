@@ -285,7 +285,7 @@ class AnnotationStore:
         rule_value = update.get("rule_filter_path", "")
         rule: dict[str, Any] = {}
         rule_path = resolve_portable_path(self.dataset_root, rule_value) if rule_value else Path("")
-        if rule_path and rule_path.exists():
+        if rule_path.is_file():
             rule = read_json(rule_path)
         score_by_id: dict[str, dict[str, Any]] = {}
         for item in rule.get("candidate_scores", []):
@@ -353,7 +353,7 @@ class AnnotationStore:
         return {
             "available": True,
             "candidate_manifest": str(manifest_path.relative_to(self.dataset_root).as_posix()),
-            "rule_filter_path": str(rule_path.relative_to(self.dataset_root).as_posix()) if rule_path and rule_path.exists() else "",
+            "rule_filter_path": str(rule_path.relative_to(self.dataset_root).as_posix()) if rule_path.is_file() else "",
             "default_selected_candidates": default_selected,
             "accepted_candidates": sorted(accepted),
             "uncertain_candidates": sorted(uncertain),
@@ -574,6 +574,8 @@ APP_HTML = r"""<!doctype html>
     button { border: 1px solid #c13d3d; background: #d54444; color: white; border-radius: 6px; padding: 8px 10px; cursor: pointer; }
     button.secondary { background: #eef2f7; color: #263043; border-color: #cbd3df; }
     button.active { background: #1f2a3d; border-color: #1f2a3d; }
+    .brush-control { display: flex; align-items: center; gap: 7px; padding: 6px 9px; background: rgba(255,255,255,.92); border: 1px solid #d8e0eb; border-radius: 7px; font-size: 12px; color: #334155; }
+    .brush-control input { width: 92px; padding: 0; }
     .sample-list { display: flex; flex-direction: column; gap: 7px; margin-top: 10px; }
     .sample { border: 1px solid #d8e0eb; border-radius: 8px; padding: 9px; cursor: pointer; }
     .sample.active { border-color: #d54444; box-shadow: 0 0 0 2px rgba(213,68,68,.12); }
@@ -618,6 +620,7 @@ APP_HTML = r"""<!doctype html>
   </aside>
   <main class="viewer">
     <div class="toolbar">
+      <label class="brush-control">brush <input id="brushRadius" type="range" min="6" max="70" value="24"> <span id="brushValue">24px</span></label>
       <button id="modeView">查看/旋转</button>
       <button id="modeToggle">点击切换点</button>
       <button id="modeAdd">只添加</button>
@@ -712,6 +715,10 @@ let previewLocked = false;
 let mode = "toggle";
 let rotX = -0.55, rotY = 0.65, zoom = 1.0;
 let dragging = false, lastX = 0, lastY = 0;
+let painting = false;
+let paintAction = null;
+let cursorX = 0, cursorY = 0, cursorInside = false;
+let brushRadius = 24;
 let history = [];
 let projectedCache = null;
 let projectedCacheKey = "";
@@ -1031,6 +1038,42 @@ function nearestPoint(x, y, positiveOnly=false) {
   return bestD <= 18 * 18 ? best : null;
 }
 
+function brushPoints(x, y, positiveOnly=false) {
+  const r2 = brushRadius * brushRadius;
+  const out = [];
+  for (const p of projectedPoints()) {
+    if (positiveOnly && !positives.has(p.original)) continue;
+    const d = (p.x - x) ** 2 + (p.y - y) ** 2;
+    if (d <= r2) out.push(p);
+  }
+  return out;
+}
+
+function applyBrush(x, y) {
+  if (!current || mode === "view") return false;
+  const action = paintAction || mode;
+  let pts = brushPoints(x, y, action === "delete");
+  if (!pts.length) {
+    const nearest = nearestPoint(x, y, mode === "delete");
+    if (nearest) pts = [nearest];
+  }
+  if (!pts.length) return false;
+  if (action === "add") {
+    pts.forEach(p => positives.add(p.original));
+  } else if (action === "delete") {
+    pts.forEach(p => positives.delete(p.original));
+  } else {
+    const positiveCount = pts.filter(p => positives.has(p.original)).length;
+    const shouldDelete = positiveCount >= Math.max(1, pts.length / 2);
+    pts.forEach(p => {
+      if (shouldDelete) positives.delete(p.original);
+      else positives.add(p.original);
+    });
+  }
+  draw();
+  return true;
+}
+
 function buildPreviewColorMap(ids) {
   const map = new Map();
   ids.forEach(cid => {
@@ -1101,6 +1144,15 @@ function drawNow() {
     ctx.fill();
   }
   ctx.globalAlpha = 1;
+  if (cursorInside && mode !== "view") {
+    ctx.beginPath();
+    ctx.strokeStyle = mode === "delete" ? "#d54444" : (mode === "add" ? "#0f766e" : "#1f6feb");
+    ctx.lineWidth = 1.5;
+    ctx.globalAlpha = 0.9;
+    ctx.arc(cursorX, cursorY, brushRadius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
   const added = [...positives].filter(x => !initialPositives.has(x)).length;
   const removed = [...initialPositives].filter(x => !positives.has(x)).length;
   document.getElementById("hud").innerHTML =
@@ -1118,10 +1170,33 @@ function resize() {
 
 canvas.addEventListener("mousedown", e => {
   dragging = true; lastX = e.clientX; lastY = e.clientY;
+  const rect = canvas.getBoundingClientRect();
+  cursorX = e.clientX - rect.left;
+  cursorY = e.clientY - rect.top;
+  cursorInside = true;
+  if (mode !== "view" && current) {
+    painting = true;
+    if (mode === "toggle") {
+      const pts = brushPoints(cursorX, cursorY, false);
+      const positiveCount = pts.filter(p => positives.has(p.original)).length;
+      paintAction = positiveCount >= Math.max(1, pts.length / 2) ? "delete" : "add";
+    } else {
+      paintAction = mode;
+    }
+    saveHistory();
+    applyBrush(cursorX, cursorY);
+  }
 });
 window.addEventListener("mouseup", e => {
   if (!dragging) return;
   const moved = Math.abs(e.clientX - lastX) + Math.abs(e.clientY - lastY);
+  if (painting) {
+    painting = false;
+    paintAction = null;
+    dragging = false;
+    draw();
+    return;
+  }
   dragging = false;
   if (moved < 4 && mode !== "view" && current) {
     const rect = canvas.getBoundingClientRect();
@@ -1137,10 +1212,27 @@ window.addEventListener("mouseup", e => {
   }
 });
 window.addEventListener("mousemove", e => {
-  if (!dragging || mode !== "view") return;
+  const rect = canvas.getBoundingClientRect();
+  cursorX = e.clientX - rect.left;
+  cursorY = e.clientY - rect.top;
+  cursorInside = cursorX >= 0 && cursorX <= rect.width && cursorY >= 0 && cursorY <= rect.height;
+  if (painting) {
+    applyBrush(cursorX, cursorY);
+    return;
+  }
+  if (!dragging || mode !== "view") {
+    draw();
+    return;
+  }
   rotY += (e.clientX - lastX) * 0.008;
   rotX += (e.clientY - lastY) * 0.008;
   lastX = e.clientX; lastY = e.clientY;
+  draw();
+});
+canvas.addEventListener("mouseleave", () => {
+  cursorInside = false;
+  painting = false;
+  paintAction = null;
   draw();
 });
 canvas.addEventListener("wheel", e => {
@@ -1188,6 +1280,11 @@ document.getElementById("clearMaskBtn").onclick = clearMask;
 document.getElementById("focusCheckedBtn").onclick = focusCheckedCandidates;
 document.getElementById("clearFocusBtn").onclick = clearCandidateFocus;
 document.getElementById("showCandidatePreview").onchange = draw;
+document.getElementById("brushRadius").oninput = (event) => {
+  brushRadius = Number(event.target.value || 24);
+  document.getElementById("brushValue").textContent = `${brushRadius}px`;
+  draw();
+};
 document.getElementById("saveBtn").onclick = () => saveEdit().catch(err => alert(err.message));
 document.getElementById("reloadBtn").onclick = () => {
   if (!current) return;
