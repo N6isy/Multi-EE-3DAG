@@ -716,6 +716,7 @@ let mode = "toggle";
 let rotX = -0.55, rotY = 0.65, zoom = 1.0;
 let dragging = false, lastX = 0, lastY = 0;
 let painting = false;
+let rotating = false;
 let paintAction = null;
 let cursorX = 0, cursorY = 0, cursorInside = false;
 let brushRadius = 24;
@@ -1157,6 +1158,8 @@ function drawNow() {
   const removed = [...initialPositives].filter(x => !positives.has(x)).length;
   document.getElementById("hud").innerHTML =
     `mode=${mode} | executor=${current.target_executor}<br/>checked_candidates=${[...selectedCandidateIds].join(",") || "(none)"}<br/>preview=${[...focusedCandidateIds].join(",") || "(all/off)"}<br/>positive=${positives.size} | added=${added} | removed=${removed}<br/>拖拽旋转，滚轮缩放；点击按当前模式编辑`;
+  document.getElementById("hud").innerHTML =
+    `mode=${mode} | executor=${current.target_executor}<br/>checked_candidates=${[...selectedCandidateIds].join(",") || "(none)"}<br/>preview=${[...focusedCandidateIds].join(",") || "(all/off)"}<br/>positive=${positives.size} | added=${added} | removed=${removed}<br/>left=brush edit | right=rotate | wheel=zoom`;
   document.getElementById("count").value = positives.size;
 }
 
@@ -1168,12 +1171,23 @@ function resize() {
   draw();
 }
 
+canvas.addEventListener("contextmenu", e => e.preventDefault());
 canvas.addEventListener("mousedown", e => {
+  if (!current) return;
+  e.preventDefault();
   dragging = true; lastX = e.clientX; lastY = e.clientY;
   const rect = canvas.getBoundingClientRect();
   cursorX = e.clientX - rect.left;
   cursorY = e.clientY - rect.top;
   cursorInside = true;
+  if (e.button === 2) {
+    rotating = true;
+    painting = false;
+    paintAction = null;
+    draw();
+    return;
+  }
+  if (e.button !== 0) return;
   if (mode !== "view" && current) {
     painting = true;
     if (mode === "toggle") {
@@ -1189,7 +1203,6 @@ canvas.addEventListener("mousedown", e => {
 });
 window.addEventListener("mouseup", e => {
   if (!dragging) return;
-  const moved = Math.abs(e.clientX - lastX) + Math.abs(e.clientY - lastY);
   if (painting) {
     painting = false;
     paintAction = null;
@@ -1197,19 +1210,13 @@ window.addEventListener("mouseup", e => {
     draw();
     return;
   }
-  dragging = false;
-  if (moved < 4 && mode !== "view" && current) {
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left, y = e.clientY - rect.top;
-    const p = nearestPoint(x, y, mode === "delete");
-    if (!p) return;
-    saveHistory();
-    if (mode === "add") positives.add(p.original);
-    else if (mode === "delete") positives.delete(p.original);
-    else if (positives.has(p.original)) positives.delete(p.original);
-    else positives.add(p.original);
+  if (rotating) {
+    rotating = false;
+    dragging = false;
     draw();
+    return;
   }
+  dragging = false;
 });
 window.addEventListener("mousemove", e => {
   const rect = canvas.getBoundingClientRect();
@@ -1220,19 +1227,26 @@ window.addEventListener("mousemove", e => {
     applyBrush(cursorX, cursorY);
     return;
   }
-  if (!dragging || mode !== "view") {
+  if (rotating) {
+    rotY += (e.clientX - lastX) * 0.008;
+    rotX += (e.clientY - lastY) * 0.008;
+    lastX = e.clientX; lastY = e.clientY;
     draw();
     return;
   }
-  rotY += (e.clientX - lastX) * 0.008;
-  rotX += (e.clientY - lastY) * 0.008;
-  lastX = e.clientX; lastY = e.clientY;
+  if (!dragging) {
+    draw();
+    return;
+  }
   draw();
 });
 canvas.addEventListener("mouseleave", () => {
   cursorInside = false;
-  painting = false;
-  paintAction = null;
+  if (painting) {
+    painting = false;
+    paintAction = null;
+    dragging = false;
+  }
   draw();
 });
 canvas.addEventListener("wheel", e => {
