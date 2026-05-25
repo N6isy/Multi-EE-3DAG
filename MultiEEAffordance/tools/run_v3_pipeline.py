@@ -74,23 +74,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--stages", default=",".join(DEFAULT_STAGES), help=f"Comma-separated stages: {','.join(ALL_STAGES)}")
     parser.add_argument(
         "--candidate-source",
-        choices=["part3d", "grounding"],
-        default="part3d",
-        help="part3d uses 3D part proposals plus VLM candidate selection; grounding keeps the old VLM coordinate path.",
+        choices=["partseg", "grounding"],
+        default="partseg",
+        help="partseg uses 3D part proposals plus VLM candidate selection; grounding keeps the old VLM coordinate path.",
     )
-    parser.add_argument(
-        "--view-renderer",
-        choices=["natural", "dense", "both"],
-        default="natural",
-        help="Render mode for VLM views. Natural is the v3 default; dense preserves the old point render.",
-    )
-    parser.add_argument("--natural-renders-root", default="processed/vlm_candidate_v3/natural_renders")
-    parser.add_argument("--dense-renders-root", default="processed/vlm_semantic_part/renders")
+    parser.add_argument("--renders-root", default="processed/vlm_semantic_part/renders", help="VLM-friendly view render root.")
     parser.add_argument(
         "--part-proposal-backend",
-        choices=["natural_cc", "sam3d", "partslippp"],
-        default="natural_cc",
-        help="3D part proposal backend. External SAM3D/PartSLIP++ adapters are reserved but not required.",
+        choices=["geometry", "partslippp"],
+        default="geometry",
+        help="3D part proposal backend. PartSLIP++ is reserved as an external adapter.",
     )
     parser.add_argument("--selected-candidates", default="", help="Optional manual candidate ids for build/visualize.")
     parser.add_argument("--allow-empty", action="store_true")
@@ -137,10 +130,6 @@ def effective_stages(args: argparse.Namespace) -> list[str]:
     if args.candidate_source == "grounding" and str(args.stages or "") == default_text:
         return list(GROUNDING_STAGES)
     return stage_list(args.stages)
-
-
-def active_renders_root(args: argparse.Namespace) -> str:
-    return args.dense_renders_root if args.view_renderer == "dense" else args.natural_renders_root
 
 
 def parse_task_filter(value: str, allow_all: bool) -> set[str] | None:
@@ -323,35 +312,10 @@ def build_commands(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
     stages = effective_stages(args)
     commands: list[tuple[str, list[str]]] = []
     if "views" in stages or any(stage in stages for stage in ("plan", "ground", "project", "grow", "part_propose", "render", "part_select", "part_filter", "coverage", "build")):
-        if args.view_renderer in {"dense", "both"}:
-            cmd = add_common([sys.executable, script(root, "render_vlm_friendly_views.py"), "--output-root", args.dense_renders_root], args)
-            if getattr(args, "effective_samples", ""):
-                cmd.extend(["--samples", args.effective_samples])
-            commands.append(("views_dense", cmd))
-        if args.view_renderer in {"natural", "both"}:
-            cmd = add_common(
-                [
-                    sys.executable,
-                    script(root, "render_natural_surface_views.py"),
-                    "--output-root",
-                    args.natural_renders_root,
-                    "--splat-radius",
-                    "10",
-                    "--fill-radius",
-                    "10",
-                    "--blur-radius",
-                    "1.4",
-                    "--densify-threshold-multiplier",
-                    "2.2",
-                    "--densify-max-neighbors",
-                    "2",
-                    "--densify-midpoints",
-                ],
-                args,
-            )
-            if getattr(args, "effective_samples", ""):
-                cmd.extend(["--samples", args.effective_samples])
-            commands.append(("views_natural", cmd))
+        cmd = add_common([sys.executable, script(root, "render_vlm_friendly_views.py"), "--output-root", args.renders_root], args)
+        if getattr(args, "effective_samples", ""):
+            cmd.extend(["--samples", args.effective_samples])
+        commands.append(("views", cmd))
     if "plan" in stages:
         cmd = add_common(
             [
@@ -360,7 +324,7 @@ def build_commands(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
                 "--config",
                 args.config,
                 "--renders-root",
-                active_renders_root(args),
+                args.renders_root,
             ],
             args,
         )
@@ -375,7 +339,7 @@ def build_commands(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
                 "--config",
                 args.config,
                 "--renders-root",
-                active_renders_root(args),
+                args.renders_root,
                 "--max-target-box-area-fraction",
                 str(args.max_target_box_area_fraction),
             ],
@@ -393,7 +357,7 @@ def build_commands(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
                         sys.executable,
                         script(root, "project_v3_grounding_to_3d.py"),
                         "--renders-root",
-                        active_renders_root(args),
+                        args.renders_root,
                         "--box-shrink-ratio",
                         str(args.box_shrink_ratio),
                         "--point-radius",
@@ -440,9 +404,7 @@ def build_commands(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
                 "--backend",
                 args.part_proposal_backend,
                 "--renders-root",
-                active_renders_root(args),
-                "--fallback-renders-root",
-                args.dense_renders_root,
+                args.renders_root,
                 "--k-neighbors",
                 str(args.k_neighbors),
                 "--min-points",
@@ -465,9 +427,9 @@ def build_commands(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
                 "--candidate-root",
                 "processed/vlm_candidate_v3/3d_candidates",
                 "--renders-root",
-                active_renders_root(args),
+                args.renders_root,
                 "--fallback-renders-root",
-                args.dense_renders_root,
+                args.renders_root,
                 "--output-root",
                 "processed/vlm_candidate_v3/candidate_overlays",
                 "--max-candidates",
@@ -605,7 +567,7 @@ def main() -> int:
                     "created_at": datetime.now(timezone.utc).isoformat(),
                     "dataset_root": str(dataset_root),
                     "pilot_id": args.pilot_id,
-            "stages": effective_stages(args),
+                    "stages": effective_stages(args),
                     "pilot_filter": pilot_filter,
                     "status": "failed",
                     "runs": run_log,
@@ -635,8 +597,7 @@ def main() -> int:
             "min_points": args.min_points,
             "max_candidates": args.max_candidates,
             "candidate_source": args.candidate_source,
-            "view_renderer": args.view_renderer,
-            "active_renders_root": active_renders_root(args),
+            "renders_root": args.renders_root,
             "part_proposal_backend": args.part_proposal_backend,
             "min_selected_votes": args.min_selected_votes,
         },

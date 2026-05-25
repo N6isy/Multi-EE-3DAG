@@ -431,7 +431,7 @@ def run_for_row(
     view_plans: list[dict[str, Any]] = []
     for entry in manifest.get("views", []):
         view = str(entry["view"])
-        image_value = entry.get("natural_render_path") or entry.get("selector_path") or entry.get("dense_render_path")
+        image_value = entry.get("selector_path") or entry.get("dense_render_path") or entry.get("render_path")
         image_path = resolve_portable_path(root, image_value, render_manifest_path.parent)
         if not image_path.exists():
             raise FileNotFoundError(f"Planner image not found: {image_path}")

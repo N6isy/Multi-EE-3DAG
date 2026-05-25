@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Generate v3 3D part candidates without asking the VLM for coordinates.
 
-This stage is the geometry/natural-render candidate backbone for the v3 path:
+This stage is the part-segmentation candidate backbone for the v3 path:
 
-  original point cloud + natural render point-index maps + optional weak masks
+  original point cloud + optional weak masks / part-segmentation adapters
       -> high-recall 3D part candidates [K, N]
       -> VLM selects candidate IDs later
 
-Render-only pixels and midpoint samples never become new 3D points.  All
-candidates are binary masks over the original point cloud length N.
+All candidates are binary masks over the original point cloud length N.
+PartSLIP++ can be plugged in later through the reserved adapter backend.
 """
 
 from __future__ import annotations
@@ -37,9 +37,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--samples", default="processed/metadata/samples_checked_v0_1.jsonl")
     parser.add_argument("--output-root", default="processed/vlm_candidate_v3/3d_candidates")
     parser.add_argument("--semantic-plan-root", default="processed/vlm_candidate_v3/semantic_plans")
-    parser.add_argument("--renders-root", default="processed/vlm_candidate_v3/natural_renders")
-    parser.add_argument("--fallback-renders-root", default="processed/vlm_semantic_part/renders")
-    parser.add_argument("--backend", choices=["natural_cc", "sam3d", "partslippp"], default="natural_cc")
+    parser.add_argument("--renders-root", default="processed/vlm_semantic_part/renders")
+    parser.add_argument(
+        "--backend",
+        choices=["geometry", "partslippp"],
+        default="geometry",
+        help="Candidate backend. geometry is the local fallback; partslippp is a reserved external adapter.",
+    )
     parser.add_argument("--pilot-id", default=None)
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--k-neighbors", type=int, default=24)
@@ -122,8 +126,8 @@ def load_optional_plan(root: Path, args: argparse.Namespace, pilot_id: str) -> d
 
 def normalize_meta(meta: dict[str, Any]) -> dict[str, Any]:
     out = dict(meta)
-    out["provenance"] = "v3_part3d_natural_cc_geometry_proposal"
-    out.setdefault("quality_hint", "v3_part_candidate")
+    out["provenance"] = "v3_partseg_geometry_proposal"
+    out.setdefault("quality_hint", "v3_partseg_candidate")
     return out
 
 
@@ -137,11 +141,13 @@ def generate_with_backend(
     row: dict[str, str],
     sample_by_id: dict[str, dict[str, Any]],
 ) -> tuple[np.ndarray, list[dict[str, Any]], str, Path, Path | None]:
-    if args.backend != "natural_cc":
+    if args.backend == "partslippp":
         raise NotImplementedError(
-            f"Backend '{args.backend}' is reserved for an external adapter. "
-            "Use --backend natural_cc until SAM3D/PartSLIP++ runtime integration is configured."
+            "Backend 'partslippp' is reserved for the external PartSLIP++ adapter. "
+            "Use --backend geometry until the runtime integration is configured."
         )
+    if args.backend != "geometry":
+        raise ValueError(f"Unsupported backend: {args.backend}")
 
     enriched = gen.enrich_row(row, sample_by_id)
     point_path = resolve_portable_path(root, enriched.get("point_cloud_path", ""))
@@ -195,8 +201,8 @@ def write_candidate_outputs(
     plan_path = semantic_plan_path(root, args, pilot_id)
     manifest = {
         "version": "v3",
-        "pipeline": "part3d_candidate_proposal",
-        "candidate_source": "part3d",
+        "pipeline": "part_segmentation_candidate_proposal",
+        "candidate_source": "partseg",
         "backend": args.backend,
         "pilot_id": pilot_id,
         "sample_id": sample_id,
@@ -206,7 +212,7 @@ def write_candidate_outputs(
         "point_cloud_path": relative_to_dataset(root, point_path),
         "weak_mask_path": relative_to_dataset(root, mask_path) if mask_path and mask_path.exists() else None,
         "semantic_plan": relative_to_dataset(root, plan_path) if plan_path.exists() else "",
-        "natural_renders_root": args.renders_root,
+        "renders_root": args.renders_root,
         "candidate_npz": relative_to_dataset(root, npz_path),
         "candidate_count": int(candidate_masks.shape[0]),
         "default_selected_candidates": [],
@@ -225,7 +231,7 @@ def write_candidate_outputs(
         },
         "notes": (
             "Part candidates are high-recall proposals over original point indices only. "
-            "Natural render proxy pixels/midpoints are never added to the point cloud or mask."
+            "The default geometry backend is a fallback; PartSLIP++ can replace it once configured."
         ),
     }
     manifest_path = output_dir / "candidate_manifest.json"
