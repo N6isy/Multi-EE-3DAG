@@ -1,0 +1,78 @@
+{
+  "version": "v3",
+  "pipeline": "target_reject_2d_grounding",
+  "pilot_id": "vlm_pilot_009",
+  "sample_id": "3danet_full_d1a20d867c2b8f459cd6e2005048d293_open_pull",
+  "object_category": "Faucet",
+  "task": "open_pull",
+  "executor": "dexterous_hand",
+  "semantic_plan": "processed/vlm_candidate_v3/semantic_plans/vlm_pilot_009/combined_semantic_plan.json",
+  "render_manifest": "processed/vlm_semantic_part/renders/3danet_full_d1a20d867c2b8f459cd6e2005048d293_open_pull/view_manifest.json",
+  "views": [
+    {
+      "view": "yaw000_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_009/yaw000_elev20_target_reject_grounding.json",
+      "target_regions": 0,
+      "reject_regions": 0,
+      "coverage_warning": "The faucet handle is not visible in this sparse point-cloud render.",
+      "parse_error": ""
+    },
+    {
+      "view": "yaw045_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_009/yaw045_elev20_target_reject_grounding.json",
+      "target_regions": 1,
+      "reject_regions": 0,
+      "coverage_warning": "",
+      "parse_error": ""
+    },
+    {
+      "view": "yaw090_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_009/yaw090_elev20_target_reject_grounding.json",
+      "target_regions": 1,
+      "reject_regions": 1,
+      "coverage_warning": "The target region is visible but sparse, and the reject region is also visible.",
+      "parse_error": ""
+    },
+    {
+      "view": "yaw135_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_009/yaw135_elev20_target_reject_grounding.json",
+      "target_regions": 1,
+      "reject_regions": 0,
+      "coverage_warning": "",
+      "parse_error": ""
+    },
+    {
+      "view": "yaw180_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_009/yaw180_elev20_target_reject_grounding.json",
+      "target_regions": 1,
+      "reject_regions": 2,
+      "coverage_warning": "The target handle loop is visible but sparse, so no points are provided.",
+      "parse_error": ""
+    },
+    {
+      "view": "yaw225_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_009/yaw225_elev20_target_reject_grounding.json",
+      "target_regions": 1,
+      "reject_regions": 2,
+      "coverage_warning": "The target handle is visible but sparse, so points are not provided.",
+      "parse_error": ""
+    },
+    {
+      "view": "yaw270_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_009/yaw270_elev20_target_reject_grounding.json",
+      "target_regions": 1,
+      "reject_regions": 1,
+      "coverage_warning": "The handle is visible and sparse, but no points are available for grounding.",
+      "parse_error": ""
+    },
+    {
+      "view": "yaw315_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_009/yaw315_elev20_target_reject_grounding.json",
+      "target_regions": 1,
+      "reject_regions": 0,
+      "coverage_warning": "",
+      "parse_error": ""
+    }
+  ],
+  "notes": "2D target/reject seeds only; project to 3D before candidate growth."
+}

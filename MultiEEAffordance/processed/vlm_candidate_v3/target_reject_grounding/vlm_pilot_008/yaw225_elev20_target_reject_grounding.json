@@ -1,0 +1,15 @@
+{
+  "view": "yaw225_elev20",
+  "target_regions": [],
+  "reject_regions": [],
+  "coverage_warning": "The image shows a sparse point cloud of a keyboard's top surface, but no individual keys or button tops are discernible as discrete, pressable elements. The entire visible area is a continuous gradient of points, making it impossible to ground specific 'keys' or 'button tops' as required by the task. Therefore, no target regions can be marked, and no reject regions are visible to mark either.",
+  "confidence": 0.0,
+  "raw_qwen3vl_response": {
+    "view": "yaw225_elev20",
+    "target_regions": [],
+    "reject_regions": [],
+    "coverage_warning": "The image shows a sparse point cloud of a keyboard's top surface, but no individual keys or button tops are discernible as discrete, pressable elements. The entire visible area is a continuous gradient of points, making it impossible to ground specific 'keys' or 'button tops' as required by the task. Therefore, no target regions can be marked, and no reject regions are visible to mark either.",
+    "confidence": 0.0,
+    "_raw_text": "{\n  \"view\": \"yaw225_elev20\",\n  \"target_regions\": [],\n  \"reject_regions\": [],\n  \"coverage_warning\": \"The image shows a sparse point cloud of a keyboard's top surface, but no individual keys or button tops are discernible as discrete, pressable elements. The entire visible area is a continuous gradient of points, making it impossible to ground specific 'keys' or 'button tops' as required by the task. Therefore, no target regions can be marked, and no reject regions are visible to mark either.\",\n  \"confidence\": 0.0\n}"
+  }
+}

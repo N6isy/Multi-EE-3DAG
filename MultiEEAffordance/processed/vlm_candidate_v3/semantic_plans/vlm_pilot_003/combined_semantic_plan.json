@@ -1,0 +1,608 @@
+{
+  "version": "v3",
+  "pipeline": "semantic_target_reject_part_plan",
+  "pilot_id": "vlm_pilot_003",
+  "sample_id": "3danet_full_5d089ccd-98db-4fb0-9e1a-9a5650390e54_pick_up",
+  "object_category": "Earphone",
+  "task": "pick_up",
+  "executor": "gripper",
+  "target_positive_parts": [
+    "mic boom",
+    "earcup outer shell",
+    "earcup stem",
+    "headband",
+    "connecting arm"
+  ],
+  "target_grounding_queries": [
+    "outer shell of earcup",
+    "stem connecting earcup to headband",
+    "mic boom",
+    "the headband arch",
+    "the mic boom arm",
+    "the thin arm connecting the two earcups",
+    "headband"
+  ],
+  "ranked_target_queries": [
+    {
+      "query": "outer shell of earcup",
+      "votes": 2,
+      "mean_confidence": 0.8
+    },
+    {
+      "query": "stem connecting earcup to headband",
+      "votes": 2,
+      "mean_confidence": 0.8
+    },
+    {
+      "query": "mic boom",
+      "votes": 2,
+      "mean_confidence": 0.95
+    },
+    {
+      "query": "the headband arch",
+      "votes": 1,
+      "mean_confidence": 0.95
+    },
+    {
+      "query": "the mic boom arm",
+      "votes": 1,
+      "mean_confidence": 0.95
+    },
+    {
+      "query": "the thin arm connecting the two earcups",
+      "votes": 1,
+      "mean_confidence": 0.95
+    },
+    {
+      "query": "headband",
+      "votes": 1,
+      "mean_confidence": 0.95
+    }
+  ],
+  "reject_negative_parts": [
+    "headband",
+    "left earcup",
+    "right earcup",
+    "earcup inner structure",
+    "earcup center flat surface",
+    "earcup inner shell",
+    "earcup hinge",
+    "earcup center"
+  ],
+  "reject_grounding_queries": [
+    "headband arch",
+    "the main earcup bodies",
+    "earcup",
+    "inner cavity of earcup",
+    "central flat area of earcup",
+    "the earcup pads",
+    "the headband arch",
+    "inner earcup cavity",
+    "hinge joint",
+    "central earcup body",
+    "headband",
+    "earpad"
+  ],
+  "view_plans": [
+    {
+      "view": "yaw000_elev20",
+      "visible_object_parts": [
+        "headband",
+        "left earcup",
+        "right earcup",
+        "earcup outer shell",
+        "earcup inner structure",
+        "earcup stem"
+      ],
+      "target_positive_parts": [
+        "earcup outer shell",
+        "earcup stem"
+      ],
+      "target_grounding_queries": [
+        "outer shell of earcup",
+        "stem connecting earcup to headband"
+      ],
+      "reject_negative_parts": [
+        "headband",
+        "earcup inner structure",
+        "earcup center flat surface"
+      ],
+      "reject_grounding_queries": [
+        "headband arch",
+        "inner cavity of earcup",
+        "central flat area of earcup"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": true,
+        "can_hold_or_constrain": true,
+        "can_apply_task_force": true,
+        "reason": "The outer shell of the earcup and the stem provide stable, opposing surfaces for a two-finger gripper to clamp. The gripper can enter from the sides, hold the structure firmly, and apply upward force to lift the object without sliding or disengaging."
+      },
+      "feasible": true,
+      "confidence": 0.8,
+      "notes": "Gripper can stably grasp the earcup outer shell and stem. Headband and inner structure are rejected as they are either too large, unstable, or not suitable for pinching.",
+      "raw_qwen3vl_response": {
+        "view": "yaw000_elev20",
+        "visible_object_parts": [
+          "headband",
+          "left earcup",
+          "right earcup",
+          "earcup outer shell",
+          "earcup inner structure",
+          "earcup stem"
+        ],
+        "target_positive_parts": [
+          "earcup outer shell",
+          "earcup stem"
+        ],
+        "target_grounding_queries": [
+          "outer shell of earcup",
+          "stem connecting earcup to headband"
+        ],
+        "reject_negative_parts": [
+          "headband",
+          "earcup inner structure",
+          "earcup center flat surface"
+        ],
+        "reject_grounding_queries": [
+          "headband arch",
+          "inner cavity of earcup",
+          "central flat area of earcup"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": true,
+          "can_hold_or_constrain": true,
+          "can_apply_task_force": true,
+          "reason": "The outer shell of the earcup and the stem provide stable, opposing surfaces for a two-finger gripper to clamp. The gripper can enter from the sides, hold the structure firmly, and apply upward force to lift the object without sliding or disengaging."
+        },
+        "feasible": true,
+        "confidence": 0.8,
+        "notes": "Gripper can stably grasp the earcup outer shell and stem. Headband and inner structure are rejected as they are either too large, unstable, or not suitable for pinching.",
+        "_raw_text": "{\n  \"view\": \"yaw000_elev20\",\n  \"visible_object_parts\": [\"headband\", \"left earcup\", \"right earcup\", \"earcup outer shell\", \"earcup inner structure\", \"earcup stem\"],\n  \"target_positive_parts\": [\"earcup outer shell\", \"earcup stem\"],\n  \"target_grounding_queries\": [\"outer shell of earcup\", \"stem connecting earcup to headband\"],\n  \"reject_negative_parts\": [\"headband\", \"earcup inner structure\", \"earcup center flat surface\"],\n  \"reject_grounding_queries\": [\"headband arch\", \"inner cavity of earcup\", \"central flat area of earcup\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"The outer shell of the earcup and the stem provide stable, opposing surfaces for a two-finger gripper to clamp. The gripper can enter from the sides, hold the structure firmly, and apply upward force to lift the object without sliding or disengaging.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.8,\n  \"notes\": \"Gripper can stably grasp the earcup outer shell and stem. Headband and inner structure are rejected as they are either too large, unstable, or not suitable for pinching.\"\n}"
+      }
+    },
+    {
+      "view": "yaw045_elev20",
+      "visible_object_parts": [
+        "headband",
+        "left earcup",
+        "right earcup",
+        "mic boom"
+      ],
+      "target_positive_parts": [
+        "headband",
+        "mic boom"
+      ],
+      "target_grounding_queries": [
+        "the headband arch",
+        "the mic boom arm"
+      ],
+      "reject_negative_parts": [
+        "left earcup",
+        "right earcup"
+      ],
+      "reject_grounding_queries": [
+        "the earcup pads",
+        "the main earcup bodies"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": true,
+        "can_hold_or_constrain": true,
+        "can_apply_task_force": true,
+        "reason": "The headband and mic boom are narrow, curved structures that can be pinched by a parallel gripper from both sides. The gripper can enter the space between the headband's arch and the earcups, or around the mic boom, to form a stable clamp. These parts can be lifted along the pick-up task direction without sliding or slipping. The earcups are broad, flat, and cannot be gripped stably by a two-finger gripper."
+      },
+      "feasible": true,
+      "confidence": 0.95,
+      "notes": "Gripper should target the headband arch and mic boom for stable lifting. Earcups are rejected as they are too broad and flat for a two-finger gripper.",
+      "raw_qwen3vl_response": {
+        "view": "yaw045_elev20",
+        "visible_object_parts": [
+          "headband",
+          "left earcup",
+          "right earcup",
+          "mic boom"
+        ],
+        "target_positive_parts": [
+          "headband",
+          "mic boom"
+        ],
+        "target_grounding_queries": [
+          "the headband arch",
+          "the mic boom arm"
+        ],
+        "reject_negative_parts": [
+          "left earcup",
+          "right earcup"
+        ],
+        "reject_grounding_queries": [
+          "the earcup pads",
+          "the main earcup bodies"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": true,
+          "can_hold_or_constrain": true,
+          "can_apply_task_force": true,
+          "reason": "The headband and mic boom are narrow, curved structures that can be pinched by a parallel gripper from both sides. The gripper can enter the space between the headband's arch and the earcups, or around the mic boom, to form a stable clamp. These parts can be lifted along the pick-up task direction without sliding or slipping. The earcups are broad, flat, and cannot be gripped stably by a two-finger gripper."
+        },
+        "feasible": true,
+        "confidence": 0.95,
+        "notes": "Gripper should target the headband arch and mic boom for stable lifting. Earcups are rejected as they are too broad and flat for a two-finger gripper.",
+        "_raw_text": "{\n  \"view\": \"yaw045_elev20\",\n  \"visible_object_parts\": [\"headband\", \"left earcup\", \"right earcup\", \"mic boom\"],\n  \"target_positive_parts\": [\"headband\", \"mic boom\"],\n  \"target_grounding_queries\": [\"the headband arch\", \"the mic boom arm\"],\n  \"reject_negative_parts\": [\"left earcup\", \"right earcup\"],\n  \"reject_grounding_queries\": [\"the earcup pads\", \"the main earcup bodies\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"The headband and mic boom are narrow, curved structures that can be pinched by a parallel gripper from both sides. The gripper can enter the space between the headband's arch and the earcups, or around the mic boom, to form a stable clamp. These parts can be lifted along the pick-up task direction without sliding or slipping. The earcups are broad, flat, and cannot be gripped stably by a two-finger gripper.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.95,\n  \"notes\": \"Gripper should target the headband arch and mic boom for stable lifting. Earcups are rejected as they are too broad and flat for a two-finger gripper.\"\n}"
+      }
+    },
+    {
+      "view": "yaw090_elev20",
+      "visible_object_parts": [],
+      "target_positive_parts": [],
+      "target_grounding_queries": [],
+      "reject_negative_parts": [],
+      "reject_grounding_queries": [],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": false,
+        "can_hold_or_constrain": false,
+        "can_apply_task_force": false,
+        "reason": "Object category is 'Earphone', but the provided render is of a bottle. No earphone structure is visible in the point cloud. Therefore, no functional parts for a two-finger gripper can be identified."
+      },
+      "feasible": false,
+      "confidence": 0.0,
+      "notes": "The object is not an earphone; it is a bottle. No valid target parts exist for the pick_up task with a gripper on this object.",
+      "raw_qwen3vl_response": {
+        "view": "yaw090_elev20",
+        "visible_object_parts": [],
+        "target_positive_parts": [],
+        "target_grounding_queries": [],
+        "reject_negative_parts": [],
+        "reject_grounding_queries": [],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": false,
+          "can_hold_or_constrain": false,
+          "can_apply_task_force": false,
+          "reason": "Object category is 'Earphone', but the provided render is of a bottle. No earphone structure is visible in the point cloud. Therefore, no functional parts for a two-finger gripper can be identified."
+        },
+        "feasible": false,
+        "confidence": 0.0,
+        "notes": "The object is not an earphone; it is a bottle. No valid target parts exist for the pick_up task with a gripper on this object.",
+        "_raw_text": "{\n  \"view\": \"yaw090_elev20\",\n  \"visible_object_parts\": [],\n  \"target_positive_parts\": [],\n  \"target_grounding_queries\": [],\n  \"reject_negative_parts\": [],\n  \"reject_grounding_queries\": [],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": false,\n    \"can_hold_or_constrain\": false,\n    \"can_apply_task_force\": false,\n    \"reason\": \"Object category is 'Earphone', but the provided render is of a bottle. No earphone structure is visible in the point cloud. Therefore, no functional parts for a two-finger gripper can be identified.\"\n  },\n  \"feasible\": false,\n  \"confidence\": 0.0,\n  \"notes\": \"The object is not an earphone; it is a bottle. No valid target parts exist for the pick_up task with a gripper on this object.\"\n}"
+      }
+    },
+    {
+      "view": "yaw135_elev20",
+      "visible_object_parts": [
+        "headband",
+        "left earcup",
+        "right earcup",
+        "connecting arm"
+      ],
+      "target_positive_parts": [
+        "connecting arm"
+      ],
+      "target_grounding_queries": [
+        "the thin arm connecting the two earcups"
+      ],
+      "reject_negative_parts": [
+        "left earcup",
+        "right earcup",
+        "headband"
+      ],
+      "reject_grounding_queries": [
+        "the main earcup bodies",
+        "the headband arch"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": true,
+        "can_hold_or_constrain": true,
+        "can_apply_task_force": true,
+        "reason": "The connecting arm is narrow and cylindrical, allowing a parallel gripper to clamp from both sides. It can be lifted stably without slipping, and the force can be applied along the pick-up direction. The earcups and headband are too broad or hollow to be gripped stably by a two-finger gripper."
+      },
+      "feasible": true,
+      "confidence": 0.95,
+      "notes": "Only the connecting arm is suitable for a two-finger gripper to pick up the earphones stably. Earcups and headband are rejected as they are too large or hollow for stable clamping.",
+      "raw_qwen3vl_response": {
+        "view": "yaw135_elev20",
+        "visible_object_parts": [
+          "headband",
+          "left earcup",
+          "right earcup",
+          "connecting arm"
+        ],
+        "target_positive_parts": [
+          "connecting arm"
+        ],
+        "target_grounding_queries": [
+          "the thin arm connecting the two earcups"
+        ],
+        "reject_negative_parts": [
+          "left earcup",
+          "right earcup",
+          "headband"
+        ],
+        "reject_grounding_queries": [
+          "the main earcup bodies",
+          "the headband arch"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": true,
+          "can_hold_or_constrain": true,
+          "can_apply_task_force": true,
+          "reason": "The connecting arm is narrow and cylindrical, allowing a parallel gripper to clamp from both sides. It can be lifted stably without slipping, and the force can be applied along the pick-up direction. The earcups and headband are too broad or hollow to be gripped stably by a two-finger gripper."
+        },
+        "feasible": true,
+        "confidence": 0.95,
+        "notes": "Only the connecting arm is suitable for a two-finger gripper to pick up the earphones stably. Earcups and headband are rejected as they are too large or hollow for stable clamping.",
+        "_raw_text": "{\n  \"view\": \"yaw135_elev20\",\n  \"visible_object_parts\": [\"headband\", \"left earcup\", \"right earcup\", \"connecting arm\"],\n  \"target_positive_parts\": [\"connecting arm\"],\n  \"target_grounding_queries\": [\"the thin arm connecting the two earcups\"],\n  \"reject_negative_parts\": [\"left earcup\", \"right earcup\", \"headband\"],\n  \"reject_grounding_queries\": [\"the main earcup bodies\", \"the headband arch\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"The connecting arm is narrow and cylindrical, allowing a parallel gripper to clamp from both sides. It can be lifted stably without slipping, and the force can be applied along the pick-up direction. The earcups and headband are too broad or hollow to be gripped stably by a two-finger gripper.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.95,\n  \"notes\": \"Only the connecting arm is suitable for a two-finger gripper to pick up the earphones stably. Earcups and headband are rejected as they are too large or hollow for stable clamping.\"\n}"
+      }
+    },
+    {
+      "view": "yaw180_elev20",
+      "visible_object_parts": [
+        "headband",
+        "left earcup",
+        "right earcup",
+        "earcup stem",
+        "earcup outer shell",
+        "earcup inner shell",
+        "earcup hinge"
+      ],
+      "target_positive_parts": [
+        "earcup outer shell",
+        "earcup stem"
+      ],
+      "target_grounding_queries": [
+        "outer shell of earcup",
+        "stem connecting earcup to headband"
+      ],
+      "reject_negative_parts": [
+        "headband",
+        "earcup inner shell",
+        "earcup hinge",
+        "earcup center"
+      ],
+      "reject_grounding_queries": [
+        "headband arch",
+        "inner earcup cavity",
+        "hinge joint",
+        "central earcup body"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": true,
+        "can_hold_or_constrain": true,
+        "can_apply_task_force": true,
+        "reason": "The outer shell of the earcup and the stem provide stable, opposing surfaces for a two-finger gripper to clamp. The gripper can enter from the sides, hold the structure firmly, and apply upward force to lift. The headband and inner shell are too broad or internal to form a stable clamp."
+      },
+      "feasible": true,
+      "confidence": 0.8,
+      "notes": "Gripper should target the outer shell and stem for stable lifting. Headband and inner shell are rejected as they cannot form a stable clamp.",
+      "raw_qwen3vl_response": {
+        "view": "yaw180_elev20",
+        "visible_object_parts": [
+          "headband",
+          "left earcup",
+          "right earcup",
+          "earcup stem",
+          "earcup outer shell",
+          "earcup inner shell",
+          "earcup hinge"
+        ],
+        "target_positive_parts": [
+          "earcup outer shell",
+          "earcup stem"
+        ],
+        "target_grounding_queries": [
+          "outer shell of earcup",
+          "stem connecting earcup to headband"
+        ],
+        "reject_negative_parts": [
+          "headband",
+          "earcup inner shell",
+          "earcup hinge",
+          "earcup center"
+        ],
+        "reject_grounding_queries": [
+          "headband arch",
+          "inner earcup cavity",
+          "hinge joint",
+          "central earcup body"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": true,
+          "can_hold_or_constrain": true,
+          "can_apply_task_force": true,
+          "reason": "The outer shell of the earcup and the stem provide stable, opposing surfaces for a two-finger gripper to clamp. The gripper can enter from the sides, hold the structure firmly, and apply upward force to lift. The headband and inner shell are too broad or internal to form a stable clamp."
+        },
+        "feasible": true,
+        "confidence": 0.8,
+        "notes": "Gripper should target the outer shell and stem for stable lifting. Headband and inner shell are rejected as they cannot form a stable clamp.",
+        "_raw_text": "{\n  \"view\": \"yaw180_elev20\",\n  \"visible_object_parts\": [\"headband\", \"left earcup\", \"right earcup\", \"earcup stem\", \"earcup outer shell\", \"earcup inner shell\", \"earcup hinge\"],\n  \"target_positive_parts\": [\"earcup outer shell\", \"earcup stem\"],\n  \"target_grounding_queries\": [\"outer shell of earcup\", \"stem connecting earcup to headband\"],\n  \"reject_negative_parts\": [\"headband\", \"earcup inner shell\", \"earcup hinge\", \"earcup center\"],\n  \"reject_grounding_queries\": [\"headband arch\", \"inner earcup cavity\", \"hinge joint\", \"central earcup body\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"The outer shell of the earcup and the stem provide stable, opposing surfaces for a two-finger gripper to clamp. The gripper can enter from the sides, hold the structure firmly, and apply upward force to lift. The headband and inner shell are too broad or internal to form a stable clamp.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.8,\n  \"notes\": \"Gripper should target the outer shell and stem for stable lifting. Headband and inner shell are rejected as they cannot form a stable clamp.\"\n}"
+      }
+    },
+    {
+      "view": "yaw225_elev20",
+      "visible_object_parts": [
+        "headband",
+        "left earcup",
+        "right earcup",
+        "mic boom"
+      ],
+      "target_positive_parts": [
+        "mic boom"
+      ],
+      "target_grounding_queries": [
+        "mic boom"
+      ],
+      "reject_negative_parts": [
+        "left earcup",
+        "right earcup",
+        "headband"
+      ],
+      "reject_grounding_queries": [
+        "earcup",
+        "headband"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": true,
+        "can_hold_or_constrain": true,
+        "can_apply_task_force": true,
+        "reason": "The mic boom is a narrow, elongated structure with two opposing sides that can be pinched by a parallel gripper. It can be lifted stably without sliding, and the gripper can apply upward force to pick up the object. The earcups and headband are too broad or curved to form stable clamps and are not suitable for a two-finger gripper."
+      },
+      "feasible": true,
+      "confidence": 0.95,
+      "notes": "Only the mic boom is suitable for a two-finger gripper to pick up the earphone. Earcups and headband are rejected due to lack of stable clamping surfaces.",
+      "raw_qwen3vl_response": {
+        "view": "yaw225_elev20",
+        "visible_object_parts": [
+          "headband",
+          "left earcup",
+          "right earcup",
+          "mic boom"
+        ],
+        "target_positive_parts": [
+          "mic boom"
+        ],
+        "target_grounding_queries": [
+          "mic boom"
+        ],
+        "reject_negative_parts": [
+          "left earcup",
+          "right earcup",
+          "headband"
+        ],
+        "reject_grounding_queries": [
+          "earcup",
+          "headband"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": true,
+          "can_hold_or_constrain": true,
+          "can_apply_task_force": true,
+          "reason": "The mic boom is a narrow, elongated structure with two opposing sides that can be pinched by a parallel gripper. It can be lifted stably without sliding, and the gripper can apply upward force to pick up the object. The earcups and headband are too broad or curved to form stable clamps and are not suitable for a two-finger gripper."
+        },
+        "feasible": true,
+        "confidence": 0.95,
+        "notes": "Only the mic boom is suitable for a two-finger gripper to pick up the earphone. Earcups and headband are rejected due to lack of stable clamping surfaces.",
+        "_raw_text": "{\n  \"view\": \"yaw225_elev20\",\n  \"visible_object_parts\": [\"headband\", \"left earcup\", \"right earcup\", \"mic boom\"],\n  \"target_positive_parts\": [\"mic boom\"],\n  \"target_grounding_queries\": [\"mic boom\"],\n  \"reject_negative_parts\": [\"left earcup\", \"right earcup\", \"headband\"],\n  \"reject_grounding_queries\": [\"earcup\", \"headband\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"The mic boom is a narrow, elongated structure with two opposing sides that can be pinched by a parallel gripper. It can be lifted stably without sliding, and the gripper can apply upward force to pick up the object. The earcups and headband are too broad or curved to form stable clamps and are not suitable for a two-finger gripper.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.95,\n  \"notes\": \"Only the mic boom is suitable for a two-finger gripper to pick up the earphone. Earcups and headband are rejected due to lack of stable clamping surfaces.\"\n}"
+      }
+    },
+    {
+      "view": "yaw270_elev20",
+      "visible_object_parts": [],
+      "target_positive_parts": [],
+      "target_grounding_queries": [],
+      "reject_negative_parts": [],
+      "reject_grounding_queries": [],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": false,
+        "can_hold_or_constrain": false,
+        "can_apply_task_force": false,
+        "reason": "Object category is 'Earphone', but no visible parts matching the task 'pick_up' with a two-finger gripper are present in the sparse point cloud. The render is incomplete and does not show any graspable features like handles, stems, or edges suitable for a parallel gripper."
+      },
+      "feasible": false,
+      "confidence": 0.0,
+      "notes": "No plausible graspable parts visible in the sparse point cloud for an earphone. Task cannot be performed with the given render.",
+      "raw_qwen3vl_response": {
+        "view": "yaw270_elev20",
+        "visible_object_parts": [],
+        "target_positive_parts": [],
+        "target_grounding_queries": [],
+        "reject_negative_parts": [],
+        "reject_grounding_queries": [],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": false,
+          "can_hold_or_constrain": false,
+          "can_apply_task_force": false,
+          "reason": "Object category is 'Earphone', but no visible parts matching the task 'pick_up' with a two-finger gripper are present in the sparse point cloud. The render is incomplete and does not show any graspable features like handles, stems, or edges suitable for a parallel gripper."
+        },
+        "feasible": false,
+        "confidence": 0.0,
+        "notes": "No plausible graspable parts visible in the sparse point cloud for an earphone. Task cannot be performed with the given render.",
+        "_raw_text": "{\n  \"view\": \"yaw270_elev20\",\n  \"visible_object_parts\": [],\n  \"target_positive_parts\": [],\n  \"target_grounding_queries\": [],\n  \"reject_negative_parts\": [],\n  \"reject_grounding_queries\": [],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": false,\n    \"can_hold_or_constrain\": false,\n    \"can_apply_task_force\": false,\n    \"reason\": \"Object category is 'Earphone', but no visible parts matching the task 'pick_up' with a two-finger gripper are present in the sparse point cloud. The render is incomplete and does not show any graspable features like handles, stems, or edges suitable for a parallel gripper.\"\n  },\n  \"feasible\": false,\n  \"confidence\": 0.0,\n  \"notes\": \"No plausible graspable parts visible in the sparse point cloud for an earphone. Task cannot be performed with the given render.\"\n}"
+      }
+    },
+    {
+      "view": "yaw315_elev20",
+      "visible_object_parts": [
+        "headband",
+        "left earcup",
+        "right earcup",
+        "mic boom"
+      ],
+      "target_positive_parts": [
+        "headband",
+        "mic boom"
+      ],
+      "target_grounding_queries": [
+        "headband",
+        "mic boom"
+      ],
+      "reject_negative_parts": [
+        "left earcup",
+        "right earcup"
+      ],
+      "reject_grounding_queries": [
+        "earcup",
+        "earpad"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": true,
+        "can_hold_or_constrain": true,
+        "can_apply_task_force": true,
+        "reason": "Headband and mic boom are narrow, curved structures that can be pinched by a two-finger gripper. The gripper can enter from the sides, constrain the structure, and apply upward force to lift. Earcups are broad, flat, and lack stable pinch points."
+      },
+      "feasible": true,
+      "confidence": 0.95,
+      "notes": "Headband and mic boom are the only parts suitable for stable two-finger gripper pickup. Earcups are rejected as they are flat and cannot be clamped.",
+      "raw_qwen3vl_response": {
+        "view": "yaw315_elev20",
+        "visible_object_parts": [
+          "headband",
+          "left earcup",
+          "right earcup",
+          "mic boom"
+        ],
+        "target_positive_parts": [
+          "headband",
+          "mic boom"
+        ],
+        "target_grounding_queries": [
+          "headband",
+          "mic boom"
+        ],
+        "reject_negative_parts": [
+          "left earcup",
+          "right earcup"
+        ],
+        "reject_grounding_queries": [
+          "earcup",
+          "earpad"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": true,
+          "can_hold_or_constrain": true,
+          "can_apply_task_force": true,
+          "reason": "Headband and mic boom are narrow, curved structures that can be pinched by a two-finger gripper. The gripper can enter from the sides, constrain the structure, and apply upward force to lift. Earcups are broad, flat, and lack stable pinch points."
+        },
+        "feasible": true,
+        "confidence": 0.95,
+        "notes": "Headband and mic boom are the only parts suitable for stable two-finger gripper pickup. Earcups are rejected as they are flat and cannot be clamped.",
+        "_raw_text": "{\n  \"view\": \"yaw315_elev20\",\n  \"visible_object_parts\": [\"headband\", \"left earcup\", \"right earcup\", \"mic boom\"],\n  \"target_positive_parts\": [\"headband\", \"mic boom\"],\n  \"target_grounding_queries\": [\"headband\", \"mic boom\"],\n  \"reject_negative_parts\": [\"left earcup\", \"right earcup\"],\n  \"reject_grounding_queries\": [\"earcup\", \"earpad\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"Headband and mic boom are narrow, curved structures that can be pinched by a two-finger gripper. The gripper can enter from the sides, constrain the structure, and apply upward force to lift. Earcups are broad, flat, and lack stable pinch points.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.95,\n  \"notes\": \"Headband and mic boom are the only parts suitable for stable two-finger gripper pickup. Earcups are rejected as they are flat and cannot be clamped.\"\n}"
+      }
+    }
+  ],
+  "render_manifest": "processed/vlm_semantic_part/renders/3danet_full_5d089ccd-98db-4fb0-9e1a-9a5650390e54_pick_up/view_manifest.json",
+  "notes": "v3 semantic plan only. It defines target and reject semantics; later stages ground, project, grow candidates, and require human review."
+}

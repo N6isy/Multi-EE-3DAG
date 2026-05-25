@@ -1,0 +1,103 @@
+{
+  "version": "v3",
+  "pipeline": "reject_aware_semantic_candidate_growth",
+  "pilot_id": "vlm_pilot_010",
+  "sample_id": "3danet_full_f4897c9b20e811f1309c3ff4f31971fa_pick_up",
+  "object_category": "Scissors",
+  "task": "pick_up",
+  "executor": "hook",
+  "point_cloud_path": "processed/points/3d_affordancenet_full_shape_val_balanced_v3/3danet_full_f4897c9b20e811f1309c3ff4f31971fa.npy",
+  "semantic_plan": "processed/vlm_candidate_v3/semantic_plans/vlm_pilot_010/combined_semantic_plan.json",
+  "projected_votes": "processed/vlm_candidate_v3/projected_3d/vlm_pilot_010_target_reject_votes.npz",
+  "candidate_npz": "processed/vlm_candidate_v3/3d_candidates/vlm_pilot_010/candidates.npz",
+  "candidate_count": 3,
+  "default_selected_candidates": [
+    "A",
+    "B"
+  ],
+  "target_seed_points": 882,
+  "reject_veto_points": 1160,
+  "candidates": [
+    {
+      "candidate_id": "A",
+      "candidate_name": "target_component_01_expanded",
+      "candidate_family": "semantic_target_component_expanded",
+      "description": "Connected target component grown locally without crossing reject-veto points.",
+      "recommended_executors": [
+        "hook"
+      ],
+      "recommended_tasks": [
+        "pick_up"
+      ],
+      "point_count": 628,
+      "point_fraction": 0.306640625,
+      "bbox_extent_ratio": [
+        0.2809692919254303,
+        0.9999997615814209,
+        0.48197221755981445
+      ],
+      "quality_hint": "v3_reject_aware_candidate",
+      "priority": 8.1,
+      "mean_target_score": 0.4217429757118225,
+      "max_reject_score_after_veto": 0.0,
+      "provenance": "v3_target_seed_growth_with_reject_veto"
+    },
+    {
+      "candidate_id": "B",
+      "candidate_name": "target_component_02_expanded",
+      "candidate_family": "semantic_target_component_expanded",
+      "description": "Connected target component grown locally without crossing reject-veto points.",
+      "recommended_executors": [
+        "hook"
+      ],
+      "recommended_tasks": [
+        "pick_up"
+      ],
+      "point_count": 259,
+      "point_fraction": 0.12646484375,
+      "bbox_extent_ratio": [
+        0.18242695927619934,
+        0.6064980030059814,
+        0.3663712739944458
+      ],
+      "quality_hint": "v3_reject_aware_candidate",
+      "priority": 8.2,
+      "mean_target_score": 0.4467930197715759,
+      "max_reject_score_after_veto": 0.0,
+      "provenance": "v3_target_seed_growth_with_reject_veto"
+    },
+    {
+      "candidate_id": "C",
+      "candidate_name": "target_seed_union_reject_aware_expanded",
+      "candidate_family": "semantic_target_union",
+      "description": "Union of all VLM target seeds after removing reject-veto points and applying small kNN expansion.",
+      "recommended_executors": [
+        "hook"
+      ],
+      "recommended_tasks": [
+        "pick_up"
+      ],
+      "point_count": 888,
+      "point_fraction": 0.43359375,
+      "bbox_extent_ratio": [
+        0.34397563338279724,
+        0.9999997615814209,
+        1.0
+      ],
+      "quality_hint": "v3_reject_aware_candidate",
+      "priority": 20.0,
+      "mean_target_score": 0.42875590920448303,
+      "max_reject_score_after_veto": 0.0,
+      "provenance": "v3_target_seed_growth_with_reject_veto"
+    }
+  ],
+  "parameters": {
+    "target_score_threshold": 0.2,
+    "reject_score_threshold": 0.1,
+    "min_target_votes": 1.0,
+    "min_reject_votes": 1.0,
+    "expand_hops": 2,
+    "k_neighbors": 24
+  },
+  "notes": "v3 candidates grow only from semantic target seeds and are clipped by reject-veto points. They remain proposals requiring human review."
+}

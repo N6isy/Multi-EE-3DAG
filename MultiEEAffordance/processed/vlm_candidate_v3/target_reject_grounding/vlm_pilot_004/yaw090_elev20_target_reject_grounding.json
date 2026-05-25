@@ -1,0 +1,15 @@
+{
+  "view": "yaw090_elev20",
+  "target_regions": [],
+  "reject_regions": [],
+  "coverage_warning": "The image shows a bottle-like object, not an earphone. No earphone parts are visible to ground.",
+  "confidence": 0.0,
+  "raw_qwen3vl_response": {
+    "view": "yaw090_elev20",
+    "target_regions": [],
+    "reject_regions": [],
+    "coverage_warning": "The image shows a bottle-like object, not an earphone. No earphone parts are visible to ground.",
+    "confidence": 0.0,
+    "_raw_text": "{\n  \"view\": \"yaw090_elev20\",\n  \"target_regions\": [],\n  \"reject_regions\": [],\n  \"coverage_warning\": \"The image shows a bottle-like object, not an earphone. No earphone parts are visible to ground.\",\n  \"confidence\": 0.0\n}"
+  }
+}

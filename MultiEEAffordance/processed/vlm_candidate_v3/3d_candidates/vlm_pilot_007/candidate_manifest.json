@@ -1,0 +1,27 @@
+{
+  "version": "v3",
+  "pipeline": "reject_aware_semantic_candidate_growth",
+  "pilot_id": "vlm_pilot_007",
+  "sample_id": "3danet_full_c34718bd10e378186c6c61abcbd83e5a_pick_up",
+  "object_category": "Mug",
+  "task": "pick_up",
+  "executor": "suction",
+  "point_cloud_path": "processed/points/3d_affordancenet_full_shape_val_balanced_v3/3danet_full_c34718bd10e378186c6c61abcbd83e5a.npy",
+  "semantic_plan": "processed/vlm_candidate_v3/semantic_plans/vlm_pilot_007/combined_semantic_plan.json",
+  "projected_votes": "processed/vlm_candidate_v3/projected_3d/vlm_pilot_007_target_reject_votes.npz",
+  "candidate_npz": "processed/vlm_candidate_v3/3d_candidates/vlm_pilot_007/candidates.npz",
+  "candidate_count": 0,
+  "default_selected_candidates": [],
+  "target_seed_points": 0,
+  "reject_veto_points": 0,
+  "candidates": [],
+  "parameters": {
+    "target_score_threshold": 0.2,
+    "reject_score_threshold": 0.1,
+    "min_target_votes": 1.0,
+    "min_reject_votes": 1.0,
+    "expand_hops": 2,
+    "k_neighbors": 24
+  },
+  "notes": "v3 candidates grow only from semantic target seeds and are clipped by reject-veto points. They remain proposals requiring human review."
+}

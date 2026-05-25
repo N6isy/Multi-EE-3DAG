@@ -1,0 +1,15 @@
+{
+  "view": "yaw135_elev20",
+  "target_regions": [],
+  "reject_regions": [],
+  "coverage_warning": "The image shows a sparse point cloud of a keyboard, but no individual keys or button tops are clearly distinguishable as discrete functional parts. The entire visible area is a gradient of points, making it impossible to ground specific target or reject regions with confidence.",
+  "confidence": 0.0,
+  "raw_qwen3vl_response": {
+    "view": "yaw135_elev20",
+    "target_regions": [],
+    "reject_regions": [],
+    "coverage_warning": "The image shows a sparse point cloud of a keyboard, but no individual keys or button tops are clearly distinguishable as discrete functional parts. The entire visible area is a gradient of points, making it impossible to ground specific target or reject regions with confidence.",
+    "confidence": 0.0,
+    "_raw_text": "{\n  \"view\": \"yaw135_elev20\",\n  \"target_regions\": [],\n  \"reject_regions\": [],\n  \"coverage_warning\": \"The image shows a sparse point cloud of a keyboard, but no individual keys or button tops are clearly distinguishable as discrete functional parts. The entire visible area is a gradient of points, making it impossible to ground specific target or reject regions with confidence.\",\n  \"confidence\": 0.0\n}"
+  }
+}

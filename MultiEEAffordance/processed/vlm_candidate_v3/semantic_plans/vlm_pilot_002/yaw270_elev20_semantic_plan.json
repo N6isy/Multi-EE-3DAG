@@ -1,0 +1,37 @@
+{
+  "view": "yaw270_elev20",
+  "visible_object_parts": [],
+  "target_positive_parts": [],
+  "target_grounding_queries": [],
+  "reject_negative_parts": [],
+  "reject_grounding_queries": [],
+  "uncertain_parts": [],
+  "mechanism_check": {
+    "can_enter_or_contact": false,
+    "can_hold_or_constrain": false,
+    "can_apply_task_force": false,
+    "reason": "No visible structural features in the sparse point cloud that can be hooked or constrained by a hook end-effector. The render is too sparse to identify any inner holes, rings, or flanges that meet the hook mechanism criteria."
+  },
+  "feasible": false,
+  "confidence": 0.0,
+  "notes": "Sparse point cloud lacks sufficient geometric detail to identify any hook-targetable structures for the 'open_pull' task on a dishwasher. No positive or negative parts can be confidently annotated.",
+  "raw_qwen3vl_response": {
+    "view": "yaw270_elev20",
+    "visible_object_parts": [],
+    "target_positive_parts": [],
+    "target_grounding_queries": [],
+    "reject_negative_parts": [],
+    "reject_grounding_queries": [],
+    "uncertain_parts": [],
+    "mechanism_check": {
+      "can_enter_or_contact": false,
+      "can_hold_or_constrain": false,
+      "can_apply_task_force": false,
+      "reason": "No visible structural features in the sparse point cloud that can be hooked or constrained by a hook end-effector. The render is too sparse to identify any inner holes, rings, or flanges that meet the hook mechanism criteria."
+    },
+    "feasible": false,
+    "confidence": 0.0,
+    "notes": "Sparse point cloud lacks sufficient geometric detail to identify any hook-targetable structures for the 'open_pull' task on a dishwasher. No positive or negative parts can be confidently annotated.",
+    "_raw_text": "{\n  \"view\": \"yaw270_elev20\",\n  \"visible_object_parts\": [],\n  \"target_positive_parts\": [],\n  \"target_grounding_queries\": [],\n  \"reject_negative_parts\": [],\n  \"reject_grounding_queries\": [],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": false,\n    \"can_hold_or_constrain\": false,\n    \"can_apply_task_force\": false,\n    \"reason\": \"No visible structural features in the sparse point cloud that can be hooked or constrained by a hook end-effector. The render is too sparse to identify any inner holes, rings, or flanges that meet the hook mechanism criteria.\"\n  },\n  \"feasible\": false,\n  \"confidence\": 0.0,\n  \"notes\": \"Sparse point cloud lacks sufficient geometric detail to identify any hook-targetable structures for the 'open_pull' task on a dishwasher. No positive or negative parts can be confidently annotated.\"\n}"
+  }
+}

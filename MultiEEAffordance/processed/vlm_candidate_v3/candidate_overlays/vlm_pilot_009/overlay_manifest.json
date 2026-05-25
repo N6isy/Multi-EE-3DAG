@@ -1,0 +1,477 @@
+{
+  "version": "v2",
+  "pipeline": "vlm_guided_candidate_selection",
+  "pilot_id": "vlm_pilot_009",
+  "sample_id": "3danet_full_d1a20d867c2b8f459cd6e2005048d293_open_pull",
+  "object_category": "Faucet",
+  "task": "open_pull",
+  "executor": "dexterous_hand",
+  "candidate_manifest": "processed/vlm_candidate_v3/3d_candidates/vlm_pilot_009/candidate_manifest.json",
+  "candidate_ids": [
+    "A",
+    "B",
+    "C",
+    "D"
+  ],
+  "candidates": [
+    {
+      "candidate_id": "A",
+      "candidate_name": "target_component_01_expanded",
+      "candidate_family": "semantic_target_component_expanded",
+      "description": "Connected target component grown locally without crossing reject-veto points.",
+      "recommended_executors": [
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "open_pull"
+      ],
+      "point_count": 283,
+      "point_fraction": 0.13818359375,
+      "bbox_extent_ratio": [
+        0.08838605135679245,
+        0.6981110572814941,
+        0.7777472734451294
+      ],
+      "quality_hint": "v3_reject_aware_candidate",
+      "priority": 8.1,
+      "mean_target_score": 0.48443830013275146,
+      "max_reject_score_after_veto": 0.0,
+      "provenance": "v3_target_seed_growth_with_reject_veto"
+    },
+    {
+      "candidate_id": "B",
+      "candidate_name": "target_component_02_expanded",
+      "candidate_family": "semantic_target_component_expanded",
+      "description": "Connected target component grown locally without crossing reject-veto points.",
+      "recommended_executors": [
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "open_pull"
+      ],
+      "point_count": 107,
+      "point_fraction": 0.05224609375,
+      "bbox_extent_ratio": [
+        0.19500970840454102,
+        0.19437658786773682,
+        0.40909501910209656
+      ],
+      "quality_hint": "v3_reject_aware_candidate",
+      "priority": 8.2,
+      "mean_target_score": 0.3066524267196655,
+      "max_reject_score_after_veto": 0.0,
+      "provenance": "v3_target_seed_growth_with_reject_veto"
+    },
+    {
+      "candidate_id": "C",
+      "candidate_name": "target_component_03_expanded",
+      "candidate_family": "semantic_target_component_expanded",
+      "description": "Connected target component grown locally without crossing reject-veto points.",
+      "recommended_executors": [
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "open_pull"
+      ],
+      "point_count": 7,
+      "point_fraction": 0.00341796875,
+      "bbox_extent_ratio": [
+        0.05235489457845688,
+        0.038182880729436874,
+        0.02492898516356945
+      ],
+      "quality_hint": "v3_reject_aware_candidate",
+      "priority": 8.3,
+      "mean_target_score": 0.375,
+      "max_reject_score_after_veto": 0.0,
+      "provenance": "v3_target_seed_growth_with_reject_veto"
+    },
+    {
+      "candidate_id": "D",
+      "candidate_name": "target_seed_union_reject_aware_expanded",
+      "candidate_family": "semantic_target_union",
+      "description": "Union of all VLM target seeds after removing reject-veto points and applying small kNN expansion.",
+      "recommended_executors": [
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "open_pull"
+      ],
+      "point_count": 403,
+      "point_fraction": 0.19677734375,
+      "bbox_extent_ratio": [
+        0.5276255011558533,
+        0.9999014139175415,
+        0.9984638094902039
+      ],
+      "quality_hint": "v3_reject_aware_candidate",
+      "priority": 20.0,
+      "mean_target_score": 0.4374198317527771,
+      "max_reject_score_after_veto": 0.0,
+      "provenance": "v3_target_seed_growth_with_reject_veto"
+    }
+  ],
+  "views": [
+    {
+      "view": "yaw000_elev20",
+      "source_image_path": "processed/vlm_semantic_part/renders/3danet_full_d1a20d867c2b8f459cd6e2005048d293_open_pull/yaw000_elev20_dense.png",
+      "point_index_path": "processed/vlm_semantic_part/renders/3danet_full_d1a20d867c2b8f459cd6e2005048d293_open_pull/yaw000_elev20_point_index.npy",
+      "overlay_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_009/yaw000_elev20_overlay.png",
+      "selector_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_009/yaw000_elev20_selector.png",
+      "selector_crop_bbox": [
+        242,
+        0,
+        744,
+        767
+      ],
+      "positive_pixels": {
+        "D": 1937,
+        "C": 35,
+        "B": 492,
+        "A": 1382
+      },
+      "candidate_bboxes": {
+        "D": [
+          322,
+          61,
+          664,
+          706
+        ],
+        "C": [
+          628,
+          681,
+          664,
+          706
+        ],
+        "B": [
+          337,
+          139,
+          464,
+          336
+        ],
+        "A": [
+          389,
+          61,
+          448,
+          571
+        ]
+      }
+    },
+    {
+      "view": "yaw045_elev20",
+      "source_image_path": "processed/vlm_semantic_part/renders/3danet_full_d1a20d867c2b8f459cd6e2005048d293_open_pull/yaw045_elev20_dense.png",
+      "point_index_path": "processed/vlm_semantic_part/renders/3danet_full_d1a20d867c2b8f459cd6e2005048d293_open_pull/yaw045_elev20_point_index.npy",
+      "overlay_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_009/yaw045_elev20_overlay.png",
+      "selector_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_009/yaw045_elev20_selector.png",
+      "selector_crop_bbox": [
+        151,
+        0,
+        767,
+        767
+      ],
+      "positive_pixels": {
+        "D": 1953,
+        "C": 35,
+        "B": 519,
+        "A": 1369
+      },
+      "candidate_bboxes": {
+        "D": [
+          231,
+          64,
+          707,
+          706
+        ],
+        "C": [
+          342,
+          681,
+          372,
+          706
+        ],
+        "B": [
+          231,
+          102,
+          442,
+          274
+        ],
+        "A": [
+          342,
+          64,
+          707,
+          538
+        ]
+      }
+    },
+    {
+      "view": "yaw090_elev20",
+      "source_image_path": "processed/vlm_semantic_part/renders/3danet_full_d1a20d867c2b8f459cd6e2005048d293_open_pull/yaw090_elev20_dense.png",
+      "point_index_path": "processed/vlm_semantic_part/renders/3danet_full_d1a20d867c2b8f459cd6e2005048d293_open_pull/yaw090_elev20_point_index.npy",
+      "overlay_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_009/yaw090_elev20_overlay.png",
+      "selector_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_009/yaw090_elev20_selector.png",
+      "selector_crop_bbox": [
+        0,
+        0,
+        767,
+        767
+      ],
+      "positive_pixels": {
+        "D": 1958,
+        "C": 35,
+        "B": 521,
+        "A": 1372
+      },
+      "candidate_bboxes": {
+        "D": [
+          60,
+          67,
+          706,
+          692
+        ],
+        "C": [
+          60,
+          659,
+          78,
+          692
+        ],
+        "B": [
+          88,
+          67,
+          354,
+          194
+        ],
+        "A": [
+          204,
+          144,
+          706,
+          521
+        ]
+      }
+    },
+    {
+      "view": "yaw135_elev20",
+      "source_image_path": "processed/vlm_semantic_part/renders/3danet_full_d1a20d867c2b8f459cd6e2005048d293_open_pull/yaw135_elev20_dense.png",
+      "point_index_path": "processed/vlm_semantic_part/renders/3danet_full_d1a20d867c2b8f459cd6e2005048d293_open_pull/yaw135_elev20_point_index.npy",
+      "overlay_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_009/yaw135_elev20_overlay.png",
+      "selector_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_009/yaw135_elev20_selector.png",
+      "selector_crop_bbox": [
+        0,
+        0,
+        767,
+        730
+      ],
+      "positive_pixels": {
+        "D": 1928,
+        "C": 35,
+        "B": 510,
+        "A": 1353
+      },
+      "candidate_bboxes": {
+        "D": [
+          60,
+          60,
+          696,
+          650
+        ],
+        "C": [
+          60,
+          612,
+          85,
+          650
+        ],
+        "B": [
+          215,
+          60,
+          422,
+          141
+        ],
+        "A": [
+          281,
+          285,
+          688,
+          538
+        ]
+      }
+    },
+    {
+      "view": "yaw180_elev20",
+      "source_image_path": "processed/vlm_semantic_part/renders/3danet_full_d1a20d867c2b8f459cd6e2005048d293_open_pull/yaw180_elev20_dense.png",
+      "point_index_path": "processed/vlm_semantic_part/renders/3danet_full_d1a20d867c2b8f459cd6e2005048d293_open_pull/yaw180_elev20_point_index.npy",
+      "overlay_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_009/yaw180_elev20_overlay.png",
+      "selector_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_009/yaw180_elev20_selector.png",
+      "selector_crop_bbox": [
+        23,
+        0,
+        510,
+        750
+      ],
+      "positive_pixels": {
+        "D": 1860,
+        "C": 35,
+        "B": 512,
+        "A": 1308
+      },
+      "candidate_bboxes": {
+        "D": [
+          103,
+          60,
+          430,
+          670
+        ],
+        "C": [
+          103,
+          578,
+          139,
+          612
+        ],
+        "B": [
+          303,
+          60,
+          430,
+          135
+        ],
+        "A": [
+          319,
+          376,
+          378,
+          592
+        ]
+      }
+    },
+    {
+      "view": "yaw225_elev20",
+      "source_image_path": "processed/vlm_semantic_part/renders/3danet_full_d1a20d867c2b8f459cd6e2005048d293_open_pull/yaw225_elev20_dense.png",
+      "point_index_path": "processed/vlm_semantic_part/renders/3danet_full_d1a20d867c2b8f459cd6e2005048d293_open_pull/yaw225_elev20_point_index.npy",
+      "overlay_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_009/yaw225_elev20_overlay.png",
+      "selector_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_009/yaw225_elev20_selector.png",
+      "selector_crop_bbox": [
+        0,
+        0,
+        616,
+        670
+      ],
+      "positive_pixels": {
+        "D": 1989,
+        "C": 35,
+        "B": 522,
+        "A": 1402
+      },
+      "candidate_bboxes": {
+        "D": [
+          60,
+          60,
+          536,
+          590
+        ],
+        "C": [
+          395,
+          468,
+          425,
+          501
+        ],
+        "B": [
+          325,
+          60,
+          536,
+          106
+        ],
+        "A": [
+          60,
+          277,
+          425,
+          519
+        ]
+      }
+    },
+    {
+      "view": "yaw270_elev20",
+      "source_image_path": "processed/vlm_semantic_part/renders/3danet_full_d1a20d867c2b8f459cd6e2005048d293_open_pull/yaw270_elev20_dense.png",
+      "point_index_path": "processed/vlm_semantic_part/renders/3danet_full_d1a20d867c2b8f459cd6e2005048d293_open_pull/yaw270_elev20_point_index.npy",
+      "overlay_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_009/yaw270_elev20_overlay.png",
+      "selector_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_009/yaw270_elev20_selector.png",
+      "selector_crop_bbox": [
+        0,
+        0,
+        767,
+        639
+      ],
+      "positive_pixels": {
+        "D": 1997,
+        "C": 35,
+        "B": 532,
+        "A": 1402
+      },
+      "candidate_bboxes": {
+        "D": [
+          61,
+          60,
+          707,
+          559
+        ],
+        "C": [
+          689,
+          478,
+          707,
+          504
+        ],
+        "B": [
+          413,
+          60,
+          679,
+          163
+        ],
+        "A": [
+          61,
+          130,
+          564,
+          493
+        ]
+      }
+    },
+    {
+      "view": "yaw315_elev20",
+      "source_image_path": "processed/vlm_semantic_part/renders/3danet_full_d1a20d867c2b8f459cd6e2005048d293_open_pull/yaw315_elev20_dense.png",
+      "point_index_path": "processed/vlm_semantic_part/renders/3danet_full_d1a20d867c2b8f459cd6e2005048d293_open_pull/yaw315_elev20_point_index.npy",
+      "overlay_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_009/yaw315_elev20_overlay.png",
+      "selector_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_009/yaw315_elev20_selector.png",
+      "selector_crop_bbox": [
+        0,
+        0,
+        767,
+        674
+      ],
+      "positive_pixels": {
+        "D": 1993,
+        "C": 35,
+        "B": 530,
+        "A": 1401
+      },
+      "candidate_bboxes": {
+        "D": [
+          72,
+          60,
+          707,
+          594
+        ],
+        "C": [
+          682,
+          569,
+          707,
+          594
+        ],
+        "B": [
+          345,
+          100,
+          552,
+          268
+        ],
+        "A": [
+          79,
+          60,
+          486,
+          520
+        ]
+      }
+    }
+  ],
+  "notes": "Candidate overlays are for VLM selection and human inspection only."
+}

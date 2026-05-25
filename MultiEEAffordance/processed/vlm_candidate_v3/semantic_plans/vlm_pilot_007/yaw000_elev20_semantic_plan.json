@@ -1,0 +1,72 @@
+{
+  "view": "yaw000_elev20",
+  "visible_object_parts": [
+    "mug body",
+    "handle",
+    "rim"
+  ],
+  "target_positive_parts": [
+    "smooth side wall",
+    "flat outer wall"
+  ],
+  "target_grounding_queries": [
+    "the main cylindrical body of the mug",
+    "smooth side wall",
+    "flat outer wall"
+  ],
+  "reject_negative_parts": [
+    "handle",
+    "rim",
+    "inside cavity"
+  ],
+  "reject_grounding_queries": [
+    "the handle",
+    "the rim",
+    "handle",
+    "rim",
+    "inside cavity"
+  ],
+  "uncertain_parts": [],
+  "mechanism_check": {
+    "can_enter_or_contact": true,
+    "can_hold_or_constrain": true,
+    "can_apply_task_force": true,
+    "reason": "Suction cup can make stable contact with the smooth side wall, which is flat and low-curvature. It can seal and lift without interlocking or catching on edges. The task direction (lifting) is aligned with the normal of the wall."
+  },
+  "feasible": true,
+  "confidence": 0.8,
+  "notes": "Suction feasible on smooth side wall; handle and rim explicitly rejected per geometry rules.",
+  "raw_qwen3vl_response": {
+    "view": "yaw000_elev20",
+    "visible_object_parts": [
+      "mug body",
+      "handle",
+      "rim"
+    ],
+    "target_positive_parts": [
+      "smooth side wall"
+    ],
+    "target_grounding_queries": [
+      "the main cylindrical body of the mug"
+    ],
+    "reject_negative_parts": [
+      "handle",
+      "rim"
+    ],
+    "reject_grounding_queries": [
+      "the handle",
+      "the rim"
+    ],
+    "uncertain_parts": [],
+    "mechanism_check": {
+      "can_enter_or_contact": true,
+      "can_hold_or_constrain": true,
+      "can_apply_task_force": true,
+      "reason": "Suction cup can make stable contact with the smooth side wall, which is flat and low-curvature. It can seal and lift without interlocking or catching on edges. The task direction (lifting) is aligned with the normal of the wall."
+    },
+    "feasible": true,
+    "confidence": 0.8,
+    "notes": "Suction feasible on smooth side wall; handle and rim explicitly rejected per geometry rules.",
+    "_raw_text": "{\n  \"view\": \"yaw000_elev20\",\n  \"visible_object_parts\": [\"mug body\", \"handle\", \"rim\"],\n  \"target_positive_parts\": [\"smooth side wall\"],\n  \"target_grounding_queries\": [\"the main cylindrical body of the mug\"],\n  \"reject_negative_parts\": [\"handle\", \"rim\"],\n  \"reject_grounding_queries\": [\"the handle\", \"the rim\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"Suction cup can make stable contact with the smooth side wall, which is flat and low-curvature. It can seal and lift without interlocking or catching on edges. The task direction (lifting) is aligned with the normal of the wall.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.8,\n  \"notes\": \"Suction feasible on smooth side wall; handle and rim explicitly rejected per geometry rules.\"\n}"
+  }
+}

@@ -1,0 +1,169 @@
+{
+  "view": "yaw000_elev20",
+  "target_regions": [
+    {
+      "role": "target",
+      "part_name": "handle loop",
+      "box": [
+        576,
+        71,
+        767,
+        767
+      ],
+      "positive_points": [
+        [
+          650,
+          150
+        ],
+        [
+          680,
+          300
+        ],
+        [
+          720,
+          450
+        ],
+        [
+          750,
+          600
+        ],
+        [
+          760,
+          750
+        ],
+        [
+          750,
+          767
+        ],
+        [
+          730,
+          767
+        ]
+      ],
+      "confidence": 0.0,
+      "reason": "This is the handle loop, which is a hookable structure for picking up the scissors. It is visible and forms part of the handle's inner rim."
+    }
+  ],
+  "reject_regions": [
+    {
+      "role": "reject",
+      "part_name": "blade",
+      "box": [
+        70,
+        380,
+        576,
+        580
+      ],
+      "positive_points": [
+        [
+          100,
+          450
+        ],
+        [
+          200,
+          480
+        ],
+        [
+          300,
+          500
+        ],
+        [
+          400,
+          510
+        ],
+        [
+          500,
+          520
+        ]
+      ],
+      "confidence": 0.0,
+      "reason": "This is the blade, which is a reject part as it cannot be hooked and is not suitable for stable lifting contact with a hook end-effector."
+    }
+  ],
+  "coverage_warning": "The target handle loop is visible but sparse; the blade is also visible and must be rejected.",
+  "confidence": 0.0,
+  "raw_qwen3vl_response": {
+    "view": "yaw000_elev20",
+    "target_regions": [
+      {
+        "part_name": "handle loop",
+        "box": [
+          576,
+          71,
+          768,
+          912
+        ],
+        "positive_points": [
+          [
+            650,
+            150
+          ],
+          [
+            680,
+            300
+          ],
+          [
+            720,
+            450
+          ],
+          [
+            750,
+            600
+          ],
+          [
+            760,
+            750
+          ],
+          [
+            750,
+            850
+          ],
+          [
+            730,
+            900
+          ]
+        ],
+        "confidence": 0.0,
+        "reason": "This is the handle loop, which is a hookable structure for picking up the scissors. It is visible and forms part of the handle's inner rim."
+      }
+    ],
+    "reject_regions": [
+      {
+        "part_name": "blade",
+        "box": [
+          70,
+          380,
+          576,
+          580
+        ],
+        "positive_points": [
+          [
+            100,
+            450
+          ],
+          [
+            200,
+            480
+          ],
+          [
+            300,
+            500
+          ],
+          [
+            400,
+            510
+          ],
+          [
+            500,
+            520
+          ]
+        ],
+        "confidence": 0.0,
+        "reason": "This is the blade, which is a reject part as it cannot be hooked and is not suitable for stable lifting contact with a hook end-effector."
+      }
+    ],
+    "coverage_warning": "The target handle loop is visible but sparse; the blade is also visible and must be rejected.",
+    "confidence": 0.0,
+    "_raw_text": "{\n  \"view\": \"yaw000_elev20\",\n  \"target_regions\": [\n    {\n      \"part_name\": \"handle loop\",\n      \"box\": [576, 71, 768, 912],\n      \"positive_points\": [[650, 150], [680, 300], [720, 450], [750, 600], [760, 750], [750, 850], [730, 900]],\n      \"confidence\": 0.0,\n      \"reason\": \"This is the handle loop, which is a hookable structure for picking up the scissors. It is visible and forms part of the handle's inner rim.\"\n    }\n  ],\n  \"reject_regions\": [\n    {\n      \"part_name\": \"blade\",\n      \"box\": [70, 380, 576, 580],\n      \"positive_points\": [[100, 450], [200, 480], [300, 500], [400, 510], [500, 520]],\n      \"confidence\": 0.0,\n      \"reason\": \"This is the blade, which is a reject part as it cannot be hooked and is not suitable for stable lifting contact with a hook end-effector.\"\n    }\n  ],\n  \"coverage_warning\": \"The target handle loop is visible but sparse; the blade is also visible and must be rejected.\",\n  \"confidence\": 0.0\n}"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "view": "yaw045_elev20",
+  "target_regions": [],
+  "reject_regions": [],
+  "coverage_warning": "The mug handle is not visible in this view, and the target regions (smooth side wall, flat outer wall) are not clearly discernible due to the sparse point cloud and viewing angle. No target or reject regions can be confidently marked.",
+  "confidence": 0.0,
+  "raw_qwen3vl_response": {
+    "view": "yaw045_elev20",
+    "target_regions": [],
+    "reject_regions": [],
+    "coverage_warning": "The mug handle is not visible in this view, and the target regions (smooth side wall, flat outer wall) are not clearly discernible due to the sparse point cloud and viewing angle. No target or reject regions can be confidently marked.",
+    "confidence": 0.0,
+    "_raw_text": "{\n  \"view\": \"yaw045_elev20\",\n  \"target_regions\": [],\n  \"reject_regions\": [],\n  \"coverage_warning\": \"The mug handle is not visible in this view, and the target regions (smooth side wall, flat outer wall) are not clearly discernible due to the sparse point cloud and viewing angle. No target or reject regions can be confidently marked.\",\n  \"confidence\": 0.0\n}"
+  }
+}

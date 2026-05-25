@@ -1,0 +1,95 @@
+{
+  "version": "v2",
+  "pipeline": "vlm_guided_candidate_selection",
+  "pilot_id": "vlm_pilot_007",
+  "sample_id": "3danet_full_c34718bd10e378186c6c61abcbd83e5a_pick_up",
+  "object_category": "Mug",
+  "task": "pick_up",
+  "executor": "suction",
+  "candidate_manifest": "processed/vlm_candidate_v3/3d_candidates/vlm_pilot_007/candidate_manifest.json",
+  "candidate_ids": [],
+  "candidates": [],
+  "views": [
+    {
+      "view": "yaw000_elev20",
+      "source_image_path": "processed/vlm_semantic_part/renders/3danet_full_c34718bd10e378186c6c61abcbd83e5a_pick_up/yaw000_elev20_dense.png",
+      "point_index_path": "processed/vlm_semantic_part/renders/3danet_full_c34718bd10e378186c6c61abcbd83e5a_pick_up/yaw000_elev20_point_index.npy",
+      "overlay_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_007/yaw000_elev20_overlay.png",
+      "selector_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_007/yaw000_elev20_selector.png",
+      "selector_crop_bbox": null,
+      "positive_pixels": {},
+      "candidate_bboxes": {}
+    },
+    {
+      "view": "yaw045_elev20",
+      "source_image_path": "processed/vlm_semantic_part/renders/3danet_full_c34718bd10e378186c6c61abcbd83e5a_pick_up/yaw045_elev20_dense.png",
+      "point_index_path": "processed/vlm_semantic_part/renders/3danet_full_c34718bd10e378186c6c61abcbd83e5a_pick_up/yaw045_elev20_point_index.npy",
+      "overlay_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_007/yaw045_elev20_overlay.png",
+      "selector_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_007/yaw045_elev20_selector.png",
+      "selector_crop_bbox": null,
+      "positive_pixels": {},
+      "candidate_bboxes": {}
+    },
+    {
+      "view": "yaw090_elev20",
+      "source_image_path": "processed/vlm_semantic_part/renders/3danet_full_c34718bd10e378186c6c61abcbd83e5a_pick_up/yaw090_elev20_dense.png",
+      "point_index_path": "processed/vlm_semantic_part/renders/3danet_full_c34718bd10e378186c6c61abcbd83e5a_pick_up/yaw090_elev20_point_index.npy",
+      "overlay_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_007/yaw090_elev20_overlay.png",
+      "selector_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_007/yaw090_elev20_selector.png",
+      "selector_crop_bbox": null,
+      "positive_pixels": {},
+      "candidate_bboxes": {}
+    },
+    {
+      "view": "yaw135_elev20",
+      "source_image_path": "processed/vlm_semantic_part/renders/3danet_full_c34718bd10e378186c6c61abcbd83e5a_pick_up/yaw135_elev20_dense.png",
+      "point_index_path": "processed/vlm_semantic_part/renders/3danet_full_c34718bd10e378186c6c61abcbd83e5a_pick_up/yaw135_elev20_point_index.npy",
+      "overlay_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_007/yaw135_elev20_overlay.png",
+      "selector_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_007/yaw135_elev20_selector.png",
+      "selector_crop_bbox": null,
+      "positive_pixels": {},
+      "candidate_bboxes": {}
+    },
+    {
+      "view": "yaw180_elev20",
+      "source_image_path": "processed/vlm_semantic_part/renders/3danet_full_c34718bd10e378186c6c61abcbd83e5a_pick_up/yaw180_elev20_dense.png",
+      "point_index_path": "processed/vlm_semantic_part/renders/3danet_full_c34718bd10e378186c6c61abcbd83e5a_pick_up/yaw180_elev20_point_index.npy",
+      "overlay_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_007/yaw180_elev20_overlay.png",
+      "selector_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_007/yaw180_elev20_selector.png",
+      "selector_crop_bbox": null,
+      "positive_pixels": {},
+      "candidate_bboxes": {}
+    },
+    {
+      "view": "yaw225_elev20",
+      "source_image_path": "processed/vlm_semantic_part/renders/3danet_full_c34718bd10e378186c6c61abcbd83e5a_pick_up/yaw225_elev20_dense.png",
+      "point_index_path": "processed/vlm_semantic_part/renders/3danet_full_c34718bd10e378186c6c61abcbd83e5a_pick_up/yaw225_elev20_point_index.npy",
+      "overlay_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_007/yaw225_elev20_overlay.png",
+      "selector_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_007/yaw225_elev20_selector.png",
+      "selector_crop_bbox": null,
+      "positive_pixels": {},
+      "candidate_bboxes": {}
+    },
+    {
+      "view": "yaw270_elev20",
+      "source_image_path": "processed/vlm_semantic_part/renders/3danet_full_c34718bd10e378186c6c61abcbd83e5a_pick_up/yaw270_elev20_dense.png",
+      "point_index_path": "processed/vlm_semantic_part/renders/3danet_full_c34718bd10e378186c6c61abcbd83e5a_pick_up/yaw270_elev20_point_index.npy",
+      "overlay_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_007/yaw270_elev20_overlay.png",
+      "selector_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_007/yaw270_elev20_selector.png",
+      "selector_crop_bbox": null,
+      "positive_pixels": {},
+      "candidate_bboxes": {}
+    },
+    {
+      "view": "yaw315_elev20",
+      "source_image_path": "processed/vlm_semantic_part/renders/3danet_full_c34718bd10e378186c6c61abcbd83e5a_pick_up/yaw315_elev20_dense.png",
+      "point_index_path": "processed/vlm_semantic_part/renders/3danet_full_c34718bd10e378186c6c61abcbd83e5a_pick_up/yaw315_elev20_point_index.npy",
+      "overlay_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_007/yaw315_elev20_overlay.png",
+      "selector_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_007/yaw315_elev20_selector.png",
+      "selector_crop_bbox": null,
+      "positive_pixels": {},
+      "candidate_bboxes": {}
+    }
+  ],
+  "notes": "Candidate overlays are for VLM selection and human inspection only."
+}

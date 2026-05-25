@@ -1,0 +1,791 @@
+{
+  "version": "v3",
+  "pipeline": "semantic_target_reject_part_plan",
+  "pilot_id": "vlm_pilot_010",
+  "sample_id": "3danet_full_f4897c9b20e811f1309c3ff4f31971fa_pick_up",
+  "object_category": "Scissors",
+  "task": "pick_up",
+  "executor": "hook",
+  "target_positive_parts": [
+    "finger holes",
+    "inner rim of handle rings",
+    "handle loops"
+  ],
+  "target_grounding_queries": [
+    "finger holes",
+    "handle loops",
+    "inner rim of handle rings",
+    "the finger holes",
+    "the inner rim of the handle rings",
+    "the inner rims of the handle rings"
+  ],
+  "ranked_target_queries": [
+    {
+      "query": "finger holes",
+      "votes": 8,
+      "mean_confidence": 0.7999999999999999
+    },
+    {
+      "query": "handle loops",
+      "votes": 8,
+      "mean_confidence": 0.7999999999999999
+    },
+    {
+      "query": "inner rim of handle rings",
+      "votes": 8,
+      "mean_confidence": 0.7999999999999999
+    },
+    {
+      "query": "the finger holes",
+      "votes": 7,
+      "mean_confidence": 0.7999999999999999
+    },
+    {
+      "query": "the inner rim of the handle rings",
+      "votes": 5,
+      "mean_confidence": 0.8
+    },
+    {
+      "query": "the inner rims of the handle rings",
+      "votes": 2,
+      "mean_confidence": 0.8
+    }
+  ],
+  "reject_negative_parts": [
+    "blade",
+    "cutting edge",
+    "blade tip",
+    "long blade boundary",
+    "ordinary outer contour"
+  ],
+  "reject_grounding_queries": [
+    "blade",
+    "cutting edge",
+    "blade tip",
+    "long blade boundary",
+    "ordinary outer contour",
+    "the blade",
+    "the blade tip",
+    "the long blade boundary",
+    "the cutting edge"
+  ],
+  "view_plans": [
+    {
+      "view": "yaw000_elev20",
+      "visible_object_parts": [
+        "scissors handle loops",
+        "scissors finger holes",
+        "scissors blade",
+        "scissors blade tip",
+        "scissors blade boundary"
+      ],
+      "target_positive_parts": [
+        "finger holes",
+        "inner rim of handle rings",
+        "handle loops"
+      ],
+      "target_grounding_queries": [
+        "the finger holes",
+        "the inner rims of the handle rings",
+        "finger holes",
+        "handle loops",
+        "inner rim of handle rings"
+      ],
+      "reject_negative_parts": [
+        "blade",
+        "cutting edge",
+        "blade tip",
+        "long blade boundary",
+        "ordinary outer contour"
+      ],
+      "reject_grounding_queries": [
+        "the blade",
+        "the cutting edge",
+        "the blade tip",
+        "the long blade boundary",
+        "blade",
+        "cutting edge",
+        "blade tip",
+        "long blade boundary",
+        "ordinary outer contour"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": true,
+        "can_hold_or_constrain": true,
+        "can_apply_task_force": true,
+        "reason": "Hook can enter the finger holes and inner rim of handle rings, catch/interlock on their inner contours, and pull/lift the scissors along the task direction. These are the only parts that provide mechanical constraint for stable lifting."
+      },
+      "feasible": true,
+      "confidence": 0.8,
+      "notes": "Target parts are clearly identifiable as functional hook contact points. Blade parts are explicitly rejected as they cannot provide mechanical interlocking for lifting.",
+      "raw_qwen3vl_response": {
+        "view": "yaw000_elev20",
+        "visible_object_parts": [
+          "scissors handle loops",
+          "scissors finger holes",
+          "scissors blade",
+          "scissors blade tip",
+          "scissors blade boundary"
+        ],
+        "target_positive_parts": [
+          "finger holes",
+          "inner rim of handle rings"
+        ],
+        "target_grounding_queries": [
+          "the finger holes",
+          "the inner rims of the handle rings"
+        ],
+        "reject_negative_parts": [
+          "blade",
+          "cutting edge",
+          "blade tip",
+          "long blade boundary"
+        ],
+        "reject_grounding_queries": [
+          "the blade",
+          "the cutting edge",
+          "the blade tip",
+          "the long blade boundary"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": true,
+          "can_hold_or_constrain": true,
+          "can_apply_task_force": true,
+          "reason": "Hook can enter the finger holes and inner rim of handle rings, catch/interlock on their inner contours, and pull/lift the scissors along the task direction. These are the only parts that provide mechanical constraint for stable lifting."
+        },
+        "feasible": true,
+        "confidence": 0.8,
+        "notes": "Target parts are clearly identifiable as functional hook contact points. Blade parts are explicitly rejected as they cannot provide mechanical interlocking for lifting.",
+        "_raw_text": "{\n  \"view\": \"yaw000_elev20\",\n  \"visible_object_parts\": [\"scissors handle loops\", \"scissors finger holes\", \"scissors blade\", \"scissors blade tip\", \"scissors blade boundary\"],\n  \"target_positive_parts\": [\"finger holes\", \"inner rim of handle rings\"],\n  \"target_grounding_queries\": [\"the finger holes\", \"the inner rims of the handle rings\"],\n  \"reject_negative_parts\": [\"blade\", \"cutting edge\", \"blade tip\", \"long blade boundary\"],\n  \"reject_grounding_queries\": [\"the blade\", \"the cutting edge\", \"the blade tip\", \"the long blade boundary\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"Hook can enter the finger holes and inner rim of handle rings, catch/interlock on their inner contours, and pull/lift the scissors along the task direction. These are the only parts that provide mechanical constraint for stable lifting.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.8,\n  \"notes\": \"Target parts are clearly identifiable as functional hook contact points. Blade parts are explicitly rejected as they cannot provide mechanical interlocking for lifting.\"\n}"
+      }
+    },
+    {
+      "view": "yaw045_elev20",
+      "visible_object_parts": [
+        "scissors handle loops",
+        "scissors finger holes",
+        "scissors blade",
+        "scissors blade tip",
+        "scissors blade boundary"
+      ],
+      "target_positive_parts": [
+        "finger holes",
+        "inner rim of handle rings",
+        "handle loops"
+      ],
+      "target_grounding_queries": [
+        "the finger holes",
+        "the inner rim of the handle rings",
+        "finger holes",
+        "handle loops",
+        "inner rim of handle rings"
+      ],
+      "reject_negative_parts": [
+        "blade",
+        "cutting edge",
+        "blade tip",
+        "long blade boundary",
+        "ordinary outer contour"
+      ],
+      "reject_grounding_queries": [
+        "the blade",
+        "the cutting edge",
+        "the blade tip",
+        "the long blade boundary",
+        "blade",
+        "cutting edge",
+        "blade tip",
+        "long blade boundary",
+        "ordinary outer contour"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": true,
+        "can_hold_or_constrain": true,
+        "can_apply_task_force": true,
+        "reason": "Hook can enter the finger holes and inner rim of handle rings, catch/interlock by engaging the inner contours, and pull/lift the scissors along the task direction for stable lifting."
+      },
+      "feasible": true,
+      "confidence": 0.8,
+      "notes": "Sparse point cloud may miss fine details, but finger holes and inner ring rims are semantically expected and mechanically suitable for hook attachment.",
+      "raw_qwen3vl_response": {
+        "view": "yaw045_elev20",
+        "visible_object_parts": [
+          "scissors handle loops",
+          "scissors finger holes",
+          "scissors blade",
+          "scissors blade tip",
+          "scissors blade boundary"
+        ],
+        "target_positive_parts": [
+          "finger holes",
+          "inner rim of handle rings"
+        ],
+        "target_grounding_queries": [
+          "the finger holes",
+          "the inner rim of the handle rings"
+        ],
+        "reject_negative_parts": [
+          "blade",
+          "cutting edge",
+          "blade tip",
+          "long blade boundary"
+        ],
+        "reject_grounding_queries": [
+          "the blade",
+          "the cutting edge",
+          "the blade tip",
+          "the long blade boundary"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": true,
+          "can_hold_or_constrain": true,
+          "can_apply_task_force": true,
+          "reason": "Hook can enter the finger holes and inner rim of handle rings, catch/interlock by engaging the inner contours, and pull/lift the scissors along the task direction for stable lifting."
+        },
+        "feasible": true,
+        "confidence": 0.8,
+        "notes": "Sparse point cloud may miss fine details, but finger holes and inner ring rims are semantically expected and mechanically suitable for hook attachment.",
+        "_raw_text": "{\n  \"view\": \"yaw045_elev20\",\n  \"visible_object_parts\": [\"scissors handle loops\", \"scissors finger holes\", \"scissors blade\", \"scissors blade tip\", \"scissors blade boundary\"],\n  \"target_positive_parts\": [\"finger holes\", \"inner rim of handle rings\"],\n  \"target_grounding_queries\": [\"the finger holes\", \"the inner rim of the handle rings\"],\n  \"reject_negative_parts\": [\"blade\", \"cutting edge\", \"blade tip\", \"long blade boundary\"],\n  \"reject_grounding_queries\": [\"the blade\", \"the cutting edge\", \"the blade tip\", \"the long blade boundary\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"Hook can enter the finger holes and inner rim of handle rings, catch/interlock by engaging the inner contours, and pull/lift the scissors along the task direction for stable lifting.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.8,\n  \"notes\": \"Sparse point cloud may miss fine details, but finger holes and inner ring rims are semantically expected and mechanically suitable for hook attachment.\"\n}"
+      }
+    },
+    {
+      "view": "yaw090_elev20",
+      "visible_object_parts": [
+        "scissors handle loops",
+        "scissors finger holes",
+        "scissors blade",
+        "scissors blade tip"
+      ],
+      "target_positive_parts": [
+        "finger holes",
+        "inner rim of handle rings",
+        "handle loops"
+      ],
+      "target_grounding_queries": [
+        "the finger holes",
+        "the inner rim of the handle rings",
+        "finger holes",
+        "handle loops",
+        "inner rim of handle rings"
+      ],
+      "reject_negative_parts": [
+        "blade",
+        "cutting edge",
+        "blade tip",
+        "long blade boundary",
+        "ordinary outer contour"
+      ],
+      "reject_grounding_queries": [
+        "the blade",
+        "the cutting edge",
+        "the blade tip",
+        "the long blade boundary",
+        "blade",
+        "cutting edge",
+        "blade tip",
+        "long blade boundary",
+        "ordinary outer contour"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": true,
+        "can_hold_or_constrain": true,
+        "can_apply_task_force": true,
+        "reason": "Hook can enter the finger holes and inner rim of handle rings, catch/interlock by engaging the inner contours, and pull/lift the scissors along the task direction. These parts are structurally designed for mechanical interlocking and lifting constraint."
+      },
+      "feasible": true,
+      "confidence": 0.8,
+      "notes": "Sparse point cloud may miss fine details, but finger holes and inner rim are semantically expected and functionally critical for hook task.",
+      "raw_qwen3vl_response": {
+        "view": "yaw090_elev20",
+        "visible_object_parts": [
+          "scissors handle loops",
+          "scissors finger holes",
+          "scissors blade",
+          "scissors blade tip"
+        ],
+        "target_positive_parts": [
+          "finger holes",
+          "inner rim of handle rings"
+        ],
+        "target_grounding_queries": [
+          "the finger holes",
+          "the inner rim of the handle rings"
+        ],
+        "reject_negative_parts": [
+          "blade",
+          "cutting edge",
+          "blade tip",
+          "long blade boundary"
+        ],
+        "reject_grounding_queries": [
+          "the blade",
+          "the cutting edge",
+          "the blade tip",
+          "the long blade boundary"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": true,
+          "can_hold_or_constrain": true,
+          "can_apply_task_force": true,
+          "reason": "Hook can enter the finger holes and inner rim of handle rings, catch/interlock by engaging the inner contours, and pull/lift the scissors along the task direction. These parts are structurally designed for mechanical interlocking and lifting constraint."
+        },
+        "feasible": true,
+        "confidence": 0.8,
+        "notes": "Sparse point cloud may miss fine details, but finger holes and inner rim are semantically expected and functionally critical for hook task.",
+        "_raw_text": "{\n  \"view\": \"yaw090_elev20\",\n  \"visible_object_parts\": [\"scissors handle loops\", \"scissors finger holes\", \"scissors blade\", \"scissors blade tip\"],\n  \"target_positive_parts\": [\"finger holes\", \"inner rim of handle rings\"],\n  \"target_grounding_queries\": [\"the finger holes\", \"the inner rim of the handle rings\"],\n  \"reject_negative_parts\": [\"blade\", \"cutting edge\", \"blade tip\", \"long blade boundary\"],\n  \"reject_grounding_queries\": [\"the blade\", \"the cutting edge\", \"the blade tip\", \"the long blade boundary\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"Hook can enter the finger holes and inner rim of handle rings, catch/interlock by engaging the inner contours, and pull/lift the scissors along the task direction. These parts are structurally designed for mechanical interlocking and lifting constraint.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.8,\n  \"notes\": \"Sparse point cloud may miss fine details, but finger holes and inner rim are semantically expected and functionally critical for hook task.\"\n}"
+      }
+    },
+    {
+      "view": "yaw135_elev20",
+      "visible_object_parts": [
+        "handle loops",
+        "finger holes",
+        "inner rim of handle rings",
+        "blade",
+        "blade tip",
+        "long blade boundary"
+      ],
+      "target_positive_parts": [
+        "finger holes",
+        "inner rim of handle rings",
+        "handle loops"
+      ],
+      "target_grounding_queries": [
+        "the finger holes",
+        "the inner rim of the handle rings",
+        "finger holes",
+        "handle loops",
+        "inner rim of handle rings"
+      ],
+      "reject_negative_parts": [
+        "blade",
+        "blade tip",
+        "long blade boundary",
+        "cutting edge",
+        "ordinary outer contour"
+      ],
+      "reject_grounding_queries": [
+        "the blade",
+        "the blade tip",
+        "the long blade boundary",
+        "blade",
+        "cutting edge",
+        "blade tip",
+        "long blade boundary",
+        "ordinary outer contour"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": true,
+        "can_hold_or_constrain": true,
+        "can_apply_task_force": true,
+        "reason": "Hook can enter the finger holes and inner rim of handle rings, catch/interlock by engaging the inner contours, and pull/lift the scissors along the task direction. These parts are structurally designed for mechanical interlocking and lifting constraint."
+      },
+      "feasible": true,
+      "confidence": 0.8,
+      "notes": "Sparse point cloud may miss fine details, but finger holes and inner rim are clearly identifiable and functionally suitable for hook attachment.",
+      "raw_qwen3vl_response": {
+        "view": "yaw135_elev20",
+        "visible_object_parts": [
+          "handle loops",
+          "finger holes",
+          "inner rim of handle rings",
+          "blade",
+          "blade tip",
+          "long blade boundary"
+        ],
+        "target_positive_parts": [
+          "finger holes",
+          "inner rim of handle rings"
+        ],
+        "target_grounding_queries": [
+          "the finger holes",
+          "the inner rim of the handle rings"
+        ],
+        "reject_negative_parts": [
+          "blade",
+          "blade tip",
+          "long blade boundary"
+        ],
+        "reject_grounding_queries": [
+          "the blade",
+          "the blade tip",
+          "the long blade boundary"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": true,
+          "can_hold_or_constrain": true,
+          "can_apply_task_force": true,
+          "reason": "Hook can enter the finger holes and inner rim of handle rings, catch/interlock by engaging the inner contours, and pull/lift the scissors along the task direction. These parts are structurally designed for mechanical interlocking and lifting constraint."
+        },
+        "feasible": true,
+        "confidence": 0.8,
+        "notes": "Sparse point cloud may miss fine details, but finger holes and inner rim are clearly identifiable and functionally suitable for hook attachment.",
+        "_raw_text": "{\n  \"view\": \"yaw135_elev20\",\n  \"visible_object_parts\": [\"handle loops\", \"finger holes\", \"inner rim of handle rings\", \"blade\", \"blade tip\", \"long blade boundary\"],\n  \"target_positive_parts\": [\"finger holes\", \"inner rim of handle rings\"],\n  \"target_grounding_queries\": [\"the finger holes\", \"the inner rim of the handle rings\"],\n  \"reject_negative_parts\": [\"blade\", \"blade tip\", \"long blade boundary\"],\n  \"reject_grounding_queries\": [\"the blade\", \"the blade tip\", \"the long blade boundary\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"Hook can enter the finger holes and inner rim of handle rings, catch/interlock by engaging the inner contours, and pull/lift the scissors along the task direction. These parts are structurally designed for mechanical interlocking and lifting constraint.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.8,\n  \"notes\": \"Sparse point cloud may miss fine details, but finger holes and inner rim are clearly identifiable and functionally suitable for hook attachment.\"\n}"
+      }
+    },
+    {
+      "view": "yaw180_elev20",
+      "visible_object_parts": [
+        "scissors handle loops",
+        "scissors finger holes",
+        "scissors blade",
+        "scissors blade tip",
+        "scissors blade boundary"
+      ],
+      "target_positive_parts": [
+        "finger holes",
+        "inner rim of handle rings",
+        "handle loops"
+      ],
+      "target_grounding_queries": [
+        "the finger holes",
+        "the inner rims of the handle rings",
+        "finger holes",
+        "handle loops",
+        "inner rim of handle rings"
+      ],
+      "reject_negative_parts": [
+        "blade",
+        "cutting edge",
+        "blade tip",
+        "long blade boundary",
+        "ordinary outer contour"
+      ],
+      "reject_grounding_queries": [
+        "the blade",
+        "the cutting edge",
+        "the blade tip",
+        "the long blade boundary",
+        "blade",
+        "cutting edge",
+        "blade tip",
+        "long blade boundary",
+        "ordinary outer contour"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": true,
+        "can_hold_or_constrain": true,
+        "can_apply_task_force": true,
+        "reason": "Hook can enter the finger holes and inner rim of handle rings, catch/interlock by engaging the inner contours, and pull/lift the scissors along the task direction."
+      },
+      "feasible": true,
+      "confidence": 0.8,
+      "notes": "Sparse point cloud may miss fine details, but finger holes and inner ring rims are semantically expected and mechanically suitable for hook.",
+      "raw_qwen3vl_response": {
+        "view": "yaw180_elev20",
+        "visible_object_parts": [
+          "scissors handle loops",
+          "scissors finger holes",
+          "scissors blade",
+          "scissors blade tip",
+          "scissors blade boundary"
+        ],
+        "target_positive_parts": [
+          "finger holes",
+          "inner rim of handle rings"
+        ],
+        "target_grounding_queries": [
+          "the finger holes",
+          "the inner rims of the handle rings"
+        ],
+        "reject_negative_parts": [
+          "blade",
+          "cutting edge",
+          "blade tip",
+          "long blade boundary"
+        ],
+        "reject_grounding_queries": [
+          "the blade",
+          "the cutting edge",
+          "the blade tip",
+          "the long blade boundary"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": true,
+          "can_hold_or_constrain": true,
+          "can_apply_task_force": true,
+          "reason": "Hook can enter the finger holes and inner rim of handle rings, catch/interlock by engaging the inner contours, and pull/lift the scissors along the task direction."
+        },
+        "feasible": true,
+        "confidence": 0.8,
+        "notes": "Sparse point cloud may miss fine details, but finger holes and inner ring rims are semantically expected and mechanically suitable for hook.",
+        "_raw_text": "{\n  \"view\": \"yaw180_elev20\",\n  \"visible_object_parts\": [\"scissors handle loops\", \"scissors finger holes\", \"scissors blade\", \"scissors blade tip\", \"scissors blade boundary\"],\n  \"target_positive_parts\": [\"finger holes\", \"inner rim of handle rings\"],\n  \"target_grounding_queries\": [\"the finger holes\", \"the inner rims of the handle rings\"],\n  \"reject_negative_parts\": [\"blade\", \"cutting edge\", \"blade tip\", \"long blade boundary\"],\n  \"reject_grounding_queries\": [\"the blade\", \"the cutting edge\", \"the blade tip\", \"the long blade boundary\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"Hook can enter the finger holes and inner rim of handle rings, catch/interlock by engaging the inner contours, and pull/lift the scissors along the task direction.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.8,\n  \"notes\": \"Sparse point cloud may miss fine details, but finger holes and inner ring rims are semantically expected and mechanically suitable for hook.\"\n}"
+      }
+    },
+    {
+      "view": "yaw225_elev20",
+      "visible_object_parts": [
+        "scissors handle loops",
+        "scissors finger holes",
+        "scissors blade",
+        "scissors blade tip",
+        "scissors blade boundary"
+      ],
+      "target_positive_parts": [
+        "finger holes",
+        "inner rim of handle rings",
+        "handle loops"
+      ],
+      "target_grounding_queries": [
+        "the finger holes",
+        "the inner rim of the handle rings",
+        "finger holes",
+        "handle loops",
+        "inner rim of handle rings"
+      ],
+      "reject_negative_parts": [
+        "blade",
+        "cutting edge",
+        "blade tip",
+        "long blade boundary",
+        "ordinary outer contour"
+      ],
+      "reject_grounding_queries": [
+        "the blade",
+        "the cutting edge",
+        "the blade tip",
+        "the long blade boundary",
+        "blade",
+        "cutting edge",
+        "blade tip",
+        "long blade boundary",
+        "ordinary outer contour"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": true,
+        "can_hold_or_constrain": true,
+        "can_apply_task_force": true,
+        "reason": "Hook can enter the finger holes and inner rim of handle rings, catch/interlock by engaging the curved inner surfaces, and pull/lift the scissors along the task direction. These parts are structurally designed for mechanical interlocking and lifting constraint."
+      },
+      "feasible": true,
+      "confidence": 0.8,
+      "notes": "Sparse point cloud may miss fine details, but finger holes and inner rim are semantically expected and functionally critical for hook task.",
+      "raw_qwen3vl_response": {
+        "view": "yaw225_elev20",
+        "visible_object_parts": [
+          "scissors handle loops",
+          "scissors finger holes",
+          "scissors blade",
+          "scissors blade tip",
+          "scissors blade boundary"
+        ],
+        "target_positive_parts": [
+          "finger holes",
+          "inner rim of handle rings"
+        ],
+        "target_grounding_queries": [
+          "the finger holes",
+          "the inner rim of the handle rings"
+        ],
+        "reject_negative_parts": [
+          "blade",
+          "cutting edge",
+          "blade tip",
+          "long blade boundary"
+        ],
+        "reject_grounding_queries": [
+          "the blade",
+          "the cutting edge",
+          "the blade tip",
+          "the long blade boundary"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": true,
+          "can_hold_or_constrain": true,
+          "can_apply_task_force": true,
+          "reason": "Hook can enter the finger holes and inner rim of handle rings, catch/interlock by engaging the curved inner surfaces, and pull/lift the scissors along the task direction. These parts are structurally designed for mechanical interlocking and lifting constraint."
+        },
+        "feasible": true,
+        "confidence": 0.8,
+        "notes": "Sparse point cloud may miss fine details, but finger holes and inner rim are semantically expected and functionally critical for hook task.",
+        "_raw_text": "{\n  \"view\": \"yaw225_elev20\",\n  \"visible_object_parts\": [\"scissors handle loops\", \"scissors finger holes\", \"scissors blade\", \"scissors blade tip\", \"scissors blade boundary\"],\n  \"target_positive_parts\": [\"finger holes\", \"inner rim of handle rings\"],\n  \"target_grounding_queries\": [\"the finger holes\", \"the inner rim of the handle rings\"],\n  \"reject_negative_parts\": [\"blade\", \"cutting edge\", \"blade tip\", \"long blade boundary\"],\n  \"reject_grounding_queries\": [\"the blade\", \"the cutting edge\", \"the blade tip\", \"the long blade boundary\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"Hook can enter the finger holes and inner rim of handle rings, catch/interlock by engaging the curved inner surfaces, and pull/lift the scissors along the task direction. These parts are structurally designed for mechanical interlocking and lifting constraint.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.8,\n  \"notes\": \"Sparse point cloud may miss fine details, but finger holes and inner rim are semantically expected and functionally critical for hook task.\"\n}"
+      }
+    },
+    {
+      "view": "yaw270_elev20",
+      "visible_object_parts": [
+        "scissors handle loops",
+        "scissors finger holes",
+        "scissors blade",
+        "scissors blade tip"
+      ],
+      "target_positive_parts": [
+        "finger holes",
+        "inner rim of handle rings",
+        "handle loops"
+      ],
+      "target_grounding_queries": [
+        "the finger holes",
+        "the inner rim of the handle rings",
+        "finger holes",
+        "handle loops",
+        "inner rim of handle rings"
+      ],
+      "reject_negative_parts": [
+        "blade",
+        "cutting edge",
+        "blade tip",
+        "long blade boundary",
+        "ordinary outer contour"
+      ],
+      "reject_grounding_queries": [
+        "the blade",
+        "the cutting edge",
+        "the blade tip",
+        "the long blade boundary",
+        "blade",
+        "cutting edge",
+        "blade tip",
+        "long blade boundary",
+        "ordinary outer contour"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": true,
+        "can_hold_or_constrain": true,
+        "can_apply_task_force": true,
+        "reason": "Hook can enter the finger holes and inner rim of handle rings, catch/interlock by engaging the inner contours, and pull/lift the scissors along the task direction. These are the only parts that provide mechanical constraint for stable lifting."
+      },
+      "feasible": true,
+      "confidence": 0.8,
+      "notes": "Sparse point cloud may miss fine details, but finger holes and inner rim are semantically expected and mechanically valid for hook interaction.",
+      "raw_qwen3vl_response": {
+        "view": "yaw270_elev20",
+        "visible_object_parts": [
+          "scissors handle loops",
+          "scissors finger holes",
+          "scissors blade",
+          "scissors blade tip"
+        ],
+        "target_positive_parts": [
+          "finger holes",
+          "inner rim of handle rings"
+        ],
+        "target_grounding_queries": [
+          "the finger holes",
+          "the inner rim of the handle rings"
+        ],
+        "reject_negative_parts": [
+          "blade",
+          "cutting edge",
+          "blade tip",
+          "long blade boundary"
+        ],
+        "reject_grounding_queries": [
+          "the blade",
+          "the cutting edge",
+          "the blade tip",
+          "the long blade boundary"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": true,
+          "can_hold_or_constrain": true,
+          "can_apply_task_force": true,
+          "reason": "Hook can enter the finger holes and inner rim of handle rings, catch/interlock by engaging the inner contours, and pull/lift the scissors along the task direction. These are the only parts that provide mechanical constraint for stable lifting."
+        },
+        "feasible": true,
+        "confidence": 0.8,
+        "notes": "Sparse point cloud may miss fine details, but finger holes and inner rim are semantically expected and mechanically valid for hook interaction.",
+        "_raw_text": "{\n  \"view\": \"yaw270_elev20\",\n  \"visible_object_parts\": [\"scissors handle loops\", \"scissors finger holes\", \"scissors blade\", \"scissors blade tip\"],\n  \"target_positive_parts\": [\"finger holes\", \"inner rim of handle rings\"],\n  \"target_grounding_queries\": [\"the finger holes\", \"the inner rim of the handle rings\"],\n  \"reject_negative_parts\": [\"blade\", \"cutting edge\", \"blade tip\", \"long blade boundary\"],\n  \"reject_grounding_queries\": [\"the blade\", \"the cutting edge\", \"the blade tip\", \"the long blade boundary\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"Hook can enter the finger holes and inner rim of handle rings, catch/interlock by engaging the inner contours, and pull/lift the scissors along the task direction. These are the only parts that provide mechanical constraint for stable lifting.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.8,\n  \"notes\": \"Sparse point cloud may miss fine details, but finger holes and inner rim are semantically expected and mechanically valid for hook interaction.\"\n}"
+      }
+    },
+    {
+      "view": "yaw315_elev20",
+      "visible_object_parts": [
+        "handle loops",
+        "inner rim of handle rings",
+        "blade",
+        "blade tip",
+        "long blade boundary"
+      ],
+      "target_positive_parts": [
+        "inner rim of handle rings",
+        "handle loops",
+        "finger holes"
+      ],
+      "target_grounding_queries": [
+        "inner rim of handle rings",
+        "handle loops",
+        "finger holes"
+      ],
+      "reject_negative_parts": [
+        "blade",
+        "blade tip",
+        "long blade boundary",
+        "cutting edge",
+        "ordinary outer contour"
+      ],
+      "reject_grounding_queries": [
+        "blade",
+        "blade tip",
+        "long blade boundary",
+        "cutting edge",
+        "ordinary outer contour"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": true,
+        "can_hold_or_constrain": true,
+        "can_apply_task_force": true,
+        "reason": "Hook can enter the inner rim of handle rings and handle loops, catch/interlock on their curved inner edges, and pull/lift the scissors along the task direction. These are the only parts that provide mechanical constraint for stable lifting."
+      },
+      "feasible": true,
+      "confidence": 0.8,
+      "notes": "Sparse point cloud may miss fine details, but handle loops and inner rim are clearly identifiable and functionally correct for hook attachment.",
+      "raw_qwen3vl_response": {
+        "view": "yaw315_elev20",
+        "visible_object_parts": [
+          "handle loops",
+          "inner rim of handle rings",
+          "blade",
+          "blade tip",
+          "long blade boundary"
+        ],
+        "target_positive_parts": [
+          "inner rim of handle rings",
+          "handle loops"
+        ],
+        "target_grounding_queries": [
+          "inner rim of handle rings",
+          "handle loops"
+        ],
+        "reject_negative_parts": [
+          "blade",
+          "blade tip",
+          "long blade boundary"
+        ],
+        "reject_grounding_queries": [
+          "blade",
+          "blade tip",
+          "long blade boundary"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": true,
+          "can_hold_or_constrain": true,
+          "can_apply_task_force": true,
+          "reason": "Hook can enter the inner rim of handle rings and handle loops, catch/interlock on their curved inner edges, and pull/lift the scissors along the task direction. These are the only parts that provide mechanical constraint for stable lifting."
+        },
+        "feasible": true,
+        "confidence": 0.8,
+        "notes": "Sparse point cloud may miss fine details, but handle loops and inner rim are clearly identifiable and functionally correct for hook attachment.",
+        "_raw_text": "{\n  \"view\": \"yaw315_elev20\",\n  \"visible_object_parts\": [\"handle loops\", \"inner rim of handle rings\", \"blade\", \"blade tip\", \"long blade boundary\"],\n  \"target_positive_parts\": [\"inner rim of handle rings\", \"handle loops\"],\n  \"target_grounding_queries\": [\"inner rim of handle rings\", \"handle loops\"],\n  \"reject_negative_parts\": [\"blade\", \"blade tip\", \"long blade boundary\"],\n  \"reject_grounding_queries\": [\"blade\", \"blade tip\", \"long blade boundary\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"Hook can enter the inner rim of handle rings and handle loops, catch/interlock on their curved inner edges, and pull/lift the scissors along the task direction. These are the only parts that provide mechanical constraint for stable lifting.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.8,\n  \"notes\": \"Sparse point cloud may miss fine details, but handle loops and inner rim are clearly identifiable and functionally correct for hook attachment.\"\n}"
+      }
+    }
+  ],
+  "render_manifest": "processed/vlm_semantic_part/renders/3danet_full_f4897c9b20e811f1309c3ff4f31971fa_pick_up/view_manifest.json",
+  "notes": "v3 semantic plan only. It defines target and reject semantics; later stages ground, project, grow candidates, and require human review."
+}

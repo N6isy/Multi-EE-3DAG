@@ -1,0 +1,78 @@
+{
+  "version": "v3",
+  "pipeline": "target_reject_projection_to_3d",
+  "pilot_id": "vlm_pilot_010",
+  "sample_id": "3danet_full_f4897c9b20e811f1309c3ff4f31971fa_pick_up",
+  "executor": "hook",
+  "projected_npz": "processed/vlm_candidate_v3/projected_3d/vlm_pilot_010_target_reject_votes.npz",
+  "views": [
+    {
+      "view": "yaw000_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_010/yaw000_elev20_target_reject_grounding.json",
+      "target_regions": 1,
+      "reject_regions": 1,
+      "projected_target_points": 599,
+      "projected_reject_points": 572
+    },
+    {
+      "view": "yaw045_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_010/yaw045_elev20_target_reject_grounding.json",
+      "target_regions": 2,
+      "reject_regions": 1,
+      "projected_target_points": 694,
+      "projected_reject_points": 1058
+    },
+    {
+      "view": "yaw090_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_010/yaw090_elev20_target_reject_grounding.json",
+      "target_regions": 2,
+      "reject_regions": 1,
+      "projected_target_points": 724,
+      "projected_reject_points": 274
+    },
+    {
+      "view": "yaw135_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_010/yaw135_elev20_target_reject_grounding.json",
+      "target_regions": 2,
+      "reject_regions": 1,
+      "projected_target_points": 931,
+      "projected_reject_points": 328
+    },
+    {
+      "view": "yaw180_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_010/yaw180_elev20_target_reject_grounding.json",
+      "target_regions": 1,
+      "reject_regions": 1,
+      "projected_target_points": 135,
+      "projected_reject_points": 74
+    },
+    {
+      "view": "yaw225_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_010/yaw225_elev20_target_reject_grounding.json",
+      "target_regions": 1,
+      "reject_regions": 1,
+      "projected_target_points": 297,
+      "projected_reject_points": 287
+    },
+    {
+      "view": "yaw270_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_010/yaw270_elev20_target_reject_grounding.json",
+      "target_regions": 0,
+      "reject_regions": 0,
+      "projected_target_points": 0,
+      "projected_reject_points": 0
+    },
+    {
+      "view": "yaw315_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_010/yaw315_elev20_target_reject_grounding.json",
+      "target_regions": 1,
+      "reject_regions": 1,
+      "projected_target_points": 567,
+      "projected_reject_points": 477
+    }
+  ],
+  "missing": [],
+  "target_positive_points_any_vote": 1430,
+  "reject_veto_points_any_vote": 1160,
+  "notes": "Target votes seed candidate growth; reject votes are hard-veto evidence."
+}

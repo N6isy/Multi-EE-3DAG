@@ -1,0 +1,37 @@
+{
+  "view": "yaw090_elev20",
+  "visible_object_parts": [],
+  "target_positive_parts": [],
+  "target_grounding_queries": [],
+  "reject_negative_parts": [],
+  "reject_grounding_queries": [],
+  "uncertain_parts": [],
+  "mechanism_check": {
+    "can_enter_or_contact": false,
+    "can_hold_or_constrain": false,
+    "can_apply_task_force": false,
+    "reason": "Object category is 'Earphone', but no visible parts are present in the sparse point cloud render. No hookable structures can be identified or inferred. The render is too sparse and incomplete to define any functional contact points for a hook end-effector."
+  },
+  "feasible": false,
+  "confidence": 0.0,
+  "notes": "No visible earphone structure detected in sparse point cloud. Cannot annotate target parts for hook task.",
+  "raw_qwen3vl_response": {
+    "view": "yaw090_elev20",
+    "visible_object_parts": [],
+    "target_positive_parts": [],
+    "target_grounding_queries": [],
+    "reject_negative_parts": [],
+    "reject_grounding_queries": [],
+    "uncertain_parts": [],
+    "mechanism_check": {
+      "can_enter_or_contact": false,
+      "can_hold_or_constrain": false,
+      "can_apply_task_force": false,
+      "reason": "Object category is 'Earphone', but no visible parts are present in the sparse point cloud render. No hookable structures can be identified or inferred. The render is too sparse and incomplete to define any functional contact points for a hook end-effector."
+    },
+    "feasible": false,
+    "confidence": 0.0,
+    "notes": "No visible earphone structure detected in sparse point cloud. Cannot annotate target parts for hook task.",
+    "_raw_text": "{\n  \"view\": \"yaw090_elev20\",\n  \"visible_object_parts\": [],\n  \"target_positive_parts\": [],\n  \"target_grounding_queries\": [],\n  \"reject_negative_parts\": [],\n  \"reject_grounding_queries\": [],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": false,\n    \"can_hold_or_constrain\": false,\n    \"can_apply_task_force\": false,\n    \"reason\": \"Object category is 'Earphone', but no visible parts are present in the sparse point cloud render. No hookable structures can be identified or inferred. The render is too sparse and incomplete to define any functional contact points for a hook end-effector.\"\n  },\n  \"feasible\": false,\n  \"confidence\": 0.0,\n  \"notes\": \"No visible earphone structure detected in sparse point cloud. Cannot annotate target parts for hook task.\"\n}"
+  }
+}

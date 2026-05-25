@@ -1,0 +1,78 @@
+{
+  "version": "v3",
+  "pipeline": "target_reject_2d_grounding",
+  "pilot_id": "vlm_pilot_007",
+  "sample_id": "3danet_full_c34718bd10e378186c6c61abcbd83e5a_pick_up",
+  "object_category": "Mug",
+  "task": "pick_up",
+  "executor": "suction",
+  "semantic_plan": "processed/vlm_candidate_v3/semantic_plans/vlm_pilot_007/combined_semantic_plan.json",
+  "render_manifest": "processed/vlm_semantic_part/renders/3danet_full_c34718bd10e378186c6c61abcbd83e5a_pick_up/view_manifest.json",
+  "views": [
+    {
+      "view": "yaw000_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_007/yaw000_elev20_target_reject_grounding.json",
+      "target_regions": 0,
+      "reject_regions": 0,
+      "coverage_warning": "The object is not clearly identifiable as a mug; the point cloud appears to be a cylindrical shape but lacks distinct mug features like a handle or rim. No target or reject regions can be confidently grounded.",
+      "parse_error": ""
+    },
+    {
+      "view": "yaw045_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_007/yaw045_elev20_target_reject_grounding.json",
+      "target_regions": 0,
+      "reject_regions": 0,
+      "coverage_warning": "The mug handle is not visible in this view, and the target regions (smooth side wall, flat outer wall) are not clearly discernible due to the sparse point cloud and viewing angle. No target or reject regions can be confidently marked.",
+      "parse_error": ""
+    },
+    {
+      "view": "yaw090_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_007/yaw090_elev20_target_reject_grounding.json",
+      "target_regions": 0,
+      "reject_regions": 0,
+      "coverage_warning": "The target regions (smooth side wall, flat outer wall) are not visible or are too sparse to be reliably grounded with sufficient point coverage for suction pickup planning.",
+      "parse_error": ""
+    },
+    {
+      "view": "yaw135_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_007/yaw135_elev20_target_reject_grounding.json",
+      "target_regions": 0,
+      "reject_regions": 0,
+      "coverage_warning": "The mug is not visible in the point cloud; no target or reject regions can be grounded.",
+      "parse_error": ""
+    },
+    {
+      "view": "yaw180_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_007/yaw180_elev20_target_reject_grounding.json",
+      "target_regions": 0,
+      "reject_regions": 0,
+      "coverage_warning": "The object is not clearly identifiable as a mug; the point cloud appears to be a generic cylindrical shape without distinct mug features like a handle or rim. Therefore, no target or reject regions can be confidently grounded.",
+      "parse_error": ""
+    },
+    {
+      "view": "yaw225_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_007/yaw225_elev20_target_reject_grounding.json",
+      "target_regions": 0,
+      "reject_regions": 0,
+      "coverage_warning": "The target regions (smooth side wall, flat outer wall) are not visible or are too sparse to be reliably grounded with sufficient point coverage for suction pickup planning.",
+      "parse_error": ""
+    },
+    {
+      "view": "yaw270_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_007/yaw270_elev20_target_reject_grounding.json",
+      "target_regions": 0,
+      "reject_regions": 0,
+      "coverage_warning": "The target regions (smooth side wall, flat outer wall) are not visible or are too sparse to be reliably grounded with sufficient points for suction pickup.",
+      "parse_error": ""
+    },
+    {
+      "view": "yaw315_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_007/yaw315_elev20_target_reject_grounding.json",
+      "target_regions": 0,
+      "reject_regions": 0,
+      "coverage_warning": "The mug is not visible in the point cloud; no target or reject regions can be grounded.",
+      "parse_error": ""
+    }
+  ],
+  "notes": "2D target/reject seeds only; project to 3D before candidate growth."
+}

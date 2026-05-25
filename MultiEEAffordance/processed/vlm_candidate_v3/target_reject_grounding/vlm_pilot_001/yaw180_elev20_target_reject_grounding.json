@@ -1,0 +1,15 @@
+{
+  "view": "yaw180_elev20",
+  "target_regions": [],
+  "reject_regions": [],
+  "coverage_warning": "No target or reject parts are visible in the sparse point cloud render.",
+  "confidence": 0.0,
+  "raw_qwen3vl_response": {
+    "view": "yaw180_elev20",
+    "target_regions": [],
+    "reject_regions": [],
+    "coverage_warning": "No target or reject parts are visible in the sparse point cloud render.",
+    "confidence": 0.0,
+    "_raw_text": "```json\n{\n  \"view\": \"yaw180_elev20\",\n  \"target_regions\": [],\n  \"reject_regions\": [],\n  \"coverage_warning\": \"No target or reject parts are visible in the sparse point cloud render.\",\n  \"confidence\": 0.0\n}\n```"
+  }
+}
