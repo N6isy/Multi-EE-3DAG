@@ -18,6 +18,7 @@ from path_utils import relative_to_dataset, resolve_portable_path
 
 
 LETTERS = list(string.ascii_uppercase)
+EXECUTOR_ORDER = ["gripper", "suction", "hook", "dexterous_hand"]
 
 
 def parse_args() -> argparse.Namespace:
@@ -37,7 +38,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--expand-hops", type=int, default=1)
     parser.add_argument("--min-points", type=int, default=4)
     parser.add_argument("--max-candidate-fraction", type=float, default=0.45)
+    parser.add_argument("--source-mask-max-fraction", type=float, default=0.65)
     parser.add_argument("--max-components", type=int, default=6)
+    parser.add_argument(
+        "--include-source-mask-candidates",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Add checked/source weak mask components as fallback candidates after reject-veto clipping.",
+    )
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args()
 
@@ -161,6 +169,7 @@ def candidate_record(
     priority: float,
     target_scores: np.ndarray,
     reject_scores: np.ndarray,
+    provenance: str = "v3_target_seed_growth_with_reject_veto",
 ) -> dict[str, Any]:
     ids = np.where(mask.astype(bool))[0]
     point_count = int(ids.size)
@@ -180,7 +189,7 @@ def candidate_record(
         "priority": float(priority),
         "mean_target_score": mean_target,
         "max_reject_score_after_veto": max_reject,
-        "provenance": "v3_target_seed_growth_with_reject_veto",
+        "provenance": provenance,
     }
 
 
@@ -197,6 +206,7 @@ def add_candidate(
     reject_scores: np.ndarray,
     min_points: int,
     max_fraction: float,
+    provenance: str = "v3_target_seed_growth_with_reject_veto",
 ) -> None:
     mask = mask.astype(np.uint8)
     n = mask.shape[0]
@@ -227,12 +237,35 @@ def add_candidate(
                 priority,
                 target_scores,
                 reject_scores,
+                provenance,
             ),
         )
     )
 
 
-def generate_candidates(row: dict[str, str], xyz: np.ndarray, projected: Any, plan: dict[str, Any], args: argparse.Namespace) -> tuple[np.ndarray, list[dict[str, Any]], np.ndarray, np.ndarray, list[str]]:
+def load_source_executor_mask(root: Path, row: dict[str, str], n: int) -> np.ndarray | None:
+    executor = row.get("executor", "")
+    if executor not in EXECUTOR_ORDER:
+        return None
+    value = row.get("checked_mask_path") or row.get("source_mask_path")
+    if not value:
+        return None
+    path = resolve_portable_path(root, value)
+    if not path.exists():
+        return None
+    arr = np.load(path, allow_pickle=False)
+    if arr.ndim == 2 and arr.shape[1] >= len(EXECUTOR_ORDER):
+        mask = arr[:, EXECUTOR_ORDER.index(executor)] > 0
+    elif arr.ndim == 1:
+        mask = arr > 0
+    else:
+        return None
+    if mask.shape[0] != n:
+        return None
+    return mask.astype(np.uint8)
+
+
+def generate_candidates(root: Path, row: dict[str, str], xyz: np.ndarray, projected: Any, plan: dict[str, Any], args: argparse.Namespace) -> tuple[np.ndarray, list[dict[str, Any]], np.ndarray, np.ndarray, list[str]]:
     target_votes = projected["target_votes"].astype(np.float32)
     reject_votes = projected["reject_votes"].astype(np.float32)
     target_scores = projected["target_scores"].astype(np.float32)
@@ -280,6 +313,60 @@ def generate_candidates(row: dict[str, str], xyz: np.ndarray, projected: Any, pl
             args.min_points,
             args.max_candidate_fraction,
         )
+
+    if args.include_source_mask_candidates:
+        source_mask = load_source_executor_mask(root, row, n)
+        if source_mask is not None and source_mask.any():
+            source_clean = source_mask.astype(bool) & allowed
+            if source_clean.any():
+                source_components = connected_components(source_clean.astype(np.uint8), knn, args.max_components)
+                source_expanded = expand_without_veto(source_clean.astype(np.uint8), knn, allowed, max(1, args.expand_hops))
+                add_candidate(
+                    items,
+                    source_expanded,
+                    "source_executor_mask_reject_aware_expanded",
+                    "source_weak_mask_fallback",
+                    xyz,
+                    row,
+                    "Existing weak/checked executor mask clipped by reject-veto and expanded locally; used as fallback when VLM coverage is sparse.",
+                    7.0,
+                    target_scores,
+                    reject_scores,
+                    args.min_points,
+                    args.source_mask_max_fraction,
+                    "source_executor_mask_reject_aware_fallback",
+                )
+                add_candidate(
+                    items,
+                    source_clean.astype(np.uint8),
+                    "source_executor_mask_core_without_reject",
+                    "source_weak_mask_core",
+                    xyz,
+                    row,
+                    "Raw existing weak/checked executor mask after reject-veto removal.",
+                    17.0,
+                    target_scores,
+                    reject_scores,
+                    args.min_points,
+                    args.source_mask_max_fraction,
+                    "source_executor_mask_reject_aware_fallback",
+                )
+                for idx, comp in enumerate(source_components, start=1):
+                    add_candidate(
+                        items,
+                        expand_without_veto(comp, knn, allowed, max(1, args.expand_hops)),
+                        f"source_mask_component_{idx:02d}_expanded",
+                        "source_weak_mask_component_expanded",
+                        xyz,
+                        row,
+                        "Connected component from the existing weak/checked executor mask, grown locally for review.",
+                        9.0 + idx * 0.1,
+                        target_scores,
+                        reject_scores,
+                        args.min_points,
+                        args.source_mask_max_fraction,
+                        "source_executor_mask_reject_aware_fallback",
+                    )
 
     expanded_component_ids: list[str] = []
     for idx, comp in enumerate(components, start=1):
@@ -365,7 +452,7 @@ def grow_one(root: Path, args: argparse.Namespace, row: dict[str, str]) -> dict[
     plan = read_json(plan_path)
     point_path = resolve_portable_path(root, row.get("point_cloud_path", ""))
     xyz = load_points(point_path)
-    candidate_masks, candidates, target_seed, reject_veto, default_selected = generate_candidates(row, xyz, projected, plan, args)
+    candidate_masks, candidates, target_seed, reject_veto, default_selected = generate_candidates(root, row, xyz, projected, plan, args)
 
     output_dir = resolve_path(root, args.output_root) / pilot_id
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -410,9 +497,12 @@ def grow_one(root: Path, args: argparse.Namespace, row: dict[str, str]) -> dict[
             "min_reject_votes": float(args.min_reject_votes),
             "expand_hops": int(args.expand_hops),
             "k_neighbors": int(args.k_neighbors),
+            "include_source_mask_candidates": bool(args.include_source_mask_candidates),
+            "source_mask_max_fraction": float(args.source_mask_max_fraction),
         },
         "notes": (
-            "v3 candidates grow only from semantic target seeds and are clipped by reject-veto points. "
+            "v3 candidates grow from semantic target seeds and optional source weak-mask fallback candidates, "
+            "then are clipped by reject-veto points. "
             "They remain proposals requiring human review."
         ),
     }
@@ -434,7 +524,13 @@ def main() -> int:
     args = parse_args()
     root = Path(args.dataset_root).resolve()
     rows = selected_rows(root, args)
-    outputs = [grow_one(root, args, row) for row in rows]
+    try:
+        from tqdm import tqdm
+
+        row_iter = tqdm(rows, desc="v3 grow", unit="row")
+    except Exception:
+        row_iter = rows
+    outputs = [grow_one(root, args, row) for row in row_iter]
     print(json.dumps({"rows": len(outputs), "outputs": outputs}, indent=2, ensure_ascii=False))
     return 0
 

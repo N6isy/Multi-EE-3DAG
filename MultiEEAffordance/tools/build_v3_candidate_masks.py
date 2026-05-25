@@ -26,6 +26,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--pilot-csv", default="processed/metadata/vlm_pilot_samples_v0_1.csv")
     parser.add_argument("--samples", default="processed/metadata/samples_checked_v0_1.jsonl")
     parser.add_argument("--candidate-root", default="processed/vlm_candidate_v3/3d_candidates")
+    parser.add_argument("--empty-pilot-csv", default="", help="Optional CSV of empty-review rows to append.")
     parser.add_argument("--output-mask-root", default="processed/vlm_candidate_v3/fused_masks")
     parser.add_argument("--output-samples", default="processed/metadata/v3_candidate_samples_v0_1.jsonl")
     parser.add_argument("--output-split-dir", default="splits_v3_candidates")
@@ -258,16 +259,106 @@ def build_for_row(root: Path, args: argparse.Namespace, row: dict[str, str], sam
     return sample, summary
 
 
+def build_empty_for_row(root: Path, args: argparse.Namespace, row: dict[str, str], sample_by_id: dict[str, dict[str, Any]]) -> tuple[dict[str, Any], dict[str, Any]]:
+    pilot_id = row["pilot_id"]
+    sample_id = row["sample_id"]
+    executor = row.get("executor", "")
+    if executor not in EXECUTOR_ORDER:
+        raise ValueError(f"Unknown executor '{executor}' for empty review row {pilot_id}")
+    sample = merge_sample(row, sample_by_id)
+    base_mask_value = row.get("checked_mask_path") or sample.get("multi_channel_mask_path") or row.get("source_mask_path")
+    base_mask_path = resolve_portable_path(root, base_mask_value)
+    if not base_mask_path.exists():
+        raise FileNotFoundError(f"Base mask not found for empty review row {pilot_id}: {base_mask_path}")
+    base_mask = np.load(base_mask_path)
+    if base_mask.ndim != 2 or base_mask.shape[1] != len(EXECUTOR_ORDER):
+        raise ValueError(f"Expected base mask shape [N,4], got {base_mask.shape}: {base_mask_path}")
+    out_mask = base_mask.astype(np.uint8).copy()
+    channel = EXECUTOR_ORDER.index(executor)
+    out_mask[:, channel] = 0
+    out_mask_path = resolve_path(root, args.output_mask_root) / f"{sample_id}_{pilot_id}_v3_empty_review.npy"
+    if out_mask_path.exists() and not args.overwrite:
+        raise FileExistsError(f"Output mask exists. Use --overwrite: {out_mask_path}")
+    out_mask_path.parent.mkdir(parents=True, exist_ok=True)
+    np.save(out_mask_path, out_mask)
+
+    feasibility = dict(sample.get("feasibility", {}))
+    label_source = dict(sample.get("label_source", {}))
+    negative_reason = dict(sample.get("negative_reason", {}))
+    feasibility[executor] = False
+    label_source[executor] = "unavailable"
+    negative_reason[executor] = row.get("negative_reason") or negative_reason.get(executor) or f"no_{executor}_feasible_region"
+
+    update = {
+        "pilot_id": pilot_id,
+        "executor": executor,
+        "source": "v3_empty_review_required",
+        "candidate_manifest": "",
+        "rule_filter_path": "",
+        "selected_candidates": [],
+        "positive_points": 0,
+        "requires_human_review": True,
+        "review_mode": "confirm_empty",
+        "negative_reason": negative_reason[executor],
+    }
+    sample["multi_channel_mask_path"] = relative_to_dataset(root, out_mask_path)
+    sample["executor_order"] = EXECUTOR_ORDER
+    sample["feasibility"] = feasibility
+    sample["label_source"] = label_source
+    sample["negative_reason"] = negative_reason
+    sample["quality_flag"] = "weak"
+    sample["split"] = "val"
+    sample["v3_candidate_update"] = dict(update)
+    sample["v2_candidate_update"] = dict(update)
+    sample["notes"] = (
+        str(sample.get("notes", ""))
+        + f" | v3_empty_review: {executor} channel is expected empty and requires human confirmation."
+    )
+    summary = {
+        "pilot_id": pilot_id,
+        "sample_id": sample_id,
+        "executor": executor,
+        "selected_candidates": [],
+        "positive_points": 0,
+        "output_mask_path": relative_to_dataset(root, out_mask_path),
+        "review_mode": "confirm_empty",
+    }
+    return sample, summary
+
+
 def main() -> int:
     args = parse_args()
     root = Path(args.dataset_root).resolve()
-    rows = selected_rows(root, args)
+    try:
+        rows = selected_rows(root, args)
+    except ValueError:
+        if args.empty_pilot_csv:
+            rows = []
+        else:
+            raise
+    empty_rows: list[dict[str, str]] = []
+    if args.empty_pilot_csv:
+        empty_path = resolve_path(root, args.empty_pilot_csv)
+        if empty_path and empty_path.exists():
+            empty_rows = read_csv(empty_path)
     checked_samples = read_jsonl(resolve_path(root, args.samples))
     sample_by_id = {str(row.get("sample_id")): row for row in checked_samples}
     output_rows: list[dict[str, Any]] = []
     summaries: list[dict[str, Any]] = []
-    for row in rows:
+    try:
+        from tqdm import tqdm
+
+        row_iter = tqdm(rows, desc="build candidates", unit="row")
+        empty_iter = tqdm(empty_rows, desc="build empty", unit="row") if empty_rows else []
+    except Exception:
+        row_iter = rows
+        empty_iter = empty_rows
+    for row in row_iter:
         sample, summary = build_for_row(root, args, row, sample_by_id)
+        output_rows.append(sample)
+        summaries.append(summary)
+    for row in empty_iter:
+        sample, summary = build_empty_for_row(root, args, row, sample_by_id)
         output_rows.append(sample)
         summaries.append(summary)
 

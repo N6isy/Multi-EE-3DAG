@@ -177,8 +177,12 @@ def select_rows(root: Path, args: argparse.Namespace) -> list[dict[str, str]]:
 
 
 def load_part_plan(root: Path, args: argparse.Namespace, pilot_id: str) -> dict[str, Any] | None:
-    path = resolve_path(root, args.part_plan_root) / pilot_id / "combined_part_plan.json"
-    return read_json(path) if path.exists() else None
+    plan_dir = resolve_path(root, args.part_plan_root) / pilot_id
+    for name in ("combined_part_plan.json", "combined_semantic_plan.json"):
+        path = plan_dir / name
+        if path.exists():
+            return read_json(path)
+    return None
 
 
 def image_path_from_overlay_entry(root: Path, entry: dict[str, Any], overlay_dir: Path, key: str) -> Path:
@@ -194,7 +198,7 @@ def image_path_from_overlay_entry(root: Path, entry: dict[str, Any], overlay_dir
 def expected_target_parts(row: dict[str, str], part_plan: dict[str, Any] | None) -> list[str]:
     parts: list[str] = []
     if part_plan:
-        for key in ("target_part_names", "grounding_queries"):
+        for key in ("target_part_names", "grounding_queries", "target_positive_parts", "target_grounding_queries"):
             for item in part_plan.get(key, []):
                 text = str(item).strip()
                 if text and text not in parts:
@@ -782,7 +786,14 @@ def main() -> int:
     processor = None
     if not args.validate_only and not args.dry_run:
         model, processor = load_qwen_model(cfg, root)
-    outputs = [run_for_row(root, args, cfg, row, model, processor) for row in rows]
+    try:
+        from tqdm import tqdm
+
+        row_iter = tqdm(rows, desc="coverage", unit="row")
+    except Exception:
+        row_iter = rows
+    print(f"[coverage] rows={len(rows)} estimated_view_calls={len(rows) * 8}", flush=True)
+    outputs = [run_for_row(root, args, cfg, row, model, processor) for row in row_iter]
     print(
         json.dumps(
             {

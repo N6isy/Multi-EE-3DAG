@@ -167,6 +167,7 @@ class ReviewedDatasetStore:
                 {
                     "row_key": sample_key(row),
                     "pilot_id": row.get("pilot_id", ""),
+                    "object_id": row.get("object_id", ""),
                     "sample_id": row.get("sample_id", ""),
                     "object_category": row.get("object_category", ""),
                     "task": row.get("task", ""),
@@ -296,17 +297,23 @@ APP_HTML = r"""<!doctype html>
     .stat b { display: block; font-size: 18px; color: var(--blue-700); }
     .stat span { color: var(--muted); font-size: 12px; }
     .sample-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+    .sample-section { margin: 12px 0 5px; padding: 6px 8px; border-radius: 999px; background: #eaf2ff; color: var(--blue-900); font-size: 12px; font-weight: 700; display: flex; justify-content: space-between; }
     .sample { border: 1px solid var(--border); border-radius: 10px; padding: 10px; cursor: pointer; background: #fff; transition: border .15s, box-shadow .15s, transform .15s; }
     .sample:hover { border-color: #9ec5fe; transform: translateY(-1px); }
     .sample.active { border-color: var(--blue-600); box-shadow: 0 0 0 3px rgba(37,99,235,.13); }
     .sample-id { font-size: 11px; color: #334155; word-break: break-all; line-height: 1.35; }
     .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+    .variant-row { margin-top: 7px; padding: 7px; border-radius: 8px; border: 1px solid #e4edf8; background: #f8fbff; }
+    .variant-row.active { border-color: var(--blue-600); background: #eff6ff; }
     .tag { font-size: 11px; padding: 2px 7px; border-radius: 999px; background: var(--blue-100); color: var(--blue-900); }
     .tag.checked, .tag.verified { background: #dcfce7; color: #166534; }
     .tag.pending { background: #fef9c3; color: #854d0e; }
     canvas { width: 100%; height: 100%; display: block; cursor: grab; }
     canvas.dragging { cursor: grabbing; }
     .toolbar { position: absolute; left: 14px; top: 14px; right: 14px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; z-index: 2; }
+    .task-banner { position: absolute; left: 14px; right: 14px; top: 58px; z-index: 2; display: flex; justify-content: center; pointer-events: none; }
+    .task-banner-inner { background: rgba(255,255,255,.94); border: 1px solid var(--border); box-shadow: 0 8px 24px rgba(15,47,87,.10); color: var(--blue-900); border-radius: 12px; padding: 9px 14px; font-size: 15px; font-weight: 750; }
+    .task-banner-inner span { display: inline-block; margin: 0 5px; padding: 2px 8px; border-radius: 999px; background: #eaf2ff; color: var(--blue-700); font-size: 12px; font-weight: 700; }
     .toolbar label { display: inline-flex; align-items: center; gap: 7px; background: rgba(255,255,255,.92); color: #334155; border: 1px solid var(--border); border-radius: 8px; padding: 7px 9px; font-size: 12px; }
     .toolbar input[type="checkbox"] { width: auto; }
     .hud { position: absolute; left: 14px; bottom: 14px; background: rgba(15,47,87,.86); color: white; padding: 10px 12px; border-radius: 10px; font-size: 12px; line-height: 1.55; max-width: 430px; }
@@ -344,6 +351,7 @@ APP_HTML = r"""<!doctype html>
       <button id="allChannels" class="secondary">显示全部通道</button>
       <label><input id="largePoints" type="checkbox" checked /> 大点显示</label>
     </div>
+    <div class="task-banner" id="taskBanner"></div>
     <canvas id="canvas"></canvas>
     <div class="hud" id="hud">请选择样本</div>
   </main>
@@ -395,6 +403,48 @@ function renderList() {
   const list = document.getElementById("sampleList");
   list.innerHTML = "";
   const filtered = samples.filter(s => `${s.sample_id} ${s.object_category} ${s.task} ${s.executor}`.toLowerCase().includes(q));
+  const objectKey = (s) => s.object_id || String(s.sample_id || "").replace(/_(pick_up|open_pull|press_push|lift_carry)$/,"");
+  const groups = new Map();
+  filtered.forEach(s => {
+    const key = objectKey(s);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(s);
+  });
+  const sections = [
+    ["checked", "已审查", rows => rows.some(x => (x.review_status || x.quality_flag || "") === "checked" || (x.review_status || x.quality_flag || "") === "verified")],
+    ["other", "其他", rows => !rows.some(x => (x.review_status || x.quality_flag || "") === "checked" || (x.review_status || x.quality_flag || "") === "verified")],
+  ];
+  sections.forEach(([keyName, title, predicate]) => {
+    const grouped = [...groups.entries()].filter(([, rows]) => predicate(rows));
+    if (!grouped.length) return;
+    const header = document.createElement("div");
+    header.className = "sample-section";
+    header.innerHTML = `<span>${title}</span><span>${grouped.length}</span>`;
+    list.appendChild(header);
+    grouped.forEach(([key, rows]) => {
+      rows.sort((a,b) => `${a.task} ${a.executor}`.localeCompare(`${b.task} ${b.executor}`));
+      const first = rows[0];
+      const active = rows.some(x => x.row_key === currentKey);
+      const div = document.createElement("div");
+      div.className = "sample" + (active ? " active" : "");
+      div.onclick = () => loadSample(rows[0].row_key);
+      div.innerHTML = `<div class="sample-id">${key}</div><div class="tags"><span class="tag">${first.object_category || ""}</span><span class="tag">${rows.length} variants</span></div>`;
+      rows.forEach(s => {
+        const v = document.createElement("div");
+        v.className = "variant-row" + (s.row_key === currentKey ? " active" : "");
+        v.onclick = (event) => { event.stopPropagation(); loadSample(s.row_key); };
+        v.innerHTML = `<div class="tags" style="margin-top:0">
+          <span class="tag">${s.task || ""}</span>
+          <span class="tag">${s.executor || ""}</span>
+          <span class="tag ${s.review_status || ""}">${s.review_status || s.quality_flag || ""}</span>
+          <span class="tag">pos=${s.positive_points || 0}</span>
+        </div>`;
+        div.appendChild(v);
+      });
+      list.appendChild(div);
+    });
+  });
+  return;
   filtered.forEach(s => {
     const div = document.createElement("div");
     div.className = "sample" + (s.row_key === currentKey ? " active" : "");
@@ -440,6 +490,8 @@ function kvHtml(items) {
 function fillPanel() {
   if (!current) return;
   const s = current.sample;
+  document.getElementById("taskBanner").innerHTML =
+    `<div class="task-banner-inner">${s.object_category || ""}<span>${s.task || ""}</span><span>${current.target_executor}</span>positive=${current.counts[current.target_executor] || 0}</div>`;
   document.getElementById("sampleMeta").innerHTML = kvHtml([
     ["sample_id", s.sample_id],
     ["category", s.object_category],
@@ -502,9 +554,9 @@ function draw() {
   for (const p of projectedPoints()) {
     const mask = current.masks[p.i] || [];
     const isTarget = !!mask[targetCh];
-    let color = "#c9d8ea";
-    let alpha = 0.42;
-    let radius = large ? 3.1 : 2.2;
+    let color = "#7f8fa3";
+    let alpha = 0.52;
+    let radius = large ? 3.4 : 2.5;
     if (isTarget) {
       color = channelColors[current.target_executor] || "#2563eb";
       alpha = 0.96;

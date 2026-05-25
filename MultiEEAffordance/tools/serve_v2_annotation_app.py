@@ -225,6 +225,7 @@ class AnnotationStore:
                 {
                     "row_key": key,
                     "pilot_id": sample.get("pilot_id", ""),
+                    "object_id": sample.get("object_id", ""),
                     "sample_id": sample_id,
                     "object_category": sample.get("object_category", ""),
                     "task": sample.get("task", ""),
@@ -234,6 +235,8 @@ class AnnotationStore:
                     "review_status": refined.get("point_review_status", "pending"),
                     "reviewer": refined.get("point_review_reviewer", ""),
                     "quality_flag": refined.get("quality_flag", sample.get("quality_flag", "")),
+                    "review_mode": update.get("review_mode", sample.get("review_mode", "")),
+                    "negative_reason": update.get("negative_reason", sample.get("negative_reason", "")),
                 }
             )
         return {"samples": rows, "count": len(rows)}
@@ -447,6 +450,8 @@ class AnnotationStore:
                 "candidate_manifest": update.get("candidate_manifest", ""),
                 "rule_filter_path": update.get("rule_filter_path", ""),
                 "mask_source_path": mask_source_path,
+                "review_mode": update.get("review_mode", sample.get("review_mode", "")),
+                "negative_reason": update.get("negative_reason", sample.get("negative_reason", "")),
             },
             "candidate_context": candidate_context,
         }
@@ -577,10 +582,13 @@ APP_HTML = r"""<!doctype html>
     .brush-control { display: flex; align-items: center; gap: 7px; padding: 6px 9px; background: rgba(255,255,255,.92); border: 1px solid #d7e5f6; border-radius: 7px; font-size: 12px; color: #334155; }
     .brush-control input { width: 92px; padding: 0; }
     .sample-list { display: flex; flex-direction: column; gap: 7px; margin-top: 10px; }
+    .sample-section { margin: 12px 0 5px; padding: 6px 8px; border-radius: 999px; background: #eaf2ff; color: #0f2f57; font-size: 12px; font-weight: 700; display: flex; justify-content: space-between; }
     .sample { border: 1px solid #d7e5f6; border-radius: 8px; padding: 9px; cursor: pointer; }
     .sample.active { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,.13); }
     .sample.loading { border-color: #2563eb; background: #eff6ff; }
     .sample-id { font-size: 11px; color: #526070; word-break: break-all; }
+    .variant-row { margin-top: 7px; padding: 7px; border-radius: 7px; border: 1px solid #e4edf8; background: #f8fbff; }
+    .variant-row.active { border-color: #2563eb; background: #eff6ff; }
     .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
     .tag { font-size: 11px; padding: 2px 7px; border-radius: 999px; background: #edf1f7; color: #334155; }
     .tag.pending { background: #fff7d6; }
@@ -588,6 +596,9 @@ APP_HTML = r"""<!doctype html>
     .tag.refine_needed { background: #ffedd5; }
     canvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
     .toolbar { position: absolute; left: 12px; top: 12px; right: 12px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; z-index: 2; }
+    .task-banner { position: absolute; left: 12px; right: 12px; top: 58px; z-index: 2; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+    .task-banner-inner { background: rgba(255,255,255,.94); border: 1px solid #c7dcf5; box-shadow: 0 8px 24px rgba(15,47,87,.10); color: #0f2f57; border-radius: 12px; padding: 9px 14px; font-size: 15px; font-weight: 750; }
+    .task-banner-inner span { display: inline-block; margin: 0 5px; padding: 2px 8px; border-radius: 999px; background: #eaf2ff; color: #1d5fbf; font-size: 12px; font-weight: 700; }
     .hud { position: absolute; left: 12px; bottom: 12px; background: rgba(15,47,87,.86); color: white; padding: 9px 11px; border-radius: 7px; font-size: 12px; line-height: 1.55; }
     .box { border: 1px solid #d7e5f6; background: #f8fbff; border-radius: 8px; padding: 10px; margin-bottom: 12px; font-size: 12px; line-height: 1.55; color: #475569; }
     .candidate-list { display: flex; flex-direction: column; gap: 7px; margin: 8px 0 10px; }
@@ -628,6 +639,7 @@ APP_HTML = r"""<!doctype html>
       <button class="secondary" id="resetView">重置视角</button>
       <button class="secondary" id="undoBtn">撤销</button>
     </div>
+    <div class="task-banner" id="taskBanner"></div>
     <canvas id="canvas"></canvas>
     <div class="hud" id="hud">请选择样本</div>
   </main>
@@ -744,6 +756,53 @@ function renderList() {
   list.innerHTML = "";
   const filtered = samples.filter(s => `${s.pilot_id || ""} ${s.sample_id} ${s.object_category} ${s.task} ${s.executor}`.toLowerCase().includes(q));
   document.getElementById("topStatus").textContent = `${samples.length} samples | 显示 ${filtered.length}`;
+  const objectKey = (s) => s.object_id || String(s.sample_id || "").replace(/_(pick_up|open_pull|press_push|lift_carry)$/,"");
+  const groups = new Map();
+  filtered.forEach(s => {
+    const key = objectKey(s);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(s);
+  });
+  const sectionDefs = [
+    ["pending", "待审查", rows => rows.some(x => (x.review_status || "pending") !== "checked")],
+    ["checked", "已审查", rows => rows.every(x => (x.review_status || "pending") === "checked")],
+  ];
+  sectionDefs.forEach(([statusKey, title, predicate]) => {
+    const grouped = [...groups.entries()].filter(([, rows]) => predicate(rows));
+    if (!grouped.length) return;
+    const header = document.createElement("div");
+    header.className = "sample-section";
+    header.innerHTML = `<span>${title}</span><span>${grouped.length}</span>`;
+    list.appendChild(header);
+    grouped.forEach(([key, rows]) => {
+      rows.sort((a,b) => `${a.task} ${a.executor}`.localeCompare(`${b.task} ${b.executor}`));
+      const first = rows[0];
+      const active = current && rows.some(x => x.row_key === current.row_key);
+      const div = document.createElement("div");
+      div.className = "sample" + (active ? " active" : "");
+      div.onclick = () => loadSample(rows[0].row_key);
+      div.innerHTML = `<div class="sample-id">${key}</div>
+        <div class="tags"><span class="tag">${first.object_category || ""}</span><span class="tag">${rows.length} variants</span></div>`;
+      rows.forEach(s => {
+        const v = document.createElement("div");
+        v.className = "variant-row"
+          + (current && current.row_key === s.row_key ? " active" : "")
+          + (activeLoadingId === s.row_key ? " loading" : "");
+        v.onclick = (event) => { event.stopPropagation(); loadSample(s.row_key); };
+        v.innerHTML = `<div class="tags" style="margin-top:0">
+          <span class="tag">${s.pilot_id || ""}</span>
+          <span class="tag">${s.task}</span>
+          <span class="tag">${s.executor}</span>
+          <span class="tag ${s.review_status || "pending"}">${s.review_status || "pending"}</span>
+          <span class="tag">pos=${s.positive_points}</span>
+        </div>`;
+        div.appendChild(v);
+      });
+      list.appendChild(div);
+    });
+  });
+  return;
+  document.getElementById("topStatus").textContent = `${samples.length} samples | 显示 ${filtered.length}`;
   filtered.forEach(s => {
     const div = document.createElement("div");
     div.className = "sample"
@@ -859,6 +918,13 @@ async function loadSample(rowKey, force=false) {
 
 function fillPanel() {
   const s = current.sample;
+  const reviewMode = (current.review_hint && current.review_hint.review_mode) || (current.sample && current.sample.review_mode) || "";
+  if (reviewMode === "confirm_empty") {
+    ensureSelectOption("reviewDecision", "confirm_empty", "confirm_empty - 确认空标签");
+    document.getElementById("reviewDecision").value = "confirm_empty";
+  }
+  document.getElementById("taskBanner").innerHTML =
+    `<div class="task-banner-inner">${s.object_category || ""}<span>${s.task || ""}</span><span>${current.target_executor}</span><span>${reviewMode || "point_refine"}</span>positive=${positives.size}</div>`;
   document.getElementById("sampleId").value = s.sample_id;
   document.getElementById("category").value = s.object_category || "";
   document.getElementById("task").value = s.task || "";
@@ -876,6 +942,17 @@ function fillPanel() {
      positive_points_before: <code>${hint.positive_points ?? ""}</code>${candidateSummary}${candidateError}<br/>
      这个页面保存的是人工点级 refinement，不会把自动候选直接当 GT。`;
   renderCandidateList();
+}
+
+function ensureSelectOption(selectId, value, label) {
+  const select = document.getElementById(selectId);
+  if (!select) return;
+  const exists = Array.from(select.options).some(opt => opt.value === value);
+  if (exists) return;
+  const option = document.createElement("option");
+  option.value = value;
+  option.textContent = label;
+  select.appendChild(option);
 }
 
 function candidateColor(cid) {
@@ -1134,13 +1211,13 @@ function drawNow() {
     if (mode === "delete" && !on) preview = null;
     ctx.beginPath();
     if (focusedCandidateIds.size) {
-      ctx.fillStyle = preview || (on ? "#2563eb" : "#aeb8c6");
-      ctx.globalAlpha = preview ? 0.98 : (on ? 0.34 : 0.16);
-      ctx.arc(p.x, p.y, preview ? 5.2 : (on ? 3.2 : 2.0), 0, Math.PI * 2);
+      ctx.fillStyle = preview || (on ? "#2563eb" : "#7f8fa3");
+      ctx.globalAlpha = preview ? 0.98 : (on ? 0.42 : 0.30);
+      ctx.arc(p.x, p.y, preview ? 5.2 : (on ? 3.2 : 2.3), 0, Math.PI * 2);
     } else {
-      ctx.fillStyle = on ? "#2563eb" : (preview || "#aeb8c6");
-      ctx.globalAlpha = on ? 0.96 : (preview ? 0.72 : 0.34);
-      ctx.arc(p.x, p.y, on ? 4.4 : (preview ? 3.4 : 2.4), 0, Math.PI * 2);
+      ctx.fillStyle = on ? "#2563eb" : (preview || "#7f8fa3");
+      ctx.globalAlpha = on ? 0.96 : (preview ? 0.78 : 0.48);
+      ctx.arc(p.x, p.y, on ? 4.4 : (preview ? 3.4 : 2.8), 0, Math.PI * 2);
     }
     ctx.fill();
   }

@@ -14,8 +14,10 @@ from typing import Any
 
 
 DEFAULT_STAGES = ["views", "plan", "ground", "project", "grow", "render", "build"]
+ALL_STAGES = DEFAULT_STAGES + ["coverage", "visualize"]
 KNOWN_TASKS = ["pick_up", "lift_carry", "open_pull", "press_push"]
 DEFAULT_ACTIVE_TASKS = ["pick_up", "open_pull", "press_push"]
+EMPTY_DECISIONS = {"empty", "empty_review_required", "confirm_empty", "skip_vlm_empty"}
 
 
 def parse_args() -> argparse.Namespace:
@@ -38,9 +40,19 @@ def parse_args() -> argparse.Namespace:
         default="processed/vlm_candidate_v3/pipeline_runs/filtered_pilot_rows_latest.csv",
         help="Filtered pilot CSV written relative to dataset root when task filtering is active.",
     )
+    parser.add_argument(
+        "--empty-review-csv",
+        default="processed/vlm_candidate_v3/pipeline_runs/empty_review_rows_latest.csv",
+        help="Task-filtered empty-review rows written relative to dataset root.",
+    )
+    parser.add_argument(
+        "--include-decisions",
+        default="non_empty",
+        help="Decision filter for VLM/candidate stages: non_empty, all, or comma-separated decision values.",
+    )
     parser.add_argument("--pilot-id", default=None)
     parser.add_argument("--limit", type=int, default=None)
-    parser.add_argument("--stages", default=",".join(DEFAULT_STAGES), help=f"Comma-separated stages: {','.join(DEFAULT_STAGES + ['visualize'])}")
+    parser.add_argument("--stages", default=",".join(DEFAULT_STAGES), help=f"Comma-separated stages: {','.join(ALL_STAGES)}")
     parser.add_argument("--selected-candidates", default="", help="Optional manual candidate ids for build/visualize.")
     parser.add_argument("--allow-empty", action="store_true")
     parser.add_argument("--box-shrink-ratio", type=float, default=0.0, help="Pass to 2D-to-3D projection.")
@@ -72,7 +84,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def stage_list(value: str) -> list[str]:
-    allowed = DEFAULT_STAGES + ["visualize"]
+    allowed = ALL_STAGES
     stages = [item.strip() for item in value.split(",") if item.strip()]
     invalid = [item for item in stages if item not in allowed]
     if invalid:
@@ -93,6 +105,20 @@ def parse_task_filter(value: str, allow_all: bool) -> set[str] | None:
     if unknown:
         raise ValueError(f"Unknown tasks: {unknown}. Known tasks: {KNOWN_TASKS}")
     return tasks
+
+
+def decision_selected(row: dict[str, str], include_decisions: str) -> bool:
+    raw = str(include_decisions or "non_empty").strip()
+    decision = str(row.get("decision") or "").strip()
+    review_mode = str(row.get("review_mode") or "").strip()
+    if raw.lower() == "all":
+        return True
+    if raw.lower() == "non_empty":
+        return decision not in EMPTY_DECISIONS and review_mode != "confirm_empty"
+    allowed = {item.strip() for item in raw.split(",") if item.strip()}
+    if not allowed:
+        return decision not in EMPTY_DECISIONS and review_mode != "confirm_empty"
+    return decision in allowed
 
 
 def resolve_path(root: Path, value: str) -> Path:
@@ -127,44 +153,68 @@ def prepare_pilot_csv(args: argparse.Namespace, dataset_root: Path) -> dict[str,
     exclude_tasks = parse_task_filter(args.exclude_tasks, allow_all=False) or set()
     input_csv = resolve_path(dataset_root, args.pilot_csv)
     rows = read_csv(input_csv)
-    if include_tasks is None and not exclude_tasks:
+    if include_tasks is None and not exclude_tasks and str(args.include_decisions).lower() == "all":
         args.effective_pilot_csv = args.pilot_csv
+        args.effective_empty_review_csv = ""
         return {
             "input_pilot_csv": relative_to_dataset(dataset_root, input_csv),
             "effective_pilot_csv": args.pilot_csv,
+            "empty_review_csv": "",
             "task_filter_active": False,
+            "decision_filter_active": False,
             "include_tasks": "all",
             "exclude_tasks": [],
             "rows_before_task_filter": len(rows),
             "rows_after_task_filter": len(rows),
+            "rows_for_vlm_candidate_stages": len(rows),
+            "rows_for_empty_review": 0,
         }
 
-    filtered = []
+    task_filtered = []
     for row in rows:
         task = str(row.get("task", ""))
         if include_tasks is not None and task not in include_tasks:
             continue
         if task in exclude_tasks:
             continue
-        filtered.append(row)
-    if not filtered:
+        task_filtered.append(row)
+    if not task_filtered:
         raise ValueError(
             "No pilot rows remain after task filtering. "
             f"include_tasks={sorted(include_tasks) if include_tasks is not None else 'all'}, "
             f"exclude_tasks={sorted(exclude_tasks)}"
         )
+    filtered = [row for row in task_filtered if decision_selected(row, args.include_decisions)]
+    empty_rows = [row for row in task_filtered if not decision_selected(row, args.include_decisions)]
+    stages = stage_list(args.stages)
+    if not filtered and any(stage in stages for stage in ("views", "plan", "ground", "project", "grow", "render", "coverage")):
+        raise ValueError(
+            "No non-empty rows remain for VLM/candidate stages after decision filtering. "
+            "Empty-review rows are passed to build only."
+        )
     out_csv = resolve_path(dataset_root, args.filtered_pilot_csv)
     fieldnames = list(rows[0].keys()) if rows else []
     write_csv(out_csv, filtered, fieldnames)
+    empty_csv = resolve_path(dataset_root, args.empty_review_csv)
+    if empty_rows:
+        write_csv(empty_csv, empty_rows, fieldnames)
+        args.effective_empty_review_csv = relative_to_dataset(dataset_root, empty_csv)
+    else:
+        args.effective_empty_review_csv = ""
     args.effective_pilot_csv = relative_to_dataset(dataset_root, out_csv)
     return {
         "input_pilot_csv": relative_to_dataset(dataset_root, input_csv),
         "effective_pilot_csv": args.effective_pilot_csv,
+        "empty_review_csv": args.effective_empty_review_csv,
         "task_filter_active": True,
+        "decision_filter_active": str(args.include_decisions).lower() != "all",
+        "include_decisions": args.include_decisions,
         "include_tasks": sorted(include_tasks) if include_tasks is not None else "all",
         "exclude_tasks": sorted(exclude_tasks),
         "rows_before_task_filter": len(rows),
-        "rows_after_task_filter": len(filtered),
+        "rows_after_task_filter": len(task_filtered),
+        "rows_for_vlm_candidate_stages": len(filtered),
+        "rows_for_empty_review": len(empty_rows),
     }
 
 
@@ -188,7 +238,7 @@ def build_commands(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
     root = Path(args.dataset_root)
     stages = stage_list(args.stages)
     commands: list[tuple[str, list[str]]] = []
-    if "views" in stages or any(stage in stages for stage in ("plan", "ground", "project", "grow", "render", "build")):
+    if "views" in stages or any(stage in stages for stage in ("plan", "ground", "project", "grow", "render", "coverage", "build")):
         commands.append(("views", add_common([sys.executable, script(root, "render_vlm_friendly_views.py")], args)))
     if "plan" in stages:
         cmd = add_common([sys.executable, script(root, "run_v3_semantic_part_planner.py"), "--config", args.config], args)
@@ -271,9 +321,32 @@ def build_commands(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
             args,
         )
         commands.append(("render", cmd))
+    if "coverage" in stages:
+        cmd = add_common(
+            [
+                sys.executable,
+                script(root, "run_vlm_coverage_check_v2.py"),
+                "--config",
+                args.config,
+                "--candidate-root",
+                "processed/vlm_candidate_v3/3d_candidates",
+                "--overlay-root",
+                "processed/vlm_candidate_v3/candidate_overlays",
+                "--part-plan-root",
+                "processed/vlm_candidate_v3/semantic_plans",
+                "--output-root",
+                "processed/vlm_candidate_v3/coverage_check",
+            ],
+            args,
+        )
+        if args.planner_dry_run:
+            cmd.append("--dry-run")
+        commands.append(("coverage", cmd))
     if "build" in stages:
         cmd = add_common([sys.executable, script(root, "build_v3_candidate_masks.py")], args)
         cmd.extend(["--include-tasks", args.include_tasks, "--exclude-tasks", args.exclude_tasks])
+        if getattr(args, "effective_empty_review_csv", ""):
+            cmd.extend(["--empty-pilot-csv", args.effective_empty_review_csv])
         if args.selected_candidates:
             cmd.extend(["--selected-candidates", args.selected_candidates])
         if args.allow_empty:

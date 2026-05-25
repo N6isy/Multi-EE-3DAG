@@ -162,6 +162,15 @@ def selected_rows(root: Path, args: argparse.Namespace) -> list[dict[str, str]]:
     return rows
 
 
+def progress_rows(rows: list[dict[str, str]], desc: str):
+    try:
+        from tqdm import tqdm
+
+        return tqdm(rows, desc=desc, unit="row")
+    except Exception:
+        return rows
+
+
 def render_image_path(root: Path, entry: dict[str, Any], base_dir: Path) -> Path:
     for key in ("dense_render_path", "selector_path", "silhouette_path", "render_path"):
         value = entry.get(key)
@@ -467,7 +476,9 @@ def main() -> int:
     processor = None
     if not args.validate_only and not args.dry_run:
         model, processor = load_qwen_model(cfg, root)
-    outputs = [run_for_row(root, args, cfg, row, model, processor) for row in rows]
+    estimated_calls = sum(8 for _ in rows)
+    print(f"[v3-ground] rows={len(rows)} estimated_view_calls={estimated_calls}", flush=True)
+    outputs = [run_for_row(root, args, cfg, row, model, processor) for row in progress_rows(rows, "v3 ground")]
     print(json.dumps({"rows": len(outputs), "validate_only": args.validate_only, "dry_run": args.dry_run, "outputs": outputs}, indent=2, ensure_ascii=False))
     return 0
 

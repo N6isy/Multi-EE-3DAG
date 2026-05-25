@@ -23,6 +23,10 @@ FIELDNAMES = [
     "executor",
     "decision",
     "issue_type",
+    "review_mode",
+    "object_task_feasible",
+    "executor_feasible",
+    "negative_reason",
     "pilot_reason",
     "point_cloud_path",
     "source_mask_path",
@@ -43,14 +47,26 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--executor-scope",
         choices=["feasible", "all"],
-        default="feasible",
+        default="all",
         help="Use only feasible channels or all four executor channels.",
     )
     parser.add_argument(
         "--quality-scope",
         choices=["needs_review", "all"],
-        default="needs_review",
+        default="all",
         help="needs_review keeps weak or needs_fix samples; all keeps every selected task sample.",
+    )
+    parser.add_argument(
+        "--empty-policy",
+        choices=["review", "skip"],
+        default="review",
+        help="How to handle infeasible executor channels when --executor-scope all.",
+    )
+    parser.add_argument(
+        "--common-sense-filter",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Filter clearly impossible object-task pairs before expensive VLM stages.",
     )
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--overwrite", action="store_true")
@@ -134,6 +150,57 @@ def executor_feasible(row: dict[str, Any], executor: str, executor_scope: str) -
     return False
 
 
+def source_executor_feasible(row: dict[str, Any], executor: str) -> bool:
+    feasibility = row.get("feasibility", {})
+    if isinstance(feasibility, dict):
+        return bool(feasibility.get(executor, False))
+    return False
+
+
+OPEN_PULL_CATEGORIES = {
+    "Door",
+    "Dishwasher",
+    "Faucet",
+    "Laptop",
+    "Microwave",
+    "Refrigerator",
+    "StorageFurniture",
+    "TrashCan",
+}
+PRESS_PUSH_CATEGORIES = {
+    "Door",
+    "Display",
+    "Dishwasher",
+    "Faucet",
+    "Keyboard",
+    "Laptop",
+    "Microwave",
+    "Refrigerator",
+    "StorageFurniture",
+}
+
+
+def object_task_feasible(category: str, task: str, common_sense_filter: bool) -> tuple[bool, str]:
+    if not common_sense_filter:
+        return True, ""
+    if task == "open_pull" and category not in OPEN_PULL_CATEGORIES:
+        return False, f"common_sense_object_task_mismatch:{category}:{task}"
+    if task == "press_push" and category not in PRESS_PUSH_CATEGORIES:
+        return False, f"common_sense_object_task_mismatch:{category}:{task}"
+    return True, ""
+
+
+def executor_negative_reason(sample: dict[str, Any], executor: str, feasible: bool) -> str:
+    negative = sample.get("negative_reason", {})
+    if isinstance(negative, dict):
+        value = negative.get(executor)
+        if value:
+            return str(value)
+    if feasible:
+        return ""
+    return f"no_{executor}_feasible_region"
+
+
 def build_queue(args: argparse.Namespace) -> dict[str, Any]:
     root = Path(args.dataset_root).resolve()
     include_tasks = parse_task_filter(args.include_tasks)
@@ -148,11 +215,16 @@ def build_queue(args: argparse.Namespace) -> dict[str, Any]:
     skipped = Counter()
     for sample in samples:
         task = str(sample.get("task") or "")
+        category = str(sample.get("object_category") or "")
         if include_tasks is not None and task not in include_tasks:
             skipped[f"task_not_included:{task}"] += 1
             continue
         if task in exclude_tasks:
             skipped[f"task_excluded:{task}"] += 1
+            continue
+        ok_task, task_reason = object_task_feasible(category, task, args.common_sense_filter)
+        if not ok_task:
+            skipped[task_reason] += 1
             continue
         if not sample_needs_review(sample, args.quality_scope):
             skipped["quality_not_selected"] += 1
@@ -160,21 +232,39 @@ def build_queue(args: argparse.Namespace) -> dict[str, Any]:
         for executor in EXECUTOR_ORDER:
             if not executor_feasible(sample, executor, args.executor_scope):
                 continue
+            feasible = source_executor_feasible(sample, executor)
+            if not feasible and args.empty_policy == "skip":
+                skipped[f"executor_infeasible_skipped:{executor}"] += 1
+                continue
             pilot_id = f"{args.pilot_prefix}_{len(out_rows) + 1:06d}"
             sample_id = str(sample.get("sample_id") or "")
+            negative_reason = executor_negative_reason(sample, executor, feasible)
+            decision = "review" if feasible else "empty_review_required"
+            issue_type = "large_scale_review" if feasible else "executor_infeasible_empty_label"
+            review_mode = "point_refine" if feasible else "confirm_empty"
+            pilot_reason = (
+                "Large-scale first-pass human review queue; "
+                "candidate generation should propose top-k regions and reviewers finalize the mask."
+                if feasible
+                else (
+                    "This object-task pair is kept, but this executor channel is marked infeasible by source metadata. "
+                    "Reviewer should confirm the empty label unless a valid affordance region is visible."
+                )
+            )
             out_rows.append(
                 {
                     "pilot_id": pilot_id,
                     "sample_id": sample_id,
-                    "object_category": str(sample.get("object_category") or ""),
+                    "object_category": category,
                     "task": task,
                     "executor": executor,
-                    "decision": "review",
-                    "issue_type": "large_scale_review",
-                    "pilot_reason": (
-                        "Large-scale first-pass human review queue; "
-                        "candidate generation should propose top-k regions and reviewers finalize the mask."
-                    ),
+                    "decision": decision,
+                    "issue_type": issue_type,
+                    "review_mode": review_mode,
+                    "object_task_feasible": "true",
+                    "executor_feasible": "true" if feasible else "false",
+                    "negative_reason": negative_reason,
+                    "pilot_reason": pilot_reason,
                     "point_cloud_path": str(sample.get("point_cloud_path") or ""),
                     "source_mask_path": str(sample.get("multi_channel_mask_path") or ""),
                     "checked_mask_path": str(sample.get("multi_channel_mask_path") or ""),
@@ -201,8 +291,11 @@ def build_queue(args: argparse.Namespace) -> dict[str, Any]:
         },
         "executor_scope": args.executor_scope,
         "quality_scope": args.quality_scope,
+        "empty_policy": args.empty_policy,
+        "common_sense_filter": bool(args.common_sense_filter),
         "counts_by_task": dict(sorted(Counter(row["task"] for row in out_rows).items())),
         "counts_by_executor": dict(sorted(Counter(row["executor"] for row in out_rows).items())),
+        "counts_by_decision": dict(sorted(Counter(row["decision"] for row in out_rows).items())),
         "counts_by_category": dict(sorted(Counter(row["object_category"] for row in out_rows).items())),
         "skipped": dict(sorted(skipped.items())),
     }
