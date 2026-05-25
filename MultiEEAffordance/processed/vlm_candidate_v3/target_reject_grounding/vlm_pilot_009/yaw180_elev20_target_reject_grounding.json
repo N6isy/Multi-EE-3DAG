@@ -1,0 +1,94 @@
+{
+  "view": "yaw180_elev20",
+  "target_regions": [
+    {
+      "role": "target",
+      "part_name": "handle loop",
+      "box": [
+        375,
+        478,
+        593,
+        767
+      ],
+      "positive_points": [],
+      "confidence": 0.0,
+      "reason": "the handle loop is the part to be pulled to open the faucet, and it is visible as a distinct curved region."
+    }
+  ],
+  "reject_regions": [
+    {
+      "role": "reject",
+      "part_name": "faucet body",
+      "box": [
+        368,
+        70,
+        630,
+        767
+      ],
+      "positive_points": [],
+      "confidence": 0.0,
+      "reason": "the main body of the faucet is not a pullable part and must be excluded."
+    },
+    {
+      "role": "reject",
+      "part_name": "faucet base",
+      "box": [
+        70,
+        730,
+        767,
+        767
+      ],
+      "positive_points": [],
+      "confidence": 0.0,
+      "reason": "the base is not a pullable part and must be excluded."
+    }
+  ],
+  "coverage_warning": "The target handle loop is visible but sparse, so no points are provided.",
+  "confidence": 0.0,
+  "raw_qwen3vl_response": {
+    "view": "yaw180_elev20",
+    "target_regions": [
+      {
+        "part_name": "handle loop",
+        "box": [
+          375,
+          478,
+          593,
+          768
+        ],
+        "positive_points": [],
+        "confidence": 0.0,
+        "reason": "the handle loop is the part to be pulled to open the faucet, and it is visible as a distinct curved region."
+      }
+    ],
+    "reject_regions": [
+      {
+        "part_name": "faucet body",
+        "box": [
+          368,
+          70,
+          630,
+          768
+        ],
+        "positive_points": [],
+        "confidence": 0.0,
+        "reason": "the main body of the faucet is not a pullable part and must be excluded."
+      },
+      {
+        "part_name": "faucet base",
+        "box": [
+          70,
+          730,
+          928,
+          928
+        ],
+        "positive_points": [],
+        "confidence": 0.0,
+        "reason": "the base is not a pullable part and must be excluded."
+      }
+    ],
+    "coverage_warning": "The target handle loop is visible but sparse, so no points are provided.",
+    "confidence": 0.0,
+    "_raw_text": "```json\n{\n  \"view\": \"yaw180_elev20\",\n  \"target_regions\": [\n    {\n      \"part_name\": \"handle loop\",\n      \"box\": [375, 478, 593, 768],\n      \"positive_points\": [],\n      \"confidence\": 0.0,\n      \"reason\": \"the handle loop is the part to be pulled to open the faucet, and it is visible as a distinct curved region.\"\n    }\n  ],\n  \"reject_regions\": [\n    {\n      \"part_name\": \"faucet body\",\n      \"box\": [368, 70, 630, 768],\n      \"positive_points\": [],\n      \"confidence\": 0.0,\n      \"reason\": \"the main body of the faucet is not a pullable part and must be excluded.\"\n    },\n    {\n      \"part_name\": \"faucet base\",\n      \"box\": [70, 730, 928, 928],\n      \"positive_points\": [],\n      \"confidence\": 0.0,\n      \"reason\": \"the base is not a pullable part and must be excluded.\"\n    }\n  ],\n  \"coverage_warning\": \"The target handle loop is visible but sparse, so no points are provided.\",\n  \"confidence\": 0.0\n}\n```"
+  }
+}

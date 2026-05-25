@@ -1,0 +1,42 @@
+{
+  "view": "yaw135_elev20",
+  "target_regions": [
+    {
+      "role": "target",
+      "part_name": "handle loop",
+      "box": [
+        130,
+        58,
+        767,
+        767
+      ],
+      "positive_points": [],
+      "confidence": 0.0,
+      "reason": "the curved handle is the part to be pulled to open the faucet, matching the task definition."
+    }
+  ],
+  "reject_regions": [],
+  "coverage_warning": "",
+  "confidence": 0.0,
+  "raw_qwen3vl_response": {
+    "view": "yaw135_elev20",
+    "target_regions": [
+      {
+        "part_name": "handle loop",
+        "box": [
+          130,
+          58,
+          920,
+          910
+        ],
+        "positive_points": [],
+        "confidence": 0.0,
+        "reason": "the curved handle is the part to be pulled to open the faucet, matching the task definition."
+      }
+    ],
+    "reject_regions": [],
+    "coverage_warning": "",
+    "confidence": 0.0,
+    "_raw_text": "```json\n{\n  \"view\": \"yaw135_elev20\",\n  \"target_regions\": [\n    {\n      \"part_name\": \"handle loop\",\n      \"box\": [130, 58, 920, 910],\n      \"positive_points\": [],\n      \"confidence\": 0.0,\n      \"reason\": \"the curved handle is the part to be pulled to open the faucet, matching the task definition.\"\n    }\n  ],\n  \"reject_regions\": [],\n  \"coverage_warning\": \"\",\n  \"confidence\": 0.0\n}\n```"
+  }
+}

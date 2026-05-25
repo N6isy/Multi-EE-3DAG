@@ -1,0 +1,121 @@
+{
+  "view": "yaw225_elev20",
+  "target_regions": [
+    {
+      "role": "target",
+      "part_name": "handle loop",
+      "box": [
+        71,
+        382,
+        382,
+        582
+      ],
+      "positive_points": [
+        [
+          150,
+          450
+        ],
+        [
+          200,
+          480
+        ],
+        [
+          250,
+          500
+        ]
+      ],
+      "confidence": 0.0,
+      "reason": "This is the finger hole area of the handle, which is a functional part for hooking or gripping during the pick-up task."
+    }
+  ],
+  "reject_regions": [
+    {
+      "role": "reject",
+      "part_name": "blade",
+      "box": [
+        382,
+        480,
+        767,
+        767
+      ],
+      "positive_points": [
+        [
+          500,
+          550
+        ],
+        [
+          600,
+          650
+        ],
+        [
+          700,
+          750
+        ]
+      ],
+      "confidence": 0.0,
+      "reason": "The blade is a reject part as it is not suitable for hooking and must be avoided during pick-up."
+    }
+  ],
+  "coverage_warning": "The handle loop is partially visible and sparse, so only a few points are marked. The blade is clearly visible and must be rejected.",
+  "confidence": 0.0,
+  "raw_qwen3vl_response": {
+    "view": "yaw225_elev20",
+    "target_regions": [
+      {
+        "part_name": "handle loop",
+        "box": [
+          71,
+          382,
+          382,
+          582
+        ],
+        "positive_points": [
+          [
+            150,
+            450
+          ],
+          [
+            200,
+            480
+          ],
+          [
+            250,
+            500
+          ]
+        ],
+        "confidence": 0.0,
+        "reason": "This is the finger hole area of the handle, which is a functional part for hooking or gripping during the pick-up task."
+      }
+    ],
+    "reject_regions": [
+      {
+        "part_name": "blade",
+        "box": [
+          382,
+          480,
+          910,
+          910
+        ],
+        "positive_points": [
+          [
+            500,
+            550
+          ],
+          [
+            600,
+            650
+          ],
+          [
+            700,
+            750
+          ]
+        ],
+        "confidence": 0.0,
+        "reason": "The blade is a reject part as it is not suitable for hooking and must be avoided during pick-up."
+      }
+    ],
+    "coverage_warning": "The handle loop is partially visible and sparse, so only a few points are marked. The blade is clearly visible and must be rejected.",
+    "confidence": 0.0,
+    "_raw_text": "{\n  \"view\": \"yaw225_elev20\",\n  \"target_regions\": [\n    {\n      \"part_name\": \"handle loop\",\n      \"box\": [71, 382, 382, 582],\n      \"positive_points\": [[150, 450], [200, 480], [250, 500]],\n      \"confidence\": 0.0,\n      \"reason\": \"This is the finger hole area of the handle, which is a functional part for hooking or gripping during the pick-up task.\"\n    }\n  ],\n  \"reject_regions\": [\n    {\n      \"part_name\": \"blade\",\n      \"box\": [382, 480, 910, 910],\n      \"positive_points\": [[500, 550], [600, 650], [700, 750]],\n      \"confidence\": 0.0,\n      \"reason\": \"The blade is a reject part as it is not suitable for hooking and must be avoided during pick-up.\"\n    }\n  ],\n  \"coverage_warning\": \"The handle loop is partially visible and sparse, so only a few points are marked. The blade is clearly visible and must be rejected.\",\n  \"confidence\": 0.0\n}"
+  }
+}

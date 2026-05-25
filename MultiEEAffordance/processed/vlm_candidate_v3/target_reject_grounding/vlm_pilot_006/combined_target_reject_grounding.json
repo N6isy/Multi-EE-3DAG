@@ -1,0 +1,78 @@
+{
+  "version": "v3",
+  "pipeline": "target_reject_2d_grounding",
+  "pilot_id": "vlm_pilot_006",
+  "sample_id": "3danet_full_542223f09a872e973858be97087c26ec_lift_carry",
+  "object_category": "Bottle",
+  "task": "lift_carry",
+  "executor": "dexterous_hand",
+  "semantic_plan": "processed/vlm_candidate_v3/semantic_plans/vlm_pilot_006/combined_semantic_plan.json",
+  "render_manifest": "processed/vlm_semantic_part/renders/3danet_full_542223f09a872e973858be97087c26ec_lift_carry/view_manifest.json",
+  "views": [
+    {
+      "view": "yaw000_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_006/yaw000_elev20_target_reject_grounding.json",
+      "target_regions": 0,
+      "reject_regions": 0,
+      "coverage_warning": "No target or reject regions visible in the sparse point cloud render.",
+      "parse_error": ""
+    },
+    {
+      "view": "yaw045_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_006/yaw045_elev20_target_reject_grounding.json",
+      "target_regions": 0,
+      "reject_regions": 0,
+      "coverage_warning": "No target or reject regions visible in the sparse point cloud render.",
+      "parse_error": ""
+    },
+    {
+      "view": "yaw090_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_006/yaw090_elev20_target_reject_grounding.json",
+      "target_regions": 0,
+      "reject_regions": 0,
+      "coverage_warning": "No target or reject regions visible in the sparse point cloud render.",
+      "parse_error": ""
+    },
+    {
+      "view": "yaw135_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_006/yaw135_elev20_target_reject_grounding.json",
+      "target_regions": 0,
+      "reject_regions": 0,
+      "coverage_warning": "No bottle object detected in the point cloud. The image shows a sparse, abstract pattern of blue and cyan dots on a black background, not a physical bottle or any identifiable object.",
+      "parse_error": ""
+    },
+    {
+      "view": "yaw180_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_006/yaw180_elev20_target_reject_grounding.json",
+      "target_regions": 0,
+      "reject_regions": 0,
+      "coverage_warning": "No bottle structure is visible in the point cloud; cannot identify shoulder or neck regions.",
+      "parse_error": ""
+    },
+    {
+      "view": "yaw225_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_006/yaw225_elev20_target_reject_grounding.json",
+      "target_regions": 0,
+      "reject_regions": 0,
+      "coverage_warning": "No target or reject regions visible in the sparse point cloud render.",
+      "parse_error": ""
+    },
+    {
+      "view": "yaw270_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_006/yaw270_elev20_target_reject_grounding.json",
+      "target_regions": 0,
+      "reject_regions": 0,
+      "coverage_warning": "No bottle or relevant parts are visible in the provided sparse point-cloud render. The image appears to be a random distribution of blue and cyan points on a black background, not a recognizable object.",
+      "parse_error": ""
+    },
+    {
+      "view": "yaw315_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_006/yaw315_elev20_target_reject_grounding.json",
+      "target_regions": 0,
+      "reject_regions": 0,
+      "coverage_warning": "No bottle or relevant parts are visible in the point cloud. The image shows only a sparse point cloud with no identifiable object.",
+      "parse_error": ""
+    }
+  ],
+  "notes": "2D target/reject seeds only; project to 3D before candidate growth."
+}

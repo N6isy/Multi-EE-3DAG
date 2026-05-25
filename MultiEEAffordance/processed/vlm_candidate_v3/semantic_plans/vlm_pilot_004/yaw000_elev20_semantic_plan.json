@@ -1,0 +1,85 @@
+{
+  "view": "yaw000_elev20",
+  "visible_object_parts": [
+    "headband",
+    "left earcup",
+    "right earcup",
+    "earcup frame",
+    "earcup padding",
+    "earcup outer shell",
+    "earcup inner rim",
+    "headband connector"
+  ],
+  "target_positive_parts": [
+    "headband connector",
+    "earcup inner rim"
+  ],
+  "target_grounding_queries": [
+    "headband connector",
+    "inner rim of earcup"
+  ],
+  "reject_negative_parts": [
+    "headband",
+    "earcup frame",
+    "earcup padding",
+    "earcup outer shell"
+  ],
+  "reject_grounding_queries": [
+    "headband structure",
+    "earcup outer shell",
+    "earcup padding surface"
+  ],
+  "uncertain_parts": [],
+  "mechanism_check": {
+    "can_enter_or_contact": true,
+    "can_hold_or_constrain": true,
+    "can_apply_task_force": true,
+    "reason": "The headband connector and earcup inner rim are structural loops or rims that a hook can enter, catch, and pull. The connector is a distinct loop, and the inner rim is a defined edge that can constrain a hook. Both allow mechanical interlocking and lifting force application for the pick_up task."
+  },
+  "feasible": true,
+  "confidence": 0.7,
+  "notes": "Hook targets are the headband connector and earcup inner rim. These are the only parts that meet the hook mechanism criteria. Other parts are flat or smooth and cannot catch a hook.",
+  "raw_qwen3vl_response": {
+    "view": "yaw000_elev20",
+    "visible_object_parts": [
+      "headband",
+      "left earcup",
+      "right earcup",
+      "earcup frame",
+      "earcup padding",
+      "earcup outer shell",
+      "earcup inner rim",
+      "headband connector"
+    ],
+    "target_positive_parts": [
+      "headband connector",
+      "earcup inner rim"
+    ],
+    "target_grounding_queries": [
+      "headband connector",
+      "inner rim of earcup"
+    ],
+    "reject_negative_parts": [
+      "headband",
+      "earcup frame",
+      "earcup padding",
+      "earcup outer shell"
+    ],
+    "reject_grounding_queries": [
+      "headband structure",
+      "earcup outer shell",
+      "earcup padding surface"
+    ],
+    "uncertain_parts": [],
+    "mechanism_check": {
+      "can_enter_or_contact": true,
+      "can_hold_or_constrain": true,
+      "can_apply_task_force": true,
+      "reason": "The headband connector and earcup inner rim are structural loops or rims that a hook can enter, catch, and pull. The connector is a distinct loop, and the inner rim is a defined edge that can constrain a hook. Both allow mechanical interlocking and lifting force application for the pick_up task."
+    },
+    "feasible": true,
+    "confidence": 0.7,
+    "notes": "Hook targets are the headband connector and earcup inner rim. These are the only parts that meet the hook mechanism criteria. Other parts are flat or smooth and cannot catch a hook.",
+    "_raw_text": "{\n  \"view\": \"yaw000_elev20\",\n  \"visible_object_parts\": [\"headband\", \"left earcup\", \"right earcup\", \"earcup frame\", \"earcup padding\", \"earcup outer shell\", \"earcup inner rim\", \"headband connector\"],\n  \"target_positive_parts\": [\"headband connector\", \"earcup inner rim\"],\n  \"target_grounding_queries\": [\"headband connector\", \"inner rim of earcup\"],\n  \"reject_negative_parts\": [\"headband\", \"earcup frame\", \"earcup padding\", \"earcup outer shell\"],\n  \"reject_grounding_queries\": [\"headband structure\", \"earcup outer shell\", \"earcup padding surface\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"The headband connector and earcup inner rim are structural loops or rims that a hook can enter, catch, and pull. The connector is a distinct loop, and the inner rim is a defined edge that can constrain a hook. Both allow mechanical interlocking and lifting force application for the pick_up task.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.7,\n  \"notes\": \"Hook targets are the headband connector and earcup inner rim. These are the only parts that meet the hook mechanism criteria. Other parts are flat or smooth and cannot catch a hook.\"\n}"
+  }
+}

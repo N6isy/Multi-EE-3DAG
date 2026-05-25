@@ -1,0 +1,558 @@
+{
+  "version": "v3",
+  "pipeline": "semantic_target_reject_part_plan",
+  "pilot_id": "vlm_pilot_009",
+  "sample_id": "3danet_full_d1a20d867c2b8f459cd6e2005048d293_open_pull",
+  "object_category": "Faucet",
+  "task": "open_pull",
+  "executor": "dexterous_hand",
+  "target_positive_parts": [
+    "faucet handle"
+  ],
+  "target_grounding_queries": [
+    "the handle to pull",
+    "the handle to pull to open the faucet",
+    "the curved handle to pull open"
+  ],
+  "ranked_target_queries": [
+    {
+      "query": "the handle to pull",
+      "votes": 3,
+      "mean_confidence": 0.9333333333333332
+    },
+    {
+      "query": "the handle to pull to open the faucet",
+      "votes": 3,
+      "mean_confidence": 0.9499999999999998
+    },
+    {
+      "query": "the curved handle to pull open",
+      "votes": 2,
+      "mean_confidence": 0.95
+    }
+  ],
+  "reject_negative_parts": [
+    "faucet body",
+    "faucet spout",
+    "faucet base"
+  ],
+  "reject_grounding_queries": [
+    "the main body of the faucet",
+    "the water outlet",
+    "the spout",
+    "the base of the faucet",
+    "the spout of the faucet"
+  ],
+  "view_plans": [
+    {
+      "view": "yaw000_elev20",
+      "visible_object_parts": [
+        "faucet body",
+        "faucet base",
+        "faucet handle"
+      ],
+      "target_positive_parts": [
+        "faucet handle"
+      ],
+      "target_grounding_queries": [
+        "the handle to pull"
+      ],
+      "reject_negative_parts": [
+        "faucet body",
+        "faucet base"
+      ],
+      "reject_grounding_queries": [
+        "the main body of the faucet",
+        "the base of the faucet"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": true,
+        "can_hold_or_constrain": true,
+        "can_apply_task_force": true,
+        "reason": "The handle is designed to be grasped and pulled; a dexterous hand can wrap around it, apply force to rotate or pull, and it is the only part that directly enables the 'open' task. The body and base are not functional for this task and should be rejected."
+      },
+      "feasible": true,
+      "confidence": 0.95,
+      "notes": "Handle is clearly identifiable and functional for the 'open_pull' task. Body and base are rejected as they are not task-relevant for manipulation.",
+      "raw_qwen3vl_response": {
+        "view": "yaw000_elev20",
+        "visible_object_parts": [
+          "faucet body",
+          "faucet base",
+          "faucet handle"
+        ],
+        "target_positive_parts": [
+          "faucet handle"
+        ],
+        "target_grounding_queries": [
+          "the handle to pull"
+        ],
+        "reject_negative_parts": [
+          "faucet body",
+          "faucet base"
+        ],
+        "reject_grounding_queries": [
+          "the main body of the faucet",
+          "the base of the faucet"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": true,
+          "can_hold_or_constrain": true,
+          "can_apply_task_force": true,
+          "reason": "The handle is designed to be grasped and pulled; a dexterous hand can wrap around it, apply force to rotate or pull, and it is the only part that directly enables the 'open' task. The body and base are not functional for this task and should be rejected."
+        },
+        "feasible": true,
+        "confidence": 0.95,
+        "notes": "Handle is clearly identifiable and functional for the 'open_pull' task. Body and base are rejected as they are not task-relevant for manipulation.",
+        "_raw_text": "{\n  \"view\": \"yaw000_elev20\",\n  \"visible_object_parts\": [\"faucet body\", \"faucet base\", \"faucet handle\"],\n  \"target_positive_parts\": [\"faucet handle\"],\n  \"target_grounding_queries\": [\"the handle to pull\"],\n  \"reject_negative_parts\": [\"faucet body\", \"faucet base\"],\n  \"reject_grounding_queries\": [\"the main body of the faucet\", \"the base of the faucet\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"The handle is designed to be grasped and pulled; a dexterous hand can wrap around it, apply force to rotate or pull, and it is the only part that directly enables the 'open' task. The body and base are not functional for this task and should be rejected.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.95,\n  \"notes\": \"Handle is clearly identifiable and functional for the 'open_pull' task. Body and base are rejected as they are not task-relevant for manipulation.\"\n}"
+      }
+    },
+    {
+      "view": "yaw045_elev20",
+      "visible_object_parts": [
+        "faucet handle",
+        "faucet body",
+        "faucet spout"
+      ],
+      "target_positive_parts": [
+        "faucet handle"
+      ],
+      "target_grounding_queries": [
+        "the handle to pull to open the faucet"
+      ],
+      "reject_negative_parts": [
+        "faucet body",
+        "faucet spout"
+      ],
+      "reject_grounding_queries": [
+        "the main body of the faucet",
+        "the spout of the faucet"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": true,
+        "can_hold_or_constrain": true,
+        "can_apply_task_force": true,
+        "reason": "The dexterous hand can wrap around the handle, apply torque to pull it, and the handle is designed to rotate to open the faucet. The body and spout are not functional for the pull task and should be rejected."
+      },
+      "feasible": true,
+      "confidence": 0.95,
+      "notes": "Handle is clearly visible and functional for the 'open_pull' task. Body and spout are rejected as they are not task-relevant for manipulation.",
+      "raw_qwen3vl_response": {
+        "view": "yaw045_elev20",
+        "visible_object_parts": [
+          "faucet handle",
+          "faucet body",
+          "faucet spout"
+        ],
+        "target_positive_parts": [
+          "faucet handle"
+        ],
+        "target_grounding_queries": [
+          "the handle to pull to open the faucet"
+        ],
+        "reject_negative_parts": [
+          "faucet body",
+          "faucet spout"
+        ],
+        "reject_grounding_queries": [
+          "the main body of the faucet",
+          "the spout of the faucet"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": true,
+          "can_hold_or_constrain": true,
+          "can_apply_task_force": true,
+          "reason": "The dexterous hand can wrap around the handle, apply torque to pull it, and the handle is designed to rotate to open the faucet. The body and spout are not functional for the pull task and should be rejected."
+        },
+        "feasible": true,
+        "confidence": 0.95,
+        "notes": "Handle is clearly visible and functional for the 'open_pull' task. Body and spout are rejected as they are not task-relevant for manipulation.",
+        "_raw_text": "{\n  \"view\": \"yaw045_elev20\",\n  \"visible_object_parts\": [\"faucet handle\", \"faucet body\", \"faucet spout\"],\n  \"target_positive_parts\": [\"faucet handle\"],\n  \"target_grounding_queries\": [\"the handle to pull to open the faucet\"],\n  \"reject_negative_parts\": [\"faucet body\", \"faucet spout\"],\n  \"reject_grounding_queries\": [\"the main body of the faucet\", \"the spout of the faucet\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"The dexterous hand can wrap around the handle, apply torque to pull it, and the handle is designed to rotate to open the faucet. The body and spout are not functional for the pull task and should be rejected.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.95,\n  \"notes\": \"Handle is clearly visible and functional for the 'open_pull' task. Body and spout are rejected as they are not task-relevant for manipulation.\"\n}"
+      }
+    },
+    {
+      "view": "yaw090_elev20",
+      "visible_object_parts": [
+        "faucet handle",
+        "faucet spout",
+        "faucet body"
+      ],
+      "target_positive_parts": [
+        "faucet handle"
+      ],
+      "target_grounding_queries": [
+        "the curved handle to pull open"
+      ],
+      "reject_negative_parts": [
+        "faucet spout",
+        "faucet body"
+      ],
+      "reject_grounding_queries": [
+        "the water outlet",
+        "the main body of the faucet"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": true,
+        "can_hold_or_constrain": true,
+        "can_apply_task_force": true,
+        "reason": "The handle is designed to be grasped and pulled; a dexterous hand can wrap around it, apply torque, and pull to open the faucet. The spout and body are not functional for the 'open_pull' task and must be rejected."
+      },
+      "feasible": true,
+      "confidence": 0.95,
+      "notes": "Handle is clearly visible and functional for the task. Body and spout are rejected as they are not part of the pull mechanism.",
+      "raw_qwen3vl_response": {
+        "view": "yaw090_elev20",
+        "visible_object_parts": [
+          "faucet handle",
+          "faucet spout",
+          "faucet body"
+        ],
+        "target_positive_parts": [
+          "faucet handle"
+        ],
+        "target_grounding_queries": [
+          "the curved handle to pull open"
+        ],
+        "reject_negative_parts": [
+          "faucet spout",
+          "faucet body"
+        ],
+        "reject_grounding_queries": [
+          "the water outlet",
+          "the main body of the faucet"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": true,
+          "can_hold_or_constrain": true,
+          "can_apply_task_force": true,
+          "reason": "The handle is designed to be grasped and pulled; a dexterous hand can wrap around it, apply torque, and pull to open the faucet. The spout and body are not functional for the 'open_pull' task and must be rejected."
+        },
+        "feasible": true,
+        "confidence": 0.95,
+        "notes": "Handle is clearly visible and functional for the task. Body and spout are rejected as they are not part of the pull mechanism.",
+        "_raw_text": "{\n  \"view\": \"yaw090_elev20\",\n  \"visible_object_parts\": [\"faucet handle\", \"faucet spout\", \"faucet body\"],\n  \"target_positive_parts\": [\"faucet handle\"],\n  \"target_grounding_queries\": [\"the curved handle to pull open\"],\n  \"reject_negative_parts\": [\"faucet spout\", \"faucet body\"],\n  \"reject_grounding_queries\": [\"the water outlet\", \"the main body of the faucet\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"The handle is designed to be grasped and pulled; a dexterous hand can wrap around it, apply torque, and pull to open the faucet. The spout and body are not functional for the 'open_pull' task and must be rejected.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.95,\n  \"notes\": \"Handle is clearly visible and functional for the task. Body and spout are rejected as they are not part of the pull mechanism.\"\n}"
+      }
+    },
+    {
+      "view": "yaw135_elev20",
+      "visible_object_parts": [
+        "faucet handle",
+        "faucet spout",
+        "faucet body"
+      ],
+      "target_positive_parts": [
+        "faucet handle"
+      ],
+      "target_grounding_queries": [
+        "the curved handle to pull open"
+      ],
+      "reject_negative_parts": [
+        "faucet spout",
+        "faucet body"
+      ],
+      "reject_grounding_queries": [
+        "the water outlet",
+        "the main body of the faucet"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": true,
+        "can_hold_or_constrain": true,
+        "can_apply_task_force": true,
+        "reason": "The handle is designed to be grasped and pulled; a dexterous hand can wrap around it, apply torque, and pull to open the faucet. The spout and body are not functional for the 'open_pull' task and should be rejected."
+      },
+      "feasible": true,
+      "confidence": 0.95,
+      "notes": "Handle is clearly visible and functional for the task. Spout and body are geometrically plausible but not task-relevant.",
+      "raw_qwen3vl_response": {
+        "view": "yaw135_elev20",
+        "visible_object_parts": [
+          "faucet handle",
+          "faucet spout",
+          "faucet body"
+        ],
+        "target_positive_parts": [
+          "faucet handle"
+        ],
+        "target_grounding_queries": [
+          "the curved handle to pull open"
+        ],
+        "reject_negative_parts": [
+          "faucet spout",
+          "faucet body"
+        ],
+        "reject_grounding_queries": [
+          "the water outlet",
+          "the main body of the faucet"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": true,
+          "can_hold_or_constrain": true,
+          "can_apply_task_force": true,
+          "reason": "The handle is designed to be grasped and pulled; a dexterous hand can wrap around it, apply torque, and pull to open the faucet. The spout and body are not functional for the 'open_pull' task and should be rejected."
+        },
+        "feasible": true,
+        "confidence": 0.95,
+        "notes": "Handle is clearly visible and functional for the task. Spout and body are geometrically plausible but not task-relevant.",
+        "_raw_text": "{\n  \"view\": \"yaw135_elev20\",\n  \"visible_object_parts\": [\"faucet handle\", \"faucet spout\", \"faucet body\"],\n  \"target_positive_parts\": [\"faucet handle\"],\n  \"target_grounding_queries\": [\"the curved handle to pull open\"],\n  \"reject_negative_parts\": [\"faucet spout\", \"faucet body\"],\n  \"reject_grounding_queries\": [\"the water outlet\", \"the main body of the faucet\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"The handle is designed to be grasped and pulled; a dexterous hand can wrap around it, apply torque, and pull to open the faucet. The spout and body are not functional for the 'open_pull' task and should be rejected.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.95,\n  \"notes\": \"Handle is clearly visible and functional for the task. Spout and body are geometrically plausible but not task-relevant.\"\n}"
+      }
+    },
+    {
+      "view": "yaw180_elev20",
+      "visible_object_parts": [
+        "faucet body",
+        "faucet handle"
+      ],
+      "target_positive_parts": [
+        "faucet handle"
+      ],
+      "target_grounding_queries": [
+        "the handle to pull"
+      ],
+      "reject_negative_parts": [
+        "faucet body"
+      ],
+      "reject_grounding_queries": [
+        "the main body of the faucet"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": true,
+        "can_hold_or_constrain": true,
+        "can_apply_task_force": true,
+        "reason": "The dexterous hand can wrap around the handle, apply torque to pull it, and the handle is designed to rotate to open the faucet. The body is not a functional part for the pull task."
+      },
+      "feasible": true,
+      "confidence": 0.9,
+      "notes": "Handle is clearly visible and functional for the 'open_pull' task. Body is rejected as it is not a target for manipulation.",
+      "raw_qwen3vl_response": {
+        "view": "yaw180_elev20",
+        "visible_object_parts": [
+          "faucet body",
+          "faucet handle"
+        ],
+        "target_positive_parts": [
+          "faucet handle"
+        ],
+        "target_grounding_queries": [
+          "the handle to pull"
+        ],
+        "reject_negative_parts": [
+          "faucet body"
+        ],
+        "reject_grounding_queries": [
+          "the main body of the faucet"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": true,
+          "can_hold_or_constrain": true,
+          "can_apply_task_force": true,
+          "reason": "The dexterous hand can wrap around the handle, apply torque to pull it, and the handle is designed to rotate to open the faucet. The body is not a functional part for the pull task."
+        },
+        "feasible": true,
+        "confidence": 0.9,
+        "notes": "Handle is clearly visible and functional for the 'open_pull' task. Body is rejected as it is not a target for manipulation.",
+        "_raw_text": "{\n  \"view\": \"yaw180_elev20\",\n  \"visible_object_parts\": [\"faucet body\", \"faucet handle\"],\n  \"target_positive_parts\": [\"faucet handle\"],\n  \"target_grounding_queries\": [\"the handle to pull\"],\n  \"reject_negative_parts\": [\"faucet body\"],\n  \"reject_grounding_queries\": [\"the main body of the faucet\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"The dexterous hand can wrap around the handle, apply torque to pull it, and the handle is designed to rotate to open the faucet. The body is not a functional part for the pull task.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.9,\n  \"notes\": \"Handle is clearly visible and functional for the 'open_pull' task. Body is rejected as it is not a target for manipulation.\"\n}"
+      }
+    },
+    {
+      "view": "yaw225_elev20",
+      "visible_object_parts": [
+        "faucet handle",
+        "faucet spout",
+        "faucet body"
+      ],
+      "target_positive_parts": [
+        "faucet handle"
+      ],
+      "target_grounding_queries": [
+        "the handle to pull to open the faucet"
+      ],
+      "reject_negative_parts": [
+        "faucet spout",
+        "faucet body"
+      ],
+      "reject_grounding_queries": [
+        "the spout",
+        "the main body of the faucet"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": true,
+        "can_hold_or_constrain": true,
+        "can_apply_task_force": true,
+        "reason": "The handle is designed to be grasped and pulled; a dexterous hand can wrap around it, apply force to rotate or pull, and it is the only part that directly enables the 'open' affordance."
+      },
+      "feasible": true,
+      "confidence": 0.95,
+      "notes": "Handle is clearly visible and functional for the task. Body and spout are rejected as they are not manipulable for opening.",
+      "raw_qwen3vl_response": {
+        "view": "yaw225_elev20",
+        "visible_object_parts": [
+          "faucet handle",
+          "faucet spout",
+          "faucet body"
+        ],
+        "target_positive_parts": [
+          "faucet handle"
+        ],
+        "target_grounding_queries": [
+          "the handle to pull to open the faucet"
+        ],
+        "reject_negative_parts": [
+          "faucet spout",
+          "faucet body"
+        ],
+        "reject_grounding_queries": [
+          "the spout",
+          "the main body of the faucet"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": true,
+          "can_hold_or_constrain": true,
+          "can_apply_task_force": true,
+          "reason": "The handle is designed to be grasped and pulled; a dexterous hand can wrap around it, apply force to rotate or pull, and it is the only part that directly enables the 'open' affordance."
+        },
+        "feasible": true,
+        "confidence": 0.95,
+        "notes": "Handle is clearly visible and functional for the task. Body and spout are rejected as they are not manipulable for opening.",
+        "_raw_text": "{\n  \"view\": \"yaw225_elev20\",\n  \"visible_object_parts\": [\"faucet handle\", \"faucet spout\", \"faucet body\"],\n  \"target_positive_parts\": [\"faucet handle\"],\n  \"target_grounding_queries\": [\"the handle to pull to open the faucet\"],\n  \"reject_negative_parts\": [\"faucet spout\", \"faucet body\"],\n  \"reject_grounding_queries\": [\"the spout\", \"the main body of the faucet\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"The handle is designed to be grasped and pulled; a dexterous hand can wrap around it, apply force to rotate or pull, and it is the only part that directly enables the 'open' affordance.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.95,\n  \"notes\": \"Handle is clearly visible and functional for the task. Body and spout are rejected as they are not manipulable for opening.\"\n}"
+      }
+    },
+    {
+      "view": "yaw270_elev20",
+      "visible_object_parts": [
+        "faucet handle",
+        "faucet spout",
+        "faucet body"
+      ],
+      "target_positive_parts": [
+        "faucet handle"
+      ],
+      "target_grounding_queries": [
+        "the handle to pull to open the faucet"
+      ],
+      "reject_negative_parts": [
+        "faucet spout",
+        "faucet body"
+      ],
+      "reject_grounding_queries": [
+        "the spout",
+        "the main body of the faucet"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": true,
+        "can_hold_or_constrain": true,
+        "can_apply_task_force": true,
+        "reason": "The handle is designed to be grasped and pulled; a dexterous hand can wrap around it, apply torque, and pull to open the faucet. The spout and body are not functional for the 'open_pull' task and should be rejected."
+      },
+      "feasible": true,
+      "confidence": 0.95,
+      "notes": "Handle is clearly visible and functional for the task. Spout and body are geometrically present but not task-relevant for 'open_pull'.",
+      "raw_qwen3vl_response": {
+        "view": "yaw270_elev20",
+        "visible_object_parts": [
+          "faucet handle",
+          "faucet spout",
+          "faucet body"
+        ],
+        "target_positive_parts": [
+          "faucet handle"
+        ],
+        "target_grounding_queries": [
+          "the handle to pull to open the faucet"
+        ],
+        "reject_negative_parts": [
+          "faucet spout",
+          "faucet body"
+        ],
+        "reject_grounding_queries": [
+          "the spout",
+          "the main body of the faucet"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": true,
+          "can_hold_or_constrain": true,
+          "can_apply_task_force": true,
+          "reason": "The handle is designed to be grasped and pulled; a dexterous hand can wrap around it, apply torque, and pull to open the faucet. The spout and body are not functional for the 'open_pull' task and should be rejected."
+        },
+        "feasible": true,
+        "confidence": 0.95,
+        "notes": "Handle is clearly visible and functional for the task. Spout and body are geometrically present but not task-relevant for 'open_pull'.",
+        "_raw_text": "{\n  \"view\": \"yaw270_elev20\",\n  \"visible_object_parts\": [\"faucet handle\", \"faucet spout\", \"faucet body\"],\n  \"target_positive_parts\": [\"faucet handle\"],\n  \"target_grounding_queries\": [\"the handle to pull to open the faucet\"],\n  \"reject_negative_parts\": [\"faucet spout\", \"faucet body\"],\n  \"reject_grounding_queries\": [\"the spout\", \"the main body of the faucet\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"The handle is designed to be grasped and pulled; a dexterous hand can wrap around it, apply torque, and pull to open the faucet. The spout and body are not functional for the 'open_pull' task and should be rejected.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.95,\n  \"notes\": \"Handle is clearly visible and functional for the task. Spout and body are geometrically present but not task-relevant for 'open_pull'.\"\n}"
+      }
+    },
+    {
+      "view": "yaw315_elev20",
+      "visible_object_parts": [
+        "faucet handle",
+        "faucet body"
+      ],
+      "target_positive_parts": [
+        "faucet handle"
+      ],
+      "target_grounding_queries": [
+        "the handle to pull"
+      ],
+      "reject_negative_parts": [
+        "faucet body"
+      ],
+      "reject_grounding_queries": [
+        "the main body of the faucet"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": true,
+        "can_hold_or_constrain": true,
+        "can_apply_task_force": true,
+        "reason": "The handle is designed to be grasped and pulled; a dexterous hand can wrap around it, apply force to rotate or pull, and it is the only part that enables the 'open_pull' task. The body is not task-relevant and must be rejected."
+      },
+      "feasible": true,
+      "confidence": 0.95,
+      "notes": "Handle is clearly visible and functional for the task. Body is rejected as non-functional for 'open_pull'.",
+      "raw_qwen3vl_response": {
+        "view": "yaw315_elev20",
+        "visible_object_parts": [
+          "faucet handle",
+          "faucet body"
+        ],
+        "target_positive_parts": [
+          "faucet handle"
+        ],
+        "target_grounding_queries": [
+          "the handle to pull"
+        ],
+        "reject_negative_parts": [
+          "faucet body"
+        ],
+        "reject_grounding_queries": [
+          "the main body of the faucet"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": true,
+          "can_hold_or_constrain": true,
+          "can_apply_task_force": true,
+          "reason": "The handle is designed to be grasped and pulled; a dexterous hand can wrap around it, apply force to rotate or pull, and it is the only part that enables the 'open_pull' task. The body is not task-relevant and must be rejected."
+        },
+        "feasible": true,
+        "confidence": 0.95,
+        "notes": "Handle is clearly visible and functional for the task. Body is rejected as non-functional for 'open_pull'.",
+        "_raw_text": "{\n  \"view\": \"yaw315_elev20\",\n  \"visible_object_parts\": [\"faucet handle\", \"faucet body\"],\n  \"target_positive_parts\": [\"faucet handle\"],\n  \"target_grounding_queries\": [\"the handle to pull\"],\n  \"reject_negative_parts\": [\"faucet body\"],\n  \"reject_grounding_queries\": [\"the main body of the faucet\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"The handle is designed to be grasped and pulled; a dexterous hand can wrap around it, apply force to rotate or pull, and it is the only part that enables the 'open_pull' task. The body is not task-relevant and must be rejected.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.95,\n  \"notes\": \"Handle is clearly visible and functional for the task. Body is rejected as non-functional for 'open_pull'.\"\n}"
+      }
+    }
+  ],
+  "render_manifest": "processed/vlm_semantic_part/renders/3danet_full_d1a20d867c2b8f459cd6e2005048d293_open_pull/view_manifest.json",
+  "notes": "v3 semantic plan only. It defines target and reject semantics; later stages ground, project, grow candidates, and require human review."
+}

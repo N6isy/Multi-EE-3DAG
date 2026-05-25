@@ -1,0 +1,15 @@
+{
+  "view": "yaw180_elev20",
+  "target_regions": [],
+  "reject_regions": [],
+  "coverage_warning": "The object is not clearly identifiable as a mug; the point cloud appears to be a generic cylindrical shape without distinct mug features like a handle or rim. Therefore, no target or reject regions can be confidently grounded.",
+  "confidence": 0.0,
+  "raw_qwen3vl_response": {
+    "view": "yaw180_elev20",
+    "target_regions": [],
+    "reject_regions": [],
+    "coverage_warning": "The object is not clearly identifiable as a mug; the point cloud appears to be a generic cylindrical shape without distinct mug features like a handle or rim. Therefore, no target or reject regions can be confidently grounded.",
+    "confidence": 0.0,
+    "_raw_text": "{\n  \"view\": \"yaw180_elev20\",\n  \"target_regions\": [],\n  \"reject_regions\": [],\n  \"coverage_warning\": \"The object is not clearly identifiable as a mug; the point cloud appears to be a generic cylindrical shape without distinct mug features like a handle or rim. Therefore, no target or reject regions can be confidently grounded.\",\n  \"confidence\": 0.0\n}"
+  }
+}

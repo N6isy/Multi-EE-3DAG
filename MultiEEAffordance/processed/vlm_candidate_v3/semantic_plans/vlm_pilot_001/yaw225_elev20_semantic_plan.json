@@ -1,0 +1,70 @@
+{
+  "view": "yaw225_elev20",
+  "visible_object_parts": [
+    "door panel",
+    "door handle",
+    "edge seam"
+  ],
+  "target_positive_parts": [
+    "flat door panel"
+  ],
+  "target_grounding_queries": [
+    "the main door surface",
+    "flat door panel"
+  ],
+  "reject_negative_parts": [
+    "door handle",
+    "edge seam",
+    "door gap"
+  ],
+  "reject_grounding_queries": [
+    "the handle",
+    "the door edge",
+    "door handle",
+    "door gap",
+    "edge seam"
+  ],
+  "uncertain_parts": [],
+  "mechanism_check": {
+    "can_enter_or_contact": true,
+    "can_hold_or_constrain": true,
+    "can_apply_task_force": true,
+    "reason": "Suction cup can adhere to the flat door panel, which is low-curvature and sealable. It can pull the door open without interference from the handle or edge seam."
+  },
+  "feasible": true,
+  "confidence": 0.0,
+  "notes": "Exclude handle and edge seam per pilot issue and category prior. Only flat panel is viable target.",
+  "raw_qwen3vl_response": {
+    "view": "yaw225_elev20",
+    "visible_object_parts": [
+      "door panel",
+      "door handle",
+      "edge seam"
+    ],
+    "target_positive_parts": [
+      "flat door panel"
+    ],
+    "target_grounding_queries": [
+      "the main door surface"
+    ],
+    "reject_negative_parts": [
+      "door handle",
+      "edge seam"
+    ],
+    "reject_grounding_queries": [
+      "the handle",
+      "the door edge"
+    ],
+    "uncertain_parts": [],
+    "mechanism_check": {
+      "can_enter_or_contact": true,
+      "can_hold_or_constrain": true,
+      "can_apply_task_force": true,
+      "reason": "Suction cup can adhere to the flat door panel, which is low-curvature and sealable. It can pull the door open without interference from the handle or edge seam."
+    },
+    "feasible": true,
+    "confidence": 0.0,
+    "notes": "Exclude handle and edge seam per pilot issue and category prior. Only flat panel is viable target.",
+    "_raw_text": "{\n  \"view\": \"yaw225_elev20\",\n  \"visible_object_parts\": [\"door panel\", \"door handle\", \"edge seam\"],\n  \"target_positive_parts\": [\"flat door panel\"],\n  \"target_grounding_queries\": [\"the main door surface\"],\n  \"reject_negative_parts\": [\"door handle\", \"edge seam\"],\n  \"reject_grounding_queries\": [\"the handle\", \"the door edge\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"Suction cup can adhere to the flat door panel, which is low-curvature and sealable. It can pull the door open without interference from the handle or edge seam.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.0,\n  \"notes\": \"Exclude handle and edge seam per pilot issue and category prior. Only flat panel is viable target.\"\n}"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "view": "yaw135_elev20",
+  "target_regions": [],
+  "reject_regions": [],
+  "coverage_warning": "No handle loops, inner rims, or hookable structures are visible in this sparse point-cloud render. The object appears to be a solid bag body with no discernible handles or loops.",
+  "confidence": 0.0,
+  "raw_qwen3vl_response": {
+    "view": "yaw135_elev20",
+    "target_regions": [],
+    "reject_regions": [],
+    "coverage_warning": "No handle loops, inner rims, or hookable structures are visible in this sparse point-cloud render. The object appears to be a solid bag body with no discernible handles or loops.",
+    "confidence": 0.0,
+    "_raw_text": "{\n  \"view\": \"yaw135_elev20\",\n  \"target_regions\": [],\n  \"reject_regions\": [],\n  \"coverage_warning\": \"No handle loops, inner rims, or hookable structures are visible in this sparse point-cloud render. The object appears to be a solid bag body with no discernible handles or loops.\",\n  \"confidence\": 0.0\n}"
+  }
+}

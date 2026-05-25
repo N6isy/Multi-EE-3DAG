@@ -1,0 +1,15 @@
+{
+  "view": "yaw180_elev20",
+  "target_regions": [],
+  "reject_regions": [],
+  "coverage_warning": "No bottle structure is visible in the point cloud; cannot identify shoulder or neck regions.",
+  "confidence": 0.0,
+  "raw_qwen3vl_response": {
+    "view": "yaw180_elev20",
+    "target_regions": [],
+    "reject_regions": [],
+    "coverage_warning": "No bottle structure is visible in the point cloud; cannot identify shoulder or neck regions.",
+    "confidence": 0.0,
+    "_raw_text": "{\n  \"view\": \"yaw180_elev20\",\n  \"target_regions\": [],\n  \"reject_regions\": [],\n  \"coverage_warning\": \"No bottle structure is visible in the point cloud; cannot identify shoulder or neck regions.\",\n  \"confidence\": 0.0\n}"
+  }
+}

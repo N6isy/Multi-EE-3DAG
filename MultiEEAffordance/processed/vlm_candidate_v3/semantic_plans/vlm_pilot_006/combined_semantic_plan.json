@@ -1,0 +1,572 @@
+{
+  "version": "v3",
+  "pipeline": "semantic_target_reject_part_plan",
+  "pilot_id": "vlm_pilot_006",
+  "sample_id": "3danet_full_542223f09a872e973858be97087c26ec_lift_carry",
+  "object_category": "Bottle",
+  "task": "lift_carry",
+  "executor": "dexterous_hand",
+  "target_positive_parts": [
+    "bottle shoulder",
+    "bottle neck"
+  ],
+  "target_grounding_queries": [
+    "shoulder region",
+    "neck region"
+  ],
+  "ranked_target_queries": [
+    {
+      "query": "shoulder region",
+      "votes": 8,
+      "mean_confidence": 0.7874999999999999
+    },
+    {
+      "query": "neck region",
+      "votes": 8,
+      "mean_confidence": 0.7874999999999999
+    }
+  ],
+  "reject_negative_parts": [
+    "bottle body main surface",
+    "bottle body"
+  ],
+  "reject_grounding_queries": [
+    "main cylindrical body",
+    "body surface",
+    "main cylindrical body surface"
+  ],
+  "view_plans": [
+    {
+      "view": "yaw000_elev20",
+      "visible_object_parts": [
+        "bottle body",
+        "bottle neck",
+        "bottle shoulder"
+      ],
+      "target_positive_parts": [
+        "bottle shoulder",
+        "bottle neck"
+      ],
+      "target_grounding_queries": [
+        "shoulder region",
+        "neck region"
+      ],
+      "reject_negative_parts": [
+        "bottle body main surface"
+      ],
+      "reject_grounding_queries": [
+        "main cylindrical body",
+        "body surface"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": true,
+        "can_hold_or_constrain": true,
+        "can_apply_task_force": true,
+        "reason": "Dexterous hand can wrap around shoulder and neck, providing stable constraint and leverage for lifting. These regions allow fingers to interlock and apply upward force without sliding. Main body surface is too large and smooth for stable multi-finger manipulation."
+      },
+      "feasible": true,
+      "confidence": 0.8,
+      "notes": "Target parts are the shoulder and neck, which are anatomically suitable for dexterous hand wrapping and lifting. Main body is rejected as it lacks functional constraint for the task.",
+      "raw_qwen3vl_response": {
+        "view": "yaw000_elev20",
+        "visible_object_parts": [
+          "bottle body",
+          "bottle neck",
+          "bottle shoulder"
+        ],
+        "target_positive_parts": [
+          "bottle shoulder",
+          "bottle neck"
+        ],
+        "target_grounding_queries": [
+          "shoulder region",
+          "neck region"
+        ],
+        "reject_negative_parts": [
+          "bottle body main surface"
+        ],
+        "reject_grounding_queries": [
+          "main cylindrical body",
+          "body surface"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": true,
+          "can_hold_or_constrain": true,
+          "can_apply_task_force": true,
+          "reason": "Dexterous hand can wrap around shoulder and neck, providing stable constraint and leverage for lifting. These regions allow fingers to interlock and apply upward force without sliding. Main body surface is too large and smooth for stable multi-finger manipulation."
+        },
+        "feasible": true,
+        "confidence": 0.8,
+        "notes": "Target parts are the shoulder and neck, which are anatomically suitable for dexterous hand wrapping and lifting. Main body is rejected as it lacks functional constraint for the task.",
+        "_raw_text": "{\n  \"view\": \"yaw000_elev20\",\n  \"visible_object_parts\": [\"bottle body\", \"bottle neck\", \"bottle shoulder\"],\n  \"target_positive_parts\": [\"bottle shoulder\", \"bottle neck\"],\n  \"target_grounding_queries\": [\"shoulder region\", \"neck region\"],\n  \"reject_negative_parts\": [\"bottle body main surface\"],\n  \"reject_grounding_queries\": [\"main cylindrical body\", \"body surface\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"Dexterous hand can wrap around shoulder and neck, providing stable constraint and leverage for lifting. These regions allow fingers to interlock and apply upward force without sliding. Main body surface is too large and smooth for stable multi-finger manipulation.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.8,\n  \"notes\": \"Target parts are the shoulder and neck, which are anatomically suitable for dexterous hand wrapping and lifting. Main body is rejected as it lacks functional constraint for the task.\"\n}"
+      }
+    },
+    {
+      "view": "yaw045_elev20",
+      "visible_object_parts": [
+        "bottle body",
+        "bottle neck",
+        "bottle shoulder"
+      ],
+      "target_positive_parts": [
+        "bottle shoulder",
+        "bottle neck"
+      ],
+      "target_grounding_queries": [
+        "shoulder region",
+        "neck region"
+      ],
+      "reject_negative_parts": [
+        "bottle body"
+      ],
+      "reject_grounding_queries": [
+        "main cylindrical body"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": true,
+        "can_hold_or_constrain": true,
+        "can_apply_task_force": true,
+        "reason": "Dexterous hand can wrap around shoulder and neck, providing stable grip and leverage for lifting. These regions allow fingers to interlock and apply force without sliding. Body is too large and smooth for stable multi-finger manipulation."
+      },
+      "feasible": true,
+      "confidence": 0.7,
+      "notes": "Lift_carry task requires stable load-bearing contact. Shoulder and neck are optimal for dexterous hand wrapping and force application. Body is rejected as it lacks functional constraint for this task.",
+      "raw_qwen3vl_response": {
+        "view": "yaw045_elev20",
+        "visible_object_parts": [
+          "bottle body",
+          "bottle neck",
+          "bottle shoulder"
+        ],
+        "target_positive_parts": [
+          "bottle shoulder",
+          "bottle neck"
+        ],
+        "target_grounding_queries": [
+          "shoulder region",
+          "neck region"
+        ],
+        "reject_negative_parts": [
+          "bottle body"
+        ],
+        "reject_grounding_queries": [
+          "main cylindrical body"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": true,
+          "can_hold_or_constrain": true,
+          "can_apply_task_force": true,
+          "reason": "Dexterous hand can wrap around shoulder and neck, providing stable grip and leverage for lifting. These regions allow fingers to interlock and apply force without sliding. Body is too large and smooth for stable multi-finger manipulation."
+        },
+        "feasible": true,
+        "confidence": 0.7,
+        "notes": "Lift_carry task requires stable load-bearing contact. Shoulder and neck are optimal for dexterous hand wrapping and force application. Body is rejected as it lacks functional constraint for this task.",
+        "_raw_text": "{\n  \"view\": \"yaw045_elev20\",\n  \"visible_object_parts\": [\"bottle body\", \"bottle neck\", \"bottle shoulder\"],\n  \"target_positive_parts\": [\"bottle shoulder\", \"bottle neck\"],\n  \"target_grounding_queries\": [\"shoulder region\", \"neck region\"],\n  \"reject_negative_parts\": [\"bottle body\"],\n  \"reject_grounding_queries\": [\"main cylindrical body\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"Dexterous hand can wrap around shoulder and neck, providing stable grip and leverage for lifting. These regions allow fingers to interlock and apply force without sliding. Body is too large and smooth for stable multi-finger manipulation.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.7,\n  \"notes\": \"Lift_carry task requires stable load-bearing contact. Shoulder and neck are optimal for dexterous hand wrapping and force application. Body is rejected as it lacks functional constraint for this task.\"\n}"
+      }
+    },
+    {
+      "view": "yaw090_elev20",
+      "visible_object_parts": [
+        "bottle body",
+        "bottle neck",
+        "bottle shoulder"
+      ],
+      "target_positive_parts": [
+        "bottle shoulder",
+        "bottle neck"
+      ],
+      "target_grounding_queries": [
+        "shoulder region",
+        "neck region"
+      ],
+      "reject_negative_parts": [
+        "bottle body main surface"
+      ],
+      "reject_grounding_queries": [
+        "main cylindrical body",
+        "body surface"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": true,
+        "can_hold_or_constrain": true,
+        "can_apply_task_force": true,
+        "reason": "Dexterous hand can wrap around shoulder and neck, providing stable grip and leverage for lifting. These regions allow fingers to interlock and apply force without sliding. Body surface is too large and smooth for stable multi-finger manipulation."
+      },
+      "feasible": true,
+      "confidence": 0.8,
+      "notes": "Lift_carry task requires stable load-bearing contact. Shoulder and neck are optimal for dexterous hand wrapping and force application. Body surface is rejected to avoid overgeneralization.",
+      "raw_qwen3vl_response": {
+        "view": "yaw090_elev20",
+        "visible_object_parts": [
+          "bottle body",
+          "bottle neck",
+          "bottle shoulder"
+        ],
+        "target_positive_parts": [
+          "bottle shoulder",
+          "bottle neck"
+        ],
+        "target_grounding_queries": [
+          "shoulder region",
+          "neck region"
+        ],
+        "reject_negative_parts": [
+          "bottle body main surface"
+        ],
+        "reject_grounding_queries": [
+          "main cylindrical body",
+          "body surface"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": true,
+          "can_hold_or_constrain": true,
+          "can_apply_task_force": true,
+          "reason": "Dexterous hand can wrap around shoulder and neck, providing stable grip and leverage for lifting. These regions allow fingers to interlock and apply force without sliding. Body surface is too large and smooth for stable multi-finger manipulation."
+        },
+        "feasible": true,
+        "confidence": 0.8,
+        "notes": "Lift_carry task requires stable load-bearing contact. Shoulder and neck are optimal for dexterous hand wrapping and force application. Body surface is rejected to avoid overgeneralization.",
+        "_raw_text": "{\n  \"view\": \"yaw090_elev20\",\n  \"visible_object_parts\": [\"bottle body\", \"bottle neck\", \"bottle shoulder\"],\n  \"target_positive_parts\": [\"bottle shoulder\", \"bottle neck\"],\n  \"target_grounding_queries\": [\"shoulder region\", \"neck region\"],\n  \"reject_negative_parts\": [\"bottle body main surface\"],\n  \"reject_grounding_queries\": [\"main cylindrical body\", \"body surface\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"Dexterous hand can wrap around shoulder and neck, providing stable grip and leverage for lifting. These regions allow fingers to interlock and apply force without sliding. Body surface is too large and smooth for stable multi-finger manipulation.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.8,\n  \"notes\": \"Lift_carry task requires stable load-bearing contact. Shoulder and neck are optimal for dexterous hand wrapping and force application. Body surface is rejected to avoid overgeneralization.\"\n}"
+      }
+    },
+    {
+      "view": "yaw135_elev20",
+      "visible_object_parts": [
+        "bottle body",
+        "bottle neck",
+        "bottle shoulder"
+      ],
+      "target_positive_parts": [
+        "bottle shoulder",
+        "bottle neck"
+      ],
+      "target_grounding_queries": [
+        "shoulder region",
+        "neck region"
+      ],
+      "reject_negative_parts": [
+        "bottle body main surface"
+      ],
+      "reject_grounding_queries": [
+        "main cylindrical body surface"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": true,
+        "can_hold_or_constrain": true,
+        "can_apply_task_force": true,
+        "reason": "Dexterous hand can wrap around shoulder and neck, providing stable constraint and leverage for lifting. These regions allow fingers to interlock and apply upward force without sliding. Main body surface is too large and smooth for stable multi-finger manipulation."
+      },
+      "feasible": true,
+      "confidence": 0.8,
+      "notes": "Target shoulder and neck for stable wrap and lift; reject main body to avoid generic contact.",
+      "raw_qwen3vl_response": {
+        "view": "yaw135_elev20",
+        "visible_object_parts": [
+          "bottle body",
+          "bottle neck",
+          "bottle shoulder"
+        ],
+        "target_positive_parts": [
+          "bottle shoulder",
+          "bottle neck"
+        ],
+        "target_grounding_queries": [
+          "shoulder region",
+          "neck region"
+        ],
+        "reject_negative_parts": [
+          "bottle body main surface"
+        ],
+        "reject_grounding_queries": [
+          "main cylindrical body surface"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": true,
+          "can_hold_or_constrain": true,
+          "can_apply_task_force": true,
+          "reason": "Dexterous hand can wrap around shoulder and neck, providing stable constraint and leverage for lifting. These regions allow fingers to interlock and apply upward force without sliding. Main body surface is too large and smooth for stable multi-finger manipulation."
+        },
+        "feasible": true,
+        "confidence": 0.8,
+        "notes": "Target shoulder and neck for stable wrap and lift; reject main body to avoid generic contact.",
+        "_raw_text": "{\n  \"view\": \"yaw135_elev20\",\n  \"visible_object_parts\": [\"bottle body\", \"bottle neck\", \"bottle shoulder\"],\n  \"target_positive_parts\": [\"bottle shoulder\", \"bottle neck\"],\n  \"target_grounding_queries\": [\"shoulder region\", \"neck region\"],\n  \"reject_negative_parts\": [\"bottle body main surface\"],\n  \"reject_grounding_queries\": [\"main cylindrical body surface\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"Dexterous hand can wrap around shoulder and neck, providing stable constraint and leverage for lifting. These regions allow fingers to interlock and apply upward force without sliding. Main body surface is too large and smooth for stable multi-finger manipulation.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.8,\n  \"notes\": \"Target shoulder and neck for stable wrap and lift; reject main body to avoid generic contact.\"\n}"
+      }
+    },
+    {
+      "view": "yaw180_elev20",
+      "visible_object_parts": [
+        "bottle body",
+        "bottle neck",
+        "bottle shoulder"
+      ],
+      "target_positive_parts": [
+        "bottle shoulder",
+        "bottle neck"
+      ],
+      "target_grounding_queries": [
+        "shoulder region",
+        "neck region"
+      ],
+      "reject_negative_parts": [
+        "bottle body main surface"
+      ],
+      "reject_grounding_queries": [
+        "main cylindrical body",
+        "body surface"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": true,
+        "can_hold_or_constrain": true,
+        "can_apply_task_force": true,
+        "reason": "Dexterous hand can wrap around shoulder and neck, providing stable grip and leverage for lifting. These regions allow fingers to interlock and apply force without sliding. Body surface is too large and smooth for stable multi-finger manipulation."
+      },
+      "feasible": true,
+      "confidence": 0.8,
+      "notes": "Target shoulder and neck for stable wrap and lift; reject main body to avoid generic contact.",
+      "raw_qwen3vl_response": {
+        "view": "yaw180_elev20",
+        "visible_object_parts": [
+          "bottle body",
+          "bottle neck",
+          "bottle shoulder"
+        ],
+        "target_positive_parts": [
+          "bottle shoulder",
+          "bottle neck"
+        ],
+        "target_grounding_queries": [
+          "shoulder region",
+          "neck region"
+        ],
+        "reject_negative_parts": [
+          "bottle body main surface"
+        ],
+        "reject_grounding_queries": [
+          "main cylindrical body",
+          "body surface"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": true,
+          "can_hold_or_constrain": true,
+          "can_apply_task_force": true,
+          "reason": "Dexterous hand can wrap around shoulder and neck, providing stable grip and leverage for lifting. These regions allow fingers to interlock and apply force without sliding. Body surface is too large and smooth for stable multi-finger manipulation."
+        },
+        "feasible": true,
+        "confidence": 0.8,
+        "notes": "Target shoulder and neck for stable wrap and lift; reject main body to avoid generic contact.",
+        "_raw_text": "{\n  \"view\": \"yaw180_elev20\",\n  \"visible_object_parts\": [\"bottle body\", \"bottle neck\", \"bottle shoulder\"],\n  \"target_positive_parts\": [\"bottle shoulder\", \"bottle neck\"],\n  \"target_grounding_queries\": [\"shoulder region\", \"neck region\"],\n  \"reject_negative_parts\": [\"bottle body main surface\"],\n  \"reject_grounding_queries\": [\"main cylindrical body\", \"body surface\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"Dexterous hand can wrap around shoulder and neck, providing stable grip and leverage for lifting. These regions allow fingers to interlock and apply force without sliding. Body surface is too large and smooth for stable multi-finger manipulation.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.8,\n  \"notes\": \"Target shoulder and neck for stable wrap and lift; reject main body to avoid generic contact.\"\n}"
+      }
+    },
+    {
+      "view": "yaw225_elev20",
+      "visible_object_parts": [
+        "bottle body",
+        "bottle neck",
+        "bottle shoulder"
+      ],
+      "target_positive_parts": [
+        "bottle shoulder",
+        "bottle neck"
+      ],
+      "target_grounding_queries": [
+        "shoulder region",
+        "neck region"
+      ],
+      "reject_negative_parts": [
+        "bottle body main surface"
+      ],
+      "reject_grounding_queries": [
+        "main cylindrical body",
+        "body surface"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": true,
+        "can_hold_or_constrain": true,
+        "can_apply_task_force": true,
+        "reason": "Dexterous hand can wrap around shoulder and neck, providing stable grip and leverage for lifting. These regions allow fingers to interlock and apply force without sliding. Body surface is too large and smooth for stable multi-finger manipulation."
+      },
+      "feasible": true,
+      "confidence": 0.8,
+      "notes": "Lift_carry task requires stable load-bearing contact; shoulder and neck are optimal for dexterous hand wrapping and force application. Body surface is rejected to avoid overgeneralization.",
+      "raw_qwen3vl_response": {
+        "view": "yaw225_elev20",
+        "visible_object_parts": [
+          "bottle body",
+          "bottle neck",
+          "bottle shoulder"
+        ],
+        "target_positive_parts": [
+          "bottle shoulder",
+          "bottle neck"
+        ],
+        "target_grounding_queries": [
+          "shoulder region",
+          "neck region"
+        ],
+        "reject_negative_parts": [
+          "bottle body main surface"
+        ],
+        "reject_grounding_queries": [
+          "main cylindrical body",
+          "body surface"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": true,
+          "can_hold_or_constrain": true,
+          "can_apply_task_force": true,
+          "reason": "Dexterous hand can wrap around shoulder and neck, providing stable grip and leverage for lifting. These regions allow fingers to interlock and apply force without sliding. Body surface is too large and smooth for stable multi-finger manipulation."
+        },
+        "feasible": true,
+        "confidence": 0.8,
+        "notes": "Lift_carry task requires stable load-bearing contact; shoulder and neck are optimal for dexterous hand wrapping and force application. Body surface is rejected to avoid overgeneralization.",
+        "_raw_text": "{\n  \"view\": \"yaw225_elev20\",\n  \"visible_object_parts\": [\"bottle body\", \"bottle neck\", \"bottle shoulder\"],\n  \"target_positive_parts\": [\"bottle shoulder\", \"bottle neck\"],\n  \"target_grounding_queries\": [\"shoulder region\", \"neck region\"],\n  \"reject_negative_parts\": [\"bottle body main surface\"],\n  \"reject_grounding_queries\": [\"main cylindrical body\", \"body surface\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"Dexterous hand can wrap around shoulder and neck, providing stable grip and leverage for lifting. These regions allow fingers to interlock and apply force without sliding. Body surface is too large and smooth for stable multi-finger manipulation.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.8,\n  \"notes\": \"Lift_carry task requires stable load-bearing contact; shoulder and neck are optimal for dexterous hand wrapping and force application. Body surface is rejected to avoid overgeneralization.\"\n}"
+      }
+    },
+    {
+      "view": "yaw270_elev20",
+      "visible_object_parts": [
+        "bottle body",
+        "bottle neck",
+        "bottle shoulder"
+      ],
+      "target_positive_parts": [
+        "bottle shoulder",
+        "bottle neck"
+      ],
+      "target_grounding_queries": [
+        "shoulder region",
+        "neck region"
+      ],
+      "reject_negative_parts": [
+        "bottle body main surface"
+      ],
+      "reject_grounding_queries": [
+        "main cylindrical body surface"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": true,
+        "can_hold_or_constrain": true,
+        "can_apply_task_force": true,
+        "reason": "Dexterous hand can wrap around shoulder and neck, providing stable grip and leverage for lifting. These regions allow fingers to interlock and apply force without sliding. Main body surface is too large and smooth for stable multi-finger manipulation."
+      },
+      "feasible": true,
+      "confidence": 0.8,
+      "notes": "Target shoulder and neck for stable wrap and lift; reject main body to avoid generic contact.",
+      "raw_qwen3vl_response": {
+        "view": "yaw270_elev20",
+        "visible_object_parts": [
+          "bottle body",
+          "bottle neck",
+          "bottle shoulder"
+        ],
+        "target_positive_parts": [
+          "bottle shoulder",
+          "bottle neck"
+        ],
+        "target_grounding_queries": [
+          "shoulder region",
+          "neck region"
+        ],
+        "reject_negative_parts": [
+          "bottle body main surface"
+        ],
+        "reject_grounding_queries": [
+          "main cylindrical body surface"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": true,
+          "can_hold_or_constrain": true,
+          "can_apply_task_force": true,
+          "reason": "Dexterous hand can wrap around shoulder and neck, providing stable grip and leverage for lifting. These regions allow fingers to interlock and apply force without sliding. Main body surface is too large and smooth for stable multi-finger manipulation."
+        },
+        "feasible": true,
+        "confidence": 0.8,
+        "notes": "Target shoulder and neck for stable wrap and lift; reject main body to avoid generic contact.",
+        "_raw_text": "{\n  \"view\": \"yaw270_elev20\",\n  \"visible_object_parts\": [\"bottle body\", \"bottle neck\", \"bottle shoulder\"],\n  \"target_positive_parts\": [\"bottle shoulder\", \"bottle neck\"],\n  \"target_grounding_queries\": [\"shoulder region\", \"neck region\"],\n  \"reject_negative_parts\": [\"bottle body main surface\"],\n  \"reject_grounding_queries\": [\"main cylindrical body surface\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"Dexterous hand can wrap around shoulder and neck, providing stable grip and leverage for lifting. These regions allow fingers to interlock and apply force without sliding. Main body surface is too large and smooth for stable multi-finger manipulation.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.8,\n  \"notes\": \"Target shoulder and neck for stable wrap and lift; reject main body to avoid generic contact.\"\n}"
+      }
+    },
+    {
+      "view": "yaw315_elev20",
+      "visible_object_parts": [
+        "bottle body",
+        "bottle neck",
+        "bottle shoulder"
+      ],
+      "target_positive_parts": [
+        "bottle shoulder",
+        "bottle neck"
+      ],
+      "target_grounding_queries": [
+        "shoulder region",
+        "neck region"
+      ],
+      "reject_negative_parts": [
+        "bottle body main surface"
+      ],
+      "reject_grounding_queries": [
+        "main cylindrical body",
+        "body surface"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": true,
+        "can_hold_or_constrain": true,
+        "can_apply_task_force": true,
+        "reason": "Dexterous hand can wrap around shoulder and neck, providing stable grip and leverage for lifting. These regions allow fingers to interlock and apply force without sliding. Body surface is too large and smooth for stable multi-finger manipulation."
+      },
+      "feasible": true,
+      "confidence": 0.8,
+      "notes": "Target shoulder and neck for stable wrap and lift; reject main body to avoid generic contact.",
+      "raw_qwen3vl_response": {
+        "view": "yaw315_elev20",
+        "visible_object_parts": [
+          "bottle body",
+          "bottle neck",
+          "bottle shoulder"
+        ],
+        "target_positive_parts": [
+          "bottle shoulder",
+          "bottle neck"
+        ],
+        "target_grounding_queries": [
+          "shoulder region",
+          "neck region"
+        ],
+        "reject_negative_parts": [
+          "bottle body main surface"
+        ],
+        "reject_grounding_queries": [
+          "main cylindrical body",
+          "body surface"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": true,
+          "can_hold_or_constrain": true,
+          "can_apply_task_force": true,
+          "reason": "Dexterous hand can wrap around shoulder and neck, providing stable grip and leverage for lifting. These regions allow fingers to interlock and apply force without sliding. Body surface is too large and smooth for stable multi-finger manipulation."
+        },
+        "feasible": true,
+        "confidence": 0.8,
+        "notes": "Target shoulder and neck for stable wrap and lift; reject main body to avoid generic contact.",
+        "_raw_text": "{\n  \"view\": \"yaw315_elev20\",\n  \"visible_object_parts\": [\"bottle body\", \"bottle neck\", \"bottle shoulder\"],\n  \"target_positive_parts\": [\"bottle shoulder\", \"bottle neck\"],\n  \"target_grounding_queries\": [\"shoulder region\", \"neck region\"],\n  \"reject_negative_parts\": [\"bottle body main surface\"],\n  \"reject_grounding_queries\": [\"main cylindrical body\", \"body surface\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"Dexterous hand can wrap around shoulder and neck, providing stable grip and leverage for lifting. These regions allow fingers to interlock and apply force without sliding. Body surface is too large and smooth for stable multi-finger manipulation.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.8,\n  \"notes\": \"Target shoulder and neck for stable wrap and lift; reject main body to avoid generic contact.\"\n}"
+      }
+    }
+  ],
+  "render_manifest": "processed/vlm_semantic_part/renders/3danet_full_542223f09a872e973858be97087c26ec_lift_carry/view_manifest.json",
+  "notes": "v3 semantic plan only. It defines target and reject semantics; later stages ground, project, grow candidates, and require human review."
+}

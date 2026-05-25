@@ -1,0 +1,81 @@
+{
+  "view": "yaw225_elev20",
+  "visible_object_parts": [
+    "bag body",
+    "bag handle",
+    "handle loop",
+    "handle inner rim"
+  ],
+  "target_positive_parts": [
+    "handle loop",
+    "handle inner rim",
+    "bag handle"
+  ],
+  "target_grounding_queries": [
+    "the inner rim of the handle loop",
+    "the circular inner edge of the handle",
+    "handle loop",
+    "bag handle",
+    "handle inner rim"
+  ],
+  "reject_negative_parts": [
+    "bag body panel",
+    "flat fabric surface",
+    "outer handle lip"
+  ],
+  "reject_grounding_queries": [
+    "the main body fabric surface",
+    "the outer edge of the handle",
+    "smooth flat panel",
+    "bag body panel",
+    "flat fabric surface"
+  ],
+  "uncertain_parts": [],
+  "mechanism_check": {
+    "can_enter_or_contact": true,
+    "can_hold_or_constrain": true,
+    "can_apply_task_force": true,
+    "reason": "The handle loop and inner rim provide clear structural boundaries for hook insertion and mechanical interlocking. The hook can enter behind the loop, catch the inner rim, and apply upward force to lift the bag."
+  },
+  "feasible": true,
+  "confidence": 0.7,
+  "notes": "Target parts are clearly identifiable in the sparse point cloud. Reject parts are explicitly vetoed to avoid false positives. Mechanism check confirms functional hook compatibility.",
+  "raw_qwen3vl_response": {
+    "view": "yaw225_elev20",
+    "visible_object_parts": [
+      "bag body",
+      "bag handle",
+      "handle loop",
+      "handle inner rim"
+    ],
+    "target_positive_parts": [
+      "handle loop",
+      "handle inner rim"
+    ],
+    "target_grounding_queries": [
+      "the inner rim of the handle loop",
+      "the circular inner edge of the handle"
+    ],
+    "reject_negative_parts": [
+      "bag body panel",
+      "flat fabric surface",
+      "outer handle lip"
+    ],
+    "reject_grounding_queries": [
+      "the main body fabric surface",
+      "the outer edge of the handle",
+      "smooth flat panel"
+    ],
+    "uncertain_parts": [],
+    "mechanism_check": {
+      "can_enter_or_contact": true,
+      "can_hold_or_constrain": true,
+      "can_apply_task_force": true,
+      "reason": "The handle loop and inner rim provide clear structural boundaries for hook insertion and mechanical interlocking. The hook can enter behind the loop, catch the inner rim, and apply upward force to lift the bag."
+    },
+    "feasible": true,
+    "confidence": 0.7,
+    "notes": "Target parts are clearly identifiable in the sparse point cloud. Reject parts are explicitly vetoed to avoid false positives. Mechanism check confirms functional hook compatibility.",
+    "_raw_text": "{\n  \"view\": \"yaw225_elev20\",\n  \"visible_object_parts\": [\"bag body\", \"bag handle\", \"handle loop\", \"handle inner rim\"],\n  \"target_positive_parts\": [\"handle loop\", \"handle inner rim\"],\n  \"target_grounding_queries\": [\"the inner rim of the handle loop\", \"the circular inner edge of the handle\"],\n  \"reject_negative_parts\": [\"bag body panel\", \"flat fabric surface\", \"outer handle lip\"],\n  \"reject_grounding_queries\": [\"the main body fabric surface\", \"the outer edge of the handle\", \"smooth flat panel\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"The handle loop and inner rim provide clear structural boundaries for hook insertion and mechanical interlocking. The hook can enter behind the loop, catch the inner rim, and apply upward force to lift the bag.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.7,\n  \"notes\": \"Target parts are clearly identifiable in the sparse point cloud. Reject parts are explicitly vetoed to avoid false positives. Mechanism check confirms functional hook compatibility.\"\n}"
+  }
+}

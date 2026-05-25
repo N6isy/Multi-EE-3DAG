@@ -1,0 +1,79 @@
+{
+  "view": "yaw000_elev20",
+  "visible_object_parts": [
+    "headband",
+    "left earcup",
+    "right earcup",
+    "earcup outer shell",
+    "earcup inner structure",
+    "earcup stem"
+  ],
+  "target_positive_parts": [
+    "earcup outer shell",
+    "earcup stem"
+  ],
+  "target_grounding_queries": [
+    "outer shell of earcup",
+    "stem connecting earcup to headband"
+  ],
+  "reject_negative_parts": [
+    "headband",
+    "earcup inner structure",
+    "earcup center flat surface"
+  ],
+  "reject_grounding_queries": [
+    "headband arch",
+    "inner cavity of earcup",
+    "central flat area of earcup"
+  ],
+  "uncertain_parts": [],
+  "mechanism_check": {
+    "can_enter_or_contact": true,
+    "can_hold_or_constrain": true,
+    "can_apply_task_force": true,
+    "reason": "The outer shell of the earcup and the stem provide stable, opposing surfaces for a two-finger gripper to clamp. The gripper can enter from the sides, hold the structure firmly, and apply upward force to lift the object without sliding or disengaging."
+  },
+  "feasible": true,
+  "confidence": 0.8,
+  "notes": "Gripper can stably grasp the earcup outer shell and stem. Headband and inner structure are rejected as they are either too large, unstable, or not suitable for pinching.",
+  "raw_qwen3vl_response": {
+    "view": "yaw000_elev20",
+    "visible_object_parts": [
+      "headband",
+      "left earcup",
+      "right earcup",
+      "earcup outer shell",
+      "earcup inner structure",
+      "earcup stem"
+    ],
+    "target_positive_parts": [
+      "earcup outer shell",
+      "earcup stem"
+    ],
+    "target_grounding_queries": [
+      "outer shell of earcup",
+      "stem connecting earcup to headband"
+    ],
+    "reject_negative_parts": [
+      "headband",
+      "earcup inner structure",
+      "earcup center flat surface"
+    ],
+    "reject_grounding_queries": [
+      "headband arch",
+      "inner cavity of earcup",
+      "central flat area of earcup"
+    ],
+    "uncertain_parts": [],
+    "mechanism_check": {
+      "can_enter_or_contact": true,
+      "can_hold_or_constrain": true,
+      "can_apply_task_force": true,
+      "reason": "The outer shell of the earcup and the stem provide stable, opposing surfaces for a two-finger gripper to clamp. The gripper can enter from the sides, hold the structure firmly, and apply upward force to lift the object without sliding or disengaging."
+    },
+    "feasible": true,
+    "confidence": 0.8,
+    "notes": "Gripper can stably grasp the earcup outer shell and stem. Headband and inner structure are rejected as they are either too large, unstable, or not suitable for pinching.",
+    "_raw_text": "{\n  \"view\": \"yaw000_elev20\",\n  \"visible_object_parts\": [\"headband\", \"left earcup\", \"right earcup\", \"earcup outer shell\", \"earcup inner structure\", \"earcup stem\"],\n  \"target_positive_parts\": [\"earcup outer shell\", \"earcup stem\"],\n  \"target_grounding_queries\": [\"outer shell of earcup\", \"stem connecting earcup to headband\"],\n  \"reject_negative_parts\": [\"headband\", \"earcup inner structure\", \"earcup center flat surface\"],\n  \"reject_grounding_queries\": [\"headband arch\", \"inner cavity of earcup\", \"central flat area of earcup\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"The outer shell of the earcup and the stem provide stable, opposing surfaces for a two-finger gripper to clamp. The gripper can enter from the sides, hold the structure firmly, and apply upward force to lift the object without sliding or disengaging.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.8,\n  \"notes\": \"Gripper can stably grasp the earcup outer shell and stem. Headband and inner structure are rejected as they are either too large, unstable, or not suitable for pinching.\"\n}"
+  }
+}

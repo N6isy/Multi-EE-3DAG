@@ -1,0 +1,75 @@
+{
+  "view": "yaw225_elev20",
+  "visible_object_parts": [
+    "keyboard keys",
+    "keyboard surface",
+    "keyboard edge"
+  ],
+  "target_positive_parts": [
+    "key tops",
+    "keys",
+    "button tops"
+  ],
+  "target_grounding_queries": [
+    "top surfaces of individual keys",
+    "keys",
+    "button tops"
+  ],
+  "reject_negative_parts": [
+    "keyboard side wall",
+    "base underside",
+    "keyboard edge"
+  ],
+  "reject_grounding_queries": [
+    "side walls of keyboard",
+    "underside of keyboard",
+    "keyboard edge",
+    "keyboard side wall",
+    "base underside"
+  ],
+  "uncertain_parts": [],
+  "mechanism_check": {
+    "can_enter_or_contact": true,
+    "can_hold_or_constrain": true,
+    "can_apply_task_force": true,
+    "reason": "Dexterous hand can wrap around key tops, press down with fingers, and apply force perpendicular to the key surface to trigger the press action. The key tops are designed for direct contact and force application."
+  },
+  "feasible": true,
+  "confidence": 0.0,
+  "notes": "Under-label correction: ensure key tops are explicitly targeted for press_push task with dexterous hand.",
+  "raw_qwen3vl_response": {
+    "view": "yaw225_elev20",
+    "visible_object_parts": [
+      "keyboard keys",
+      "keyboard surface",
+      "keyboard edge"
+    ],
+    "target_positive_parts": [
+      "key tops"
+    ],
+    "target_grounding_queries": [
+      "top surfaces of individual keys"
+    ],
+    "reject_negative_parts": [
+      "keyboard side wall",
+      "base underside",
+      "keyboard edge"
+    ],
+    "reject_grounding_queries": [
+      "side walls of keyboard",
+      "underside of keyboard",
+      "keyboard edge"
+    ],
+    "uncertain_parts": [],
+    "mechanism_check": {
+      "can_enter_or_contact": true,
+      "can_hold_or_constrain": true,
+      "can_apply_task_force": true,
+      "reason": "Dexterous hand can wrap around key tops, press down with fingers, and apply force perpendicular to the key surface to trigger the press action. The key tops are designed for direct contact and force application."
+    },
+    "feasible": true,
+    "confidence": 0.0,
+    "notes": "Under-label correction: ensure key tops are explicitly targeted for press_push task with dexterous hand.",
+    "_raw_text": "{\n  \"view\": \"yaw225_elev20\",\n  \"visible_object_parts\": [\"keyboard keys\", \"keyboard surface\", \"keyboard edge\"],\n  \"target_positive_parts\": [\"key tops\"],\n  \"target_grounding_queries\": [\"top surfaces of individual keys\"],\n  \"reject_negative_parts\": [\"keyboard side wall\", \"base underside\", \"keyboard edge\"],\n  \"reject_grounding_queries\": [\"side walls of keyboard\", \"underside of keyboard\", \"keyboard edge\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"Dexterous hand can wrap around key tops, press down with fingers, and apply force perpendicular to the key surface to trigger the press action. The key tops are designed for direct contact and force application.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.0,\n  \"notes\": \"Under-label correction: ensure key tops are explicitly targeted for press_push task with dexterous hand.\"\n}"
+  }
+}

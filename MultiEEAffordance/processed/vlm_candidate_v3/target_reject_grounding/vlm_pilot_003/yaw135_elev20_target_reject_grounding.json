@@ -1,0 +1,15 @@
+{
+  "view": "yaw135_elev20",
+  "target_regions": [],
+  "reject_regions": [],
+  "coverage_warning": "The object is not visible in the provided image. The image appears to be a sparse point cloud render with no clear visual representation of the earphone's physical structure or graspable parts.",
+  "confidence": 0.0,
+  "raw_qwen3vl_response": {
+    "view": "yaw135_elev20",
+    "target_regions": [],
+    "reject_regions": [],
+    "coverage_warning": "The object is not visible in the provided image. The image appears to be a sparse point cloud render with no clear visual representation of the earphone's physical structure or graspable parts.",
+    "confidence": 0.0,
+    "_raw_text": "{\n  \"view\": \"yaw135_elev20\",\n  \"target_regions\": [],\n  \"reject_regions\": [],\n  \"coverage_warning\": \"The object is not visible in the provided image. The image appears to be a sparse point cloud render with no clear visual representation of the earphone's physical structure or graspable parts.\",\n  \"confidence\": 0.0\n}"
+  }
+}

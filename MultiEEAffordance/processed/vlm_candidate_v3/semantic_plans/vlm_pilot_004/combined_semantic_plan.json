@@ -1,0 +1,568 @@
+{
+  "version": "v3",
+  "pipeline": "semantic_target_reject_part_plan",
+  "pilot_id": "vlm_pilot_004",
+  "sample_id": "3danet_full_5d089ccd-98db-4fb0-9e1a-9a5650390e54_pick_up",
+  "object_category": "Earphone",
+  "task": "pick_up",
+  "executor": "hook",
+  "target_positive_parts": [
+    "earcup inner rim",
+    "headband connector",
+    "headband inner rim",
+    "connecting arm inner loop",
+    "earcup hinge"
+  ],
+  "target_grounding_queries": [
+    "inner rim of earcup",
+    "headband connector",
+    "inner rim of headband",
+    "inner loop of connecting arm",
+    "hinge structure of earcup"
+  ],
+  "ranked_target_queries": [
+    {
+      "query": "inner rim of earcup",
+      "votes": 2,
+      "mean_confidence": 0.7
+    },
+    {
+      "query": "headband connector",
+      "votes": 1,
+      "mean_confidence": 0.7
+    },
+    {
+      "query": "inner rim of headband",
+      "votes": 1,
+      "mean_confidence": 0.7
+    },
+    {
+      "query": "inner loop of connecting arm",
+      "votes": 1,
+      "mean_confidence": 0.7
+    },
+    {
+      "query": "hinge structure of earcup",
+      "votes": 1,
+      "mean_confidence": 0.7
+    }
+  ],
+  "reject_negative_parts": [
+    "headband",
+    "earcup padding",
+    "earcup outer shell",
+    "mic boom",
+    "earcup frame",
+    "earcup outer surfaces",
+    "outer surface of earcups",
+    "outer surface of headband",
+    "connecting arm outer surface",
+    "earcup outer rims"
+  ],
+  "reject_grounding_queries": [
+    "headband structure",
+    "headband",
+    "mic boom",
+    "earcup outer shell",
+    "earcup padding surface",
+    "earcup outer surfaces",
+    "outer earcup surface",
+    "outer headband surface",
+    "outer connecting arm surface",
+    "outer shell of earcup",
+    "padding of earcup",
+    "earcup outer rims"
+  ],
+  "view_plans": [
+    {
+      "view": "yaw000_elev20",
+      "visible_object_parts": [
+        "headband",
+        "left earcup",
+        "right earcup",
+        "earcup frame",
+        "earcup padding",
+        "earcup outer shell",
+        "earcup inner rim",
+        "headband connector"
+      ],
+      "target_positive_parts": [
+        "headband connector",
+        "earcup inner rim"
+      ],
+      "target_grounding_queries": [
+        "headband connector",
+        "inner rim of earcup"
+      ],
+      "reject_negative_parts": [
+        "headband",
+        "earcup frame",
+        "earcup padding",
+        "earcup outer shell"
+      ],
+      "reject_grounding_queries": [
+        "headband structure",
+        "earcup outer shell",
+        "earcup padding surface"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": true,
+        "can_hold_or_constrain": true,
+        "can_apply_task_force": true,
+        "reason": "The headband connector and earcup inner rim are structural loops or rims that a hook can enter, catch, and pull. The connector is a distinct loop, and the inner rim is a defined edge that can constrain a hook. Both allow mechanical interlocking and lifting force application for the pick_up task."
+      },
+      "feasible": true,
+      "confidence": 0.7,
+      "notes": "Hook targets are the headband connector and earcup inner rim. These are the only parts that meet the hook mechanism criteria. Other parts are flat or smooth and cannot catch a hook.",
+      "raw_qwen3vl_response": {
+        "view": "yaw000_elev20",
+        "visible_object_parts": [
+          "headband",
+          "left earcup",
+          "right earcup",
+          "earcup frame",
+          "earcup padding",
+          "earcup outer shell",
+          "earcup inner rim",
+          "headband connector"
+        ],
+        "target_positive_parts": [
+          "headband connector",
+          "earcup inner rim"
+        ],
+        "target_grounding_queries": [
+          "headband connector",
+          "inner rim of earcup"
+        ],
+        "reject_negative_parts": [
+          "headband",
+          "earcup frame",
+          "earcup padding",
+          "earcup outer shell"
+        ],
+        "reject_grounding_queries": [
+          "headband structure",
+          "earcup outer shell",
+          "earcup padding surface"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": true,
+          "can_hold_or_constrain": true,
+          "can_apply_task_force": true,
+          "reason": "The headband connector and earcup inner rim are structural loops or rims that a hook can enter, catch, and pull. The connector is a distinct loop, and the inner rim is a defined edge that can constrain a hook. Both allow mechanical interlocking and lifting force application for the pick_up task."
+        },
+        "feasible": true,
+        "confidence": 0.7,
+        "notes": "Hook targets are the headband connector and earcup inner rim. These are the only parts that meet the hook mechanism criteria. Other parts are flat or smooth and cannot catch a hook.",
+        "_raw_text": "{\n  \"view\": \"yaw000_elev20\",\n  \"visible_object_parts\": [\"headband\", \"left earcup\", \"right earcup\", \"earcup frame\", \"earcup padding\", \"earcup outer shell\", \"earcup inner rim\", \"headband connector\"],\n  \"target_positive_parts\": [\"headband connector\", \"earcup inner rim\"],\n  \"target_grounding_queries\": [\"headband connector\", \"inner rim of earcup\"],\n  \"reject_negative_parts\": [\"headband\", \"earcup frame\", \"earcup padding\", \"earcup outer shell\"],\n  \"reject_grounding_queries\": [\"headband structure\", \"earcup outer shell\", \"earcup padding surface\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"The headband connector and earcup inner rim are structural loops or rims that a hook can enter, catch, and pull. The connector is a distinct loop, and the inner rim is a defined edge that can constrain a hook. Both allow mechanical interlocking and lifting force application for the pick_up task.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.7,\n  \"notes\": \"Hook targets are the headband connector and earcup inner rim. These are the only parts that meet the hook mechanism criteria. Other parts are flat or smooth and cannot catch a hook.\"\n}"
+      }
+    },
+    {
+      "view": "yaw045_elev20",
+      "visible_object_parts": [
+        "headband",
+        "left earcup",
+        "right earcup",
+        "mic boom"
+      ],
+      "target_positive_parts": [],
+      "target_grounding_queries": [],
+      "reject_negative_parts": [
+        "headband",
+        "earcup outer surfaces",
+        "mic boom"
+      ],
+      "reject_grounding_queries": [
+        "headband",
+        "earcup outer surfaces",
+        "mic boom"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": false,
+        "can_hold_or_constrain": false,
+        "can_apply_task_force": false,
+        "reason": "The headphone's headband and earcups lack any hook-compatible structures (holes, rings, lips, flanges) for mechanical interlocking. The mic boom is too short and lacks a hookable feature. All visible parts are smooth, solid surfaces that cannot catch or constrain a hook."
+      },
+      "feasible": false,
+      "confidence": 0.0,
+      "notes": "No hook-compatible structures exist on the headphone for the 'pick_up' task with a hook end-effector.",
+      "raw_qwen3vl_response": {
+        "view": "yaw045_elev20",
+        "visible_object_parts": [
+          "headband",
+          "left earcup",
+          "right earcup",
+          "mic boom"
+        ],
+        "target_positive_parts": [],
+        "target_grounding_queries": [],
+        "reject_negative_parts": [
+          "headband",
+          "earcup outer surfaces",
+          "mic boom"
+        ],
+        "reject_grounding_queries": [
+          "headband",
+          "earcup outer surfaces",
+          "mic boom"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": false,
+          "can_hold_or_constrain": false,
+          "can_apply_task_force": false,
+          "reason": "The headphone's headband and earcups lack any hook-compatible structures (holes, rings, lips, flanges) for mechanical interlocking. The mic boom is too short and lacks a hookable feature. All visible parts are smooth, solid surfaces that cannot catch or constrain a hook."
+        },
+        "feasible": false,
+        "confidence": 0.0,
+        "notes": "No hook-compatible structures exist on the headphone for the 'pick_up' task with a hook end-effector.",
+        "_raw_text": "{\n  \"view\": \"yaw045_elev20\",\n  \"visible_object_parts\": [\"headband\", \"left earcup\", \"right earcup\", \"mic boom\"],\n  \"target_positive_parts\": [],\n  \"target_grounding_queries\": [],\n  \"reject_negative_parts\": [\"headband\", \"earcup outer surfaces\", \"mic boom\"],\n  \"reject_grounding_queries\": [\"headband\", \"earcup outer surfaces\", \"mic boom\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": false,\n    \"can_hold_or_constrain\": false,\n    \"can_apply_task_force\": false,\n    \"reason\": \"The headphone's headband and earcups lack any hook-compatible structures (holes, rings, lips, flanges) for mechanical interlocking. The mic boom is too short and lacks a hookable feature. All visible parts are smooth, solid surfaces that cannot catch or constrain a hook.\"\n  },\n  \"feasible\": false,\n  \"confidence\": 0.0,\n  \"notes\": \"No hook-compatible structures exist on the headphone for the 'pick_up' task with a hook end-effector.\"\n}"
+      }
+    },
+    {
+      "view": "yaw090_elev20",
+      "visible_object_parts": [],
+      "target_positive_parts": [],
+      "target_grounding_queries": [],
+      "reject_negative_parts": [],
+      "reject_grounding_queries": [],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": false,
+        "can_hold_or_constrain": false,
+        "can_apply_task_force": false,
+        "reason": "Object category is 'Earphone', but no visible parts are present in the sparse point cloud render. No hookable structures can be identified or inferred. The render is too sparse and incomplete to define any functional contact points for a hook end-effector."
+      },
+      "feasible": false,
+      "confidence": 0.0,
+      "notes": "No visible earphone structure detected in sparse point cloud. Cannot annotate target parts for hook task.",
+      "raw_qwen3vl_response": {
+        "view": "yaw090_elev20",
+        "visible_object_parts": [],
+        "target_positive_parts": [],
+        "target_grounding_queries": [],
+        "reject_negative_parts": [],
+        "reject_grounding_queries": [],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": false,
+          "can_hold_or_constrain": false,
+          "can_apply_task_force": false,
+          "reason": "Object category is 'Earphone', but no visible parts are present in the sparse point cloud render. No hookable structures can be identified or inferred. The render is too sparse and incomplete to define any functional contact points for a hook end-effector."
+        },
+        "feasible": false,
+        "confidence": 0.0,
+        "notes": "No visible earphone structure detected in sparse point cloud. Cannot annotate target parts for hook task.",
+        "_raw_text": "{\n  \"view\": \"yaw090_elev20\",\n  \"visible_object_parts\": [],\n  \"target_positive_parts\": [],\n  \"target_grounding_queries\": [],\n  \"reject_negative_parts\": [],\n  \"reject_grounding_queries\": [],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": false,\n    \"can_hold_or_constrain\": false,\n    \"can_apply_task_force\": false,\n    \"reason\": \"Object category is 'Earphone', but no visible parts are present in the sparse point cloud render. No hookable structures can be identified or inferred. The render is too sparse and incomplete to define any functional contact points for a hook end-effector.\"\n  },\n  \"feasible\": false,\n  \"confidence\": 0.0,\n  \"notes\": \"No visible earphone structure detected in sparse point cloud. Cannot annotate target parts for hook task.\"\n}"
+      }
+    },
+    {
+      "view": "yaw135_elev20",
+      "visible_object_parts": [
+        "headband",
+        "left earcup",
+        "right earcup",
+        "connecting arm"
+      ],
+      "target_positive_parts": [
+        "headband inner rim",
+        "connecting arm inner loop"
+      ],
+      "target_grounding_queries": [
+        "inner rim of headband",
+        "inner loop of connecting arm"
+      ],
+      "reject_negative_parts": [
+        "outer surface of earcups",
+        "outer surface of headband",
+        "connecting arm outer surface"
+      ],
+      "reject_grounding_queries": [
+        "outer earcup surface",
+        "outer headband surface",
+        "outer connecting arm surface"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": true,
+        "can_hold_or_constrain": true,
+        "can_apply_task_force": true,
+        "reason": "Hook can enter the inner rim of headband and inner loop of connecting arm, catch and interlock mechanically, and apply upward lifting force to pick up the earphone."
+      },
+      "feasible": true,
+      "confidence": 0.7,
+      "notes": "Headband inner rim and connecting arm inner loop are the only plausible hook attachment points. Outer surfaces are rejected as they cannot catch a hook.",
+      "raw_qwen3vl_response": {
+        "view": "yaw135_elev20",
+        "visible_object_parts": [
+          "headband",
+          "left earcup",
+          "right earcup",
+          "connecting arm"
+        ],
+        "target_positive_parts": [
+          "headband inner rim",
+          "connecting arm inner loop"
+        ],
+        "target_grounding_queries": [
+          "inner rim of headband",
+          "inner loop of connecting arm"
+        ],
+        "reject_negative_parts": [
+          "outer surface of earcups",
+          "outer surface of headband",
+          "connecting arm outer surface"
+        ],
+        "reject_grounding_queries": [
+          "outer earcup surface",
+          "outer headband surface",
+          "outer connecting arm surface"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": true,
+          "can_hold_or_constrain": true,
+          "can_apply_task_force": true,
+          "reason": "Hook can enter the inner rim of headband and inner loop of connecting arm, catch and interlock mechanically, and apply upward lifting force to pick up the earphone."
+        },
+        "feasible": true,
+        "confidence": 0.7,
+        "notes": "Headband inner rim and connecting arm inner loop are the only plausible hook attachment points. Outer surfaces are rejected as they cannot catch a hook.",
+        "_raw_text": "{\n  \"view\": \"yaw135_elev20\",\n  \"visible_object_parts\": [\"headband\", \"left earcup\", \"right earcup\", \"connecting arm\"],\n  \"target_positive_parts\": [\"headband inner rim\", \"connecting arm inner loop\"],\n  \"target_grounding_queries\": [\"inner rim of headband\", \"inner loop of connecting arm\"],\n  \"reject_negative_parts\": [\"outer surface of earcups\", \"outer surface of headband\", \"connecting arm outer surface\"],\n  \"reject_grounding_queries\": [\"outer earcup surface\", \"outer headband surface\", \"outer connecting arm surface\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"Hook can enter the inner rim of headband and inner loop of connecting arm, catch and interlock mechanically, and apply upward lifting force to pick up the earphone.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.7,\n  \"notes\": \"Headband inner rim and connecting arm inner loop are the only plausible hook attachment points. Outer surfaces are rejected as they cannot catch a hook.\"\n}"
+      }
+    },
+    {
+      "view": "yaw180_elev20",
+      "visible_object_parts": [
+        "headband",
+        "left earcup",
+        "right earcup",
+        "earcup inner rim",
+        "earcup outer shell",
+        "earcup hinge",
+        "earcup padding"
+      ],
+      "target_positive_parts": [
+        "earcup inner rim",
+        "earcup hinge"
+      ],
+      "target_grounding_queries": [
+        "inner rim of earcup",
+        "hinge structure of earcup"
+      ],
+      "reject_negative_parts": [
+        "headband",
+        "earcup outer shell",
+        "earcup padding"
+      ],
+      "reject_grounding_queries": [
+        "outer shell of earcup",
+        "padding of earcup",
+        "headband structure"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": true,
+        "can_hold_or_constrain": true,
+        "can_apply_task_force": true,
+        "reason": "The inner rim of the earcup and the hinge structure can be hooked. The hook can enter behind the rim or around the hinge, catch and interlock with the structure, and apply upward force to lift the earphone. The headband and outer shell are flat surfaces that cannot catch a hook."
+      },
+      "feasible": true,
+      "confidence": 0.7,
+      "notes": "Hook can engage with inner rim and hinge for stable lifting. Outer shell and padding are rejected as they cannot mechanically catch a hook.",
+      "raw_qwen3vl_response": {
+        "view": "yaw180_elev20",
+        "visible_object_parts": [
+          "headband",
+          "left earcup",
+          "right earcup",
+          "earcup inner rim",
+          "earcup outer shell",
+          "earcup hinge",
+          "earcup padding"
+        ],
+        "target_positive_parts": [
+          "earcup inner rim",
+          "earcup hinge"
+        ],
+        "target_grounding_queries": [
+          "inner rim of earcup",
+          "hinge structure of earcup"
+        ],
+        "reject_negative_parts": [
+          "headband",
+          "earcup outer shell",
+          "earcup padding"
+        ],
+        "reject_grounding_queries": [
+          "outer shell of earcup",
+          "padding of earcup",
+          "headband structure"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": true,
+          "can_hold_or_constrain": true,
+          "can_apply_task_force": true,
+          "reason": "The inner rim of the earcup and the hinge structure can be hooked. The hook can enter behind the rim or around the hinge, catch and interlock with the structure, and apply upward force to lift the earphone. The headband and outer shell are flat surfaces that cannot catch a hook."
+        },
+        "feasible": true,
+        "confidence": 0.7,
+        "notes": "Hook can engage with inner rim and hinge for stable lifting. Outer shell and padding are rejected as they cannot mechanically catch a hook.",
+        "_raw_text": "{\n  \"view\": \"yaw180_elev20\",\n  \"visible_object_parts\": [\"headband\", \"left earcup\", \"right earcup\", \"earcup inner rim\", \"earcup outer shell\", \"earcup hinge\", \"earcup padding\"],\n  \"target_positive_parts\": [\"earcup inner rim\", \"earcup hinge\"],\n  \"target_grounding_queries\": [\"inner rim of earcup\", \"hinge structure of earcup\"],\n  \"reject_negative_parts\": [\"headband\", \"earcup outer shell\", \"earcup padding\"],\n  \"reject_grounding_queries\": [\"outer shell of earcup\", \"padding of earcup\", \"headband structure\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"The inner rim of the earcup and the hinge structure can be hooked. The hook can enter behind the rim or around the hinge, catch and interlock with the structure, and apply upward force to lift the earphone. The headband and outer shell are flat surfaces that cannot catch a hook.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.7,\n  \"notes\": \"Hook can engage with inner rim and hinge for stable lifting. Outer shell and padding are rejected as they cannot mechanically catch a hook.\"\n}"
+      }
+    },
+    {
+      "view": "yaw225_elev20",
+      "visible_object_parts": [
+        "headband",
+        "left earcup",
+        "right earcup",
+        "mic boom"
+      ],
+      "target_positive_parts": [],
+      "target_grounding_queries": [],
+      "reject_negative_parts": [],
+      "reject_grounding_queries": [],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": false,
+        "can_hold_or_constrain": false,
+        "can_apply_task_force": false,
+        "reason": "The sparse point cloud lacks visible hookable structures such as inner handle holes, rings, or flanges. The object is a closed-shell headphone with no clear mechanical interlocking points for a hook. All visible parts are smooth surfaces or solid volumes that cannot catch or constrain a hook."
+      },
+      "feasible": false,
+      "confidence": 0.0,
+      "notes": "No hookable structures visible in sparse point cloud; pilot issue 'missing_positive' confirmed. No parts meet hook mechanism criteria.",
+      "raw_qwen3vl_response": {
+        "view": "yaw225_elev20",
+        "visible_object_parts": [
+          "headband",
+          "left earcup",
+          "right earcup",
+          "mic boom"
+        ],
+        "target_positive_parts": [],
+        "target_grounding_queries": [],
+        "reject_negative_parts": [],
+        "reject_grounding_queries": [],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": false,
+          "can_hold_or_constrain": false,
+          "can_apply_task_force": false,
+          "reason": "The sparse point cloud lacks visible hookable structures such as inner handle holes, rings, or flanges. The object is a closed-shell headphone with no clear mechanical interlocking points for a hook. All visible parts are smooth surfaces or solid volumes that cannot catch or constrain a hook."
+        },
+        "feasible": false,
+        "confidence": 0.0,
+        "notes": "No hookable structures visible in sparse point cloud; pilot issue 'missing_positive' confirmed. No parts meet hook mechanism criteria.",
+        "_raw_text": "{\n  \"view\": \"yaw225_elev20\",\n  \"visible_object_parts\": [\"headband\", \"left earcup\", \"right earcup\", \"mic boom\"],\n  \"target_positive_parts\": [],\n  \"target_grounding_queries\": [],\n  \"reject_negative_parts\": [],\n  \"reject_grounding_queries\": [],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": false,\n    \"can_hold_or_constrain\": false,\n    \"can_apply_task_force\": false,\n    \"reason\": \"The sparse point cloud lacks visible hookable structures such as inner handle holes, rings, or flanges. The object is a closed-shell headphone with no clear mechanical interlocking points for a hook. All visible parts are smooth surfaces or solid volumes that cannot catch or constrain a hook.\"\n  },\n  \"feasible\": false,\n  \"confidence\": 0.0,\n  \"notes\": \"No hookable structures visible in sparse point cloud; pilot issue 'missing_positive' confirmed. No parts meet hook mechanism criteria.\"\n}"
+      }
+    },
+    {
+      "view": "yaw270_elev20",
+      "visible_object_parts": [],
+      "target_positive_parts": [],
+      "target_grounding_queries": [],
+      "reject_negative_parts": [],
+      "reject_grounding_queries": [],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": false,
+        "can_hold_or_constrain": false,
+        "can_apply_task_force": false,
+        "reason": "The object is an earphone, which typically lacks any hookable structures such as holes, rings, or handle loops. The sparse point cloud does not reveal any such features. The task 'pick_up' with a hook end-effector is not mechanically feasible for an earphone without such functional parts."
+      },
+      "feasible": false,
+      "confidence": 0.0,
+      "notes": "No hookable structures exist on an earphone. The task is not feasible with the given end-effector.",
+      "raw_qwen3vl_response": {
+        "view": "yaw270_elev20",
+        "visible_object_parts": [],
+        "target_positive_parts": [],
+        "target_grounding_queries": [],
+        "reject_negative_parts": [],
+        "reject_grounding_queries": [],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": false,
+          "can_hold_or_constrain": false,
+          "can_apply_task_force": false,
+          "reason": "The object is an earphone, which typically lacks any hookable structures such as holes, rings, or handle loops. The sparse point cloud does not reveal any such features. The task 'pick_up' with a hook end-effector is not mechanically feasible for an earphone without such functional parts."
+        },
+        "feasible": false,
+        "confidence": 0.0,
+        "notes": "No hookable structures exist on an earphone. The task is not feasible with the given end-effector.",
+        "_raw_text": "{\n  \"view\": \"yaw270_elev20\",\n  \"visible_object_parts\": [],\n  \"target_positive_parts\": [],\n  \"target_grounding_queries\": [],\n  \"reject_negative_parts\": [],\n  \"reject_grounding_queries\": [],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": false,\n    \"can_hold_or_constrain\": false,\n    \"can_apply_task_force\": false,\n    \"reason\": \"The object is an earphone, which typically lacks any hookable structures such as holes, rings, or handle loops. The sparse point cloud does not reveal any such features. The task 'pick_up' with a hook end-effector is not mechanically feasible for an earphone without such functional parts.\"\n  },\n  \"feasible\": false,\n  \"confidence\": 0.0,\n  \"notes\": \"No hookable structures exist on an earphone. The task is not feasible with the given end-effector.\"\n}"
+      }
+    },
+    {
+      "view": "yaw315_elev20",
+      "visible_object_parts": [
+        "headband",
+        "left earcup",
+        "right earcup",
+        "mic boom"
+      ],
+      "target_positive_parts": [],
+      "target_grounding_queries": [],
+      "reject_negative_parts": [
+        "headband",
+        "earcup outer rims",
+        "mic boom"
+      ],
+      "reject_grounding_queries": [
+        "headband",
+        "earcup outer rims",
+        "mic boom"
+      ],
+      "uncertain_parts": [],
+      "mechanism_check": {
+        "can_enter_or_contact": false,
+        "can_hold_or_constrain": false,
+        "can_apply_task_force": false,
+        "reason": "No hookable structures (holes, rings, inner rims) are visible or implied in the sparse point cloud. The headband and earcups are solid surfaces without mechanical interlocking features for a hook. The mic boom is too thin and lacks a defined hooking point."
+      },
+      "feasible": false,
+      "confidence": 0.0,
+      "notes": "No plausible hookable structures exist in the sparse point cloud for the 'pick_up' task with a hook end-effector.",
+      "raw_qwen3vl_response": {
+        "view": "yaw315_elev20",
+        "visible_object_parts": [
+          "headband",
+          "left earcup",
+          "right earcup",
+          "mic boom"
+        ],
+        "target_positive_parts": [],
+        "target_grounding_queries": [],
+        "reject_negative_parts": [
+          "headband",
+          "earcup outer rims",
+          "mic boom"
+        ],
+        "reject_grounding_queries": [
+          "headband",
+          "earcup outer rims",
+          "mic boom"
+        ],
+        "uncertain_parts": [],
+        "mechanism_check": {
+          "can_enter_or_contact": false,
+          "can_hold_or_constrain": false,
+          "can_apply_task_force": false,
+          "reason": "No hookable structures (holes, rings, inner rims) are visible or implied in the sparse point cloud. The headband and earcups are solid surfaces without mechanical interlocking features for a hook. The mic boom is too thin and lacks a defined hooking point."
+        },
+        "feasible": false,
+        "confidence": 0.0,
+        "notes": "No plausible hookable structures exist in the sparse point cloud for the 'pick_up' task with a hook end-effector.",
+        "_raw_text": "{\n  \"view\": \"yaw315_elev20\",\n  \"visible_object_parts\": [\"headband\", \"left earcup\", \"right earcup\", \"mic boom\"],\n  \"target_positive_parts\": [],\n  \"target_grounding_queries\": [],\n  \"reject_negative_parts\": [\"headband\", \"earcup outer rims\", \"mic boom\"],\n  \"reject_grounding_queries\": [\"headband\", \"earcup outer rims\", \"mic boom\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": false,\n    \"can_hold_or_constrain\": false,\n    \"can_apply_task_force\": false,\n    \"reason\": \"No hookable structures (holes, rings, inner rims) are visible or implied in the sparse point cloud. The headband and earcups are solid surfaces without mechanical interlocking features for a hook. The mic boom is too thin and lacks a defined hooking point.\"\n  },\n  \"feasible\": false,\n  \"confidence\": 0.0,\n  \"notes\": \"No plausible hookable structures exist in the sparse point cloud for the 'pick_up' task with a hook end-effector.\"\n}"
+      }
+    }
+  ],
+  "render_manifest": "processed/vlm_semantic_part/renders/3danet_full_5d089ccd-98db-4fb0-9e1a-9a5650390e54_pick_up/view_manifest.json",
+  "notes": "v3 semantic plan only. It defines target and reject semantics; later stages ground, project, grow candidates, and require human review."
+}

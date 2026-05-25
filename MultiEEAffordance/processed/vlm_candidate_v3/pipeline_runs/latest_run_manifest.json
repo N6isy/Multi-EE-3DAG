@@ -1,0 +1,147 @@
+{
+  "version": "v3",
+  "created_at": "2026-05-24T11:32:45.168022+00:00",
+  "dataset_root": "/home/lzq/Multi-EE-3DAG/MultiEEAffordance",
+  "pilot_id": null,
+  "stages": [
+    "ground",
+    "project",
+    "grow",
+    "render",
+    "build"
+  ],
+  "selected_candidates": "",
+  "planner_dry_run": false,
+  "parameters": {
+    "box_shrink_ratio": 0.05,
+    "point_radius": 4,
+    "box_dilate_radius": 2,
+    "max_target_box_area_fraction": 0.3,
+    "target_score_threshold": 0.2,
+    "reject_score_threshold": 0.1,
+    "min_target_votes": 1.0,
+    "min_reject_votes": 1.0,
+    "expand_hops": 2,
+    "k_neighbors": 24,
+    "min_points": 4,
+    "max_candidates": 12
+  },
+  "status": "ok",
+  "runs": [
+    {
+      "stage": "views",
+      "command": [
+        "/home/lzq/conda_envs/multiee3dag_torch26/bin/python",
+        "MultiEEAffordance/tools/render_vlm_friendly_views.py",
+        "--dataset-root",
+        "MultiEEAffordance",
+        "--limit",
+        "10",
+        "--overwrite"
+      ],
+      "returncode": 0,
+      "status": "ok"
+    },
+    {
+      "stage": "ground",
+      "command": [
+        "/home/lzq/conda_envs/multiee3dag_torch26/bin/python",
+        "MultiEEAffordance/tools/run_v3_target_reject_grounding.py",
+        "--config",
+        "configs/qwen3vl_sam2_pilot.yaml",
+        "--max-target-box-area-fraction",
+        "0.3",
+        "--dataset-root",
+        "MultiEEAffordance",
+        "--limit",
+        "10",
+        "--overwrite"
+      ],
+      "returncode": 0,
+      "status": "ok"
+    },
+    {
+      "stage": "project",
+      "command": [
+        "/home/lzq/conda_envs/multiee3dag_torch26/bin/python",
+        "MultiEEAffordance/tools/project_v3_grounding_to_3d.py",
+        "--box-shrink-ratio",
+        "0.05",
+        "--point-radius",
+        "4",
+        "--box-dilate-radius",
+        "2",
+        "--dataset-root",
+        "MultiEEAffordance",
+        "--limit",
+        "10",
+        "--overwrite"
+      ],
+      "returncode": 0,
+      "status": "ok"
+    },
+    {
+      "stage": "grow",
+      "command": [
+        "/home/lzq/conda_envs/multiee3dag_torch26/bin/python",
+        "MultiEEAffordance/tools/grow_v3_reject_aware_candidates.py",
+        "--target-score-threshold",
+        "0.2",
+        "--reject-score-threshold",
+        "0.1",
+        "--min-target-votes",
+        "1.0",
+        "--min-reject-votes",
+        "1.0",
+        "--expand-hops",
+        "2",
+        "--k-neighbors",
+        "24",
+        "--min-points",
+        "4",
+        "--dataset-root",
+        "MultiEEAffordance",
+        "--limit",
+        "10",
+        "--overwrite"
+      ],
+      "returncode": 0,
+      "status": "ok"
+    },
+    {
+      "stage": "render",
+      "command": [
+        "/home/lzq/conda_envs/multiee3dag_torch26/bin/python",
+        "MultiEEAffordance/tools/render_candidate_overlays_v2.py",
+        "--candidate-root",
+        "processed/vlm_candidate_v3/3d_candidates",
+        "--output-root",
+        "processed/vlm_candidate_v3/candidate_overlays",
+        "--max-candidates",
+        "12",
+        "--dataset-root",
+        "MultiEEAffordance",
+        "--limit",
+        "10",
+        "--overwrite"
+      ],
+      "returncode": 0,
+      "status": "ok"
+    },
+    {
+      "stage": "build",
+      "command": [
+        "/home/lzq/conda_envs/multiee3dag_torch26/bin/python",
+        "MultiEEAffordance/tools/build_v3_candidate_masks.py",
+        "--dataset-root",
+        "MultiEEAffordance",
+        "--limit",
+        "10",
+        "--overwrite",
+        "--allow-empty"
+      ],
+      "returncode": 0,
+      "status": "ok"
+    }
+  ]
+}

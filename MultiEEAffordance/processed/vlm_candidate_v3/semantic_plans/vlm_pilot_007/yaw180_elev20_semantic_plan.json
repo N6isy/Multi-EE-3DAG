@@ -1,0 +1,74 @@
+{
+  "view": "yaw180_elev20",
+  "visible_object_parts": [
+    "smooth side wall",
+    "rim",
+    "handle"
+  ],
+  "target_positive_parts": [
+    "smooth side wall",
+    "flat outer wall"
+  ],
+  "target_grounding_queries": [
+    "side wall of mug",
+    "outer cylindrical surface",
+    "smooth side wall",
+    "flat outer wall"
+  ],
+  "reject_negative_parts": [
+    "handle",
+    "rim",
+    "inside cavity"
+  ],
+  "reject_grounding_queries": [
+    "mug handle",
+    "cup rim",
+    "handle",
+    "rim",
+    "inside cavity"
+  ],
+  "uncertain_parts": [],
+  "mechanism_check": {
+    "can_enter_or_contact": true,
+    "can_hold_or_constrain": true,
+    "can_apply_task_force": true,
+    "reason": "Suction cup can make stable contact on the smooth side wall, which is flat and low-curvature. It can seal and lift without interlocking or catching on edges. The side wall allows force application along the pick-up direction without risk of slipping or breaking seal."
+  },
+  "feasible": true,
+  "confidence": 0.9,
+  "notes": "Sparse point cloud confirms smooth side wall as primary target; handle and rim are clearly rejectable by geometry and task constraints.",
+  "raw_qwen3vl_response": {
+    "view": "yaw180_elev20",
+    "visible_object_parts": [
+      "smooth side wall",
+      "rim",
+      "handle"
+    ],
+    "target_positive_parts": [
+      "smooth side wall"
+    ],
+    "target_grounding_queries": [
+      "side wall of mug",
+      "outer cylindrical surface"
+    ],
+    "reject_negative_parts": [
+      "handle",
+      "rim"
+    ],
+    "reject_grounding_queries": [
+      "mug handle",
+      "cup rim"
+    ],
+    "uncertain_parts": [],
+    "mechanism_check": {
+      "can_enter_or_contact": true,
+      "can_hold_or_constrain": true,
+      "can_apply_task_force": true,
+      "reason": "Suction cup can make stable contact on the smooth side wall, which is flat and low-curvature. It can seal and lift without interlocking or catching on edges. The side wall allows force application along the pick-up direction without risk of slipping or breaking seal."
+    },
+    "feasible": true,
+    "confidence": 0.9,
+    "notes": "Sparse point cloud confirms smooth side wall as primary target; handle and rim are clearly rejectable by geometry and task constraints.",
+    "_raw_text": "{\n  \"view\": \"yaw180_elev20\",\n  \"visible_object_parts\": [\"smooth side wall\", \"rim\", \"handle\"],\n  \"target_positive_parts\": [\"smooth side wall\"],\n  \"target_grounding_queries\": [\"side wall of mug\", \"outer cylindrical surface\"],\n  \"reject_negative_parts\": [\"handle\", \"rim\"],\n  \"reject_grounding_queries\": [\"mug handle\", \"cup rim\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"Suction cup can make stable contact on the smooth side wall, which is flat and low-curvature. It can seal and lift without interlocking or catching on edges. The side wall allows force application along the pick-up direction without risk of slipping or breaking seal.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.9,\n  \"notes\": \"Sparse point cloud confirms smooth side wall as primary target; handle and rim are clearly rejectable by geometry and task constraints.\"\n}"
+  }
+}

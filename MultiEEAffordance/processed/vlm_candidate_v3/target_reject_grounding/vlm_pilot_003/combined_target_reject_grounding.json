@@ -1,0 +1,78 @@
+{
+  "version": "v3",
+  "pipeline": "target_reject_2d_grounding",
+  "pilot_id": "vlm_pilot_003",
+  "sample_id": "3danet_full_5d089ccd-98db-4fb0-9e1a-9a5650390e54_pick_up",
+  "object_category": "Earphone",
+  "task": "pick_up",
+  "executor": "gripper",
+  "semantic_plan": "processed/vlm_candidate_v3/semantic_plans/vlm_pilot_003/combined_semantic_plan.json",
+  "render_manifest": "processed/vlm_semantic_part/renders/3danet_full_5d089ccd-98db-4fb0-9e1a-9a5650390e54_pick_up/view_manifest.json",
+  "views": [
+    {
+      "view": "yaw000_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_003/yaw000_elev20_target_reject_grounding.json",
+      "target_regions": 0,
+      "reject_regions": 0,
+      "coverage_warning": "qwen_json_parse_failed",
+      "parse_error": "Expecting value: line 50 column 28 (char 1565) | Expecting ',' delimiter: line 50 column 27 (char 1564)"
+    },
+    {
+      "view": "yaw045_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_003/yaw045_elev20_target_reject_grounding.json",
+      "target_regions": 0,
+      "reject_regions": 0,
+      "coverage_warning": "qwen_json_parse_failed",
+      "parse_error": "Expecting value: line 28 column 68 (char 1193) | Expecting ',' delimiter: line 28 column 67 (char 1192)"
+    },
+    {
+      "view": "yaw090_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_003/yaw090_elev20_target_reject_grounding.json",
+      "target_regions": 0,
+      "reject_regions": 0,
+      "coverage_warning": "The object in the image is a bottle, not an earphone. No target or reject regions can be grounded as per the provided semantic plan.",
+      "parse_error": ""
+    },
+    {
+      "view": "yaw135_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_003/yaw135_elev20_target_reject_grounding.json",
+      "target_regions": 0,
+      "reject_regions": 0,
+      "coverage_warning": "The object is not visible in the provided image. The image appears to be a sparse point cloud render with no clear visual representation of the earphone's physical structure or graspable parts.",
+      "parse_error": ""
+    },
+    {
+      "view": "yaw180_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_003/yaw180_elev20_target_reject_grounding.json",
+      "target_regions": 0,
+      "reject_regions": 0,
+      "coverage_warning": "qwen_json_parse_failed",
+      "parse_error": "Unterminated string starting at: line 53 column 17 (char 1536) | Unterminated string starting at: line 53 column 17 (char 1536)"
+    },
+    {
+      "view": "yaw225_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_003/yaw225_elev20_target_reject_grounding.json",
+      "target_regions": 0,
+      "reject_regions": 0,
+      "coverage_warning": "qwen_json_parse_failed",
+      "parse_error": "Expecting value: line 47 column 7 (char 1616) | Expecting ',' delimiter: line 47 column 6 (char 1615)"
+    },
+    {
+      "view": "yaw270_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_003/yaw270_elev20_target_reject_grounding.json",
+      "target_regions": 0,
+      "reject_regions": 0,
+      "coverage_warning": "The object in the image is not an earphone; it appears to be a bottle-like shape. No earphone parts are visible to ground.",
+      "parse_error": ""
+    },
+    {
+      "view": "yaw315_elev20",
+      "grounding_path": "processed/vlm_candidate_v3/target_reject_grounding/vlm_pilot_003/yaw315_elev20_target_reject_grounding.json",
+      "target_regions": 0,
+      "reject_regions": 0,
+      "coverage_warning": "The object is not visible in the provided image. The image shows a sparse point-cloud render of a headphone, but no clear, visible parts for grasping are present. The entire object is rendered as a collection of points, making it impossible to identify specific target or reject regions with confidence.",
+      "parse_error": ""
+    }
+  ],
+  "notes": "2D target/reject seeds only; project to 3D before candidate growth."
+}

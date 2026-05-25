@@ -1,0 +1,69 @@
+{
+  "view": "yaw135_elev20",
+  "visible_object_parts": [
+    "headband",
+    "left earcup",
+    "right earcup",
+    "connecting arm"
+  ],
+  "target_positive_parts": [
+    "connecting arm"
+  ],
+  "target_grounding_queries": [
+    "the thin arm connecting the two earcups"
+  ],
+  "reject_negative_parts": [
+    "left earcup",
+    "right earcup",
+    "headband"
+  ],
+  "reject_grounding_queries": [
+    "the main earcup bodies",
+    "the headband arch"
+  ],
+  "uncertain_parts": [],
+  "mechanism_check": {
+    "can_enter_or_contact": true,
+    "can_hold_or_constrain": true,
+    "can_apply_task_force": true,
+    "reason": "The connecting arm is narrow and cylindrical, allowing a parallel gripper to clamp from both sides. It can be lifted stably without slipping, and the force can be applied along the pick-up direction. The earcups and headband are too broad or hollow to be gripped stably by a two-finger gripper."
+  },
+  "feasible": true,
+  "confidence": 0.95,
+  "notes": "Only the connecting arm is suitable for a two-finger gripper to pick up the earphones stably. Earcups and headband are rejected as they are too large or hollow for stable clamping.",
+  "raw_qwen3vl_response": {
+    "view": "yaw135_elev20",
+    "visible_object_parts": [
+      "headband",
+      "left earcup",
+      "right earcup",
+      "connecting arm"
+    ],
+    "target_positive_parts": [
+      "connecting arm"
+    ],
+    "target_grounding_queries": [
+      "the thin arm connecting the two earcups"
+    ],
+    "reject_negative_parts": [
+      "left earcup",
+      "right earcup",
+      "headband"
+    ],
+    "reject_grounding_queries": [
+      "the main earcup bodies",
+      "the headband arch"
+    ],
+    "uncertain_parts": [],
+    "mechanism_check": {
+      "can_enter_or_contact": true,
+      "can_hold_or_constrain": true,
+      "can_apply_task_force": true,
+      "reason": "The connecting arm is narrow and cylindrical, allowing a parallel gripper to clamp from both sides. It can be lifted stably without slipping, and the force can be applied along the pick-up direction. The earcups and headband are too broad or hollow to be gripped stably by a two-finger gripper."
+    },
+    "feasible": true,
+    "confidence": 0.95,
+    "notes": "Only the connecting arm is suitable for a two-finger gripper to pick up the earphones stably. Earcups and headband are rejected as they are too large or hollow for stable clamping.",
+    "_raw_text": "{\n  \"view\": \"yaw135_elev20\",\n  \"visible_object_parts\": [\"headband\", \"left earcup\", \"right earcup\", \"connecting arm\"],\n  \"target_positive_parts\": [\"connecting arm\"],\n  \"target_grounding_queries\": [\"the thin arm connecting the two earcups\"],\n  \"reject_negative_parts\": [\"left earcup\", \"right earcup\", \"headband\"],\n  \"reject_grounding_queries\": [\"the main earcup bodies\", \"the headband arch\"],\n  \"uncertain_parts\": [],\n  \"mechanism_check\": {\n    \"can_enter_or_contact\": true,\n    \"can_hold_or_constrain\": true,\n    \"can_apply_task_force\": true,\n    \"reason\": \"The connecting arm is narrow and cylindrical, allowing a parallel gripper to clamp from both sides. It can be lifted stably without slipping, and the force can be applied along the pick-up direction. The earcups and headband are too broad or hollow to be gripped stably by a two-finger gripper.\"\n  },\n  \"feasible\": true,\n  \"confidence\": 0.95,\n  \"notes\": \"Only the connecting arm is suitable for a two-finger gripper to pick up the earphones stably. Earcups and headband are rejected as they are too large or hollow for stable clamping.\"\n}"
+  }
+}
