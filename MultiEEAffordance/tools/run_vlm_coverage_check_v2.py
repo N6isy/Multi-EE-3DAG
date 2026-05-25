@@ -537,11 +537,16 @@ def supplement_missing_candidates(
     data = np.load(candidate_npz_path, allow_pickle=True)
     old_masks = data["candidate_masks"].astype(np.uint8)
     old_candidates = list(candidate_manifest.get("candidates", []))
-    if not old_candidates:
-        raise ValueError(f"No existing candidates to supplement: {candidate_manifest_path}")
 
     point_path = resolve_portable_path(root, candidate_manifest["point_cloud_path"], candidate_manifest_path.parent)
     xyz = load_points(point_path)
+    if old_masks.ndim != 2:
+        if old_masks.size == 0:
+            old_masks = np.zeros((0, xyz.shape[0]), dtype=np.uint8)
+        else:
+            raise ValueError(f"Expected candidate mask shape [C,N], got {old_masks.shape}: {candidate_npz_path}")
+    if old_masks.shape[0] == 0 and old_masks.shape[1] == 0:
+        old_masks = np.zeros((0, xyz.shape[0]), dtype=np.uint8)
     if old_masks.shape[1] != xyz.shape[0]:
         raise ValueError(f"Candidate mask length {old_masks.shape[1]} does not match point count {xyz.shape[0]}")
     knn = pairwise_knn(xyz, args.k_neighbors) if int(args.expand_hops) > 0 else np.zeros((xyz.shape[0], 0), dtype=np.int64)
@@ -639,8 +644,12 @@ def supplement_missing_candidates(
         write_json(candidate_manifest_path, candidate_manifest, args.overwrite)
         return {"added_candidates": [], "candidate_manifest": relative_to_dataset(root, candidate_manifest_path)}
 
-    combined_masks = np.concatenate([np.stack(new_masks, axis=0).astype(np.uint8), old_masks], axis=0)
+    new_stack = np.stack(new_masks, axis=0).astype(np.uint8)
+    combined_masks = np.concatenate([new_stack, old_masks], axis=0) if old_masks.shape[0] else new_stack
     combined_candidates = new_candidates + old_candidates
+    added_ids = [item["candidate_id"] for item in new_candidates]
+    previous_defaults = [str(item).upper() for item in candidate_manifest.get("default_selected_candidates", [])]
+    candidate_manifest["default_selected_candidates"] = added_ids + [cid for cid in previous_defaults if cid not in added_ids]
     np.savez_compressed(
         candidate_npz_path,
         pilot_id=candidate_manifest.get("pilot_id", row.get("pilot_id", "")),
@@ -656,7 +665,7 @@ def supplement_missing_candidates(
     candidate_manifest.setdefault("coverage_supplement_history", []).append(
         {
             "coverage_check_path": relative_to_dataset(root, coverage_output_path),
-            "added_candidates": [item["candidate_id"] for item in new_candidates],
+            "added_candidates": added_ids,
             "added_candidate_count": len(new_candidates),
             "notes": "Inserted before existing candidates so the next overlay render exposes them to VLM selection.",
         }
@@ -667,7 +676,7 @@ def supplement_missing_candidates(
     )
     write_json(candidate_manifest_path, candidate_manifest, args.overwrite)
     return {
-        "added_candidates": [item["candidate_id"] for item in new_candidates],
+        "added_candidates": added_ids,
         "candidate_manifest": relative_to_dataset(root, candidate_manifest_path),
         "candidate_npz": relative_to_dataset(root, candidate_npz_path),
     }
@@ -768,6 +777,7 @@ def run_for_row(
         ],
         "coverage_by_view": coverage_by_view,
         "supplement_result": supplement_result,
+        "coverage_check": relative_to_dataset(root, coverage_output_path),
         "notes": (
             "Coverage check only identifies candidate-pool holes. Supplemented candidates are proposals "
             "and must be rerendered, selected by VLM/rules, and human-reviewed."
@@ -805,7 +815,7 @@ def main() -> int:
                     {
                         "pilot_id": item["pilot_id"],
                         "sample_id": item["sample_id"],
-                        "coverage_check": f"processed/vlm_candidate_v2/coverage_check/{item['pilot_id']}/combined_coverage_check.json",
+                        "coverage_check": item.get("coverage_check", ""),
                         "added_candidates": item.get("supplement_result", {}).get("added_candidates", []),
                     }
                     for item in outputs
