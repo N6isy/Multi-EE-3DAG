@@ -178,9 +178,11 @@ class AnnotationStore:
         self.max_points = int(max_points)
         self.allow_partial_save = allow_partial_save
         self.top_k_candidates = int(top_k_candidates)
+        self.payload_cache: dict[str, dict[str, Any]] = {}
         self.reload()
 
     def reload(self) -> None:
+        self.payload_cache.clear()
         self.samples = read_jsonl(self.samples_path)
         self.samples_by_id = {str(row["sample_id"]): row for row in self.samples}
         self.refined_by_id: dict[str, dict[str, Any]] = {}
@@ -308,6 +310,9 @@ class AnnotationStore:
         }
 
     def sample_payload(self, sample_id: str) -> dict[str, Any]:
+        cached = self.payload_cache.get(sample_id)
+        if cached is not None:
+            return cached
         sample = self.refined_by_id.get(sample_id) or self.samples_by_id.get(sample_id)
         if sample is None:
             raise KeyError(f"Unknown sample_id: {sample_id}")
@@ -331,7 +336,7 @@ class AnnotationStore:
         visible_points = normalized[indices]
         visible_masks = (masks[indices] > 0).astype(np.uint8)
         candidate_context = self.load_candidate_context(sample, indices)
-        return {
+        payload = {
             "sample": sample,
             "executor_order": EXECUTOR_ORDER,
             "target_executor": executor,
@@ -350,6 +355,8 @@ class AnnotationStore:
             },
             "candidate_context": candidate_context,
         }
+        self.payload_cache[sample_id] = payload
+        return payload
 
     def save_edit(self, payload: dict[str, Any]) -> dict[str, Any]:
         sample_id = str(payload.get("sample_id", ""))
@@ -403,6 +410,7 @@ class AnnotationStore:
             "updated_at": now,
         }
         self.refined_by_id[sample_id] = refined_sample
+        self.payload_cache.pop(sample_id, None)
         ordered = []
         for sample in self.samples:
             sid = str(sample["sample_id"])
@@ -454,6 +462,7 @@ APP_HTML = r"""<!doctype html>
     .sample-list { display: flex; flex-direction: column; gap: 7px; margin-top: 10px; }
     .sample { border: 1px solid #d8e0eb; border-radius: 8px; padding: 9px; cursor: pointer; }
     .sample.active { border-color: #d54444; box-shadow: 0 0 0 2px rgba(213,68,68,.12); }
+    .sample.loading { border-color: #2563eb; background: #eff6ff; }
     .sample-id { font-size: 11px; color: #526070; word-break: break-all; }
     .tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
     .tag { font-size: 11px; padding: 2px 7px; border-radius: 999px; background: #edf1f7; color: #334155; }
@@ -573,10 +582,15 @@ APP_HTML = r"""<!doctype html>
 let samples = [];
 let current = null;
 let currentIndex = -1;
+let sampleCache = new Map();
+let loadSeq = 0;
+let pendingSampleController = null;
+let activeLoadingId = "";
 let positives = new Set();
 let initialPositives = new Set();
 let candidateSets = new Map();
 let candidateInfo = [];
+let candidateColorById = new Map();
 let selectedCandidateIds = new Set();
 let focusedCandidateIds = new Set();
 let previewLocked = false;
@@ -584,6 +598,11 @@ let mode = "toggle";
 let rotX = -0.55, rotY = 0.65, zoom = 1.0;
 let dragging = false, lastX = 0, lastY = 0;
 let history = [];
+let projectedCache = null;
+let projectedCacheKey = "";
+let previewColorCache = null;
+let previewColorCacheKey = "";
+let drawQueued = false;
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 const CANDIDATE_COLORS = ["#ff4848","#32dc78","#ffd240","#78a0ff","#ff70d2","#46e6eb","#ff9150","#be7dff","#aae65a","#ffffff","#ff7878","#78ffb4"];
@@ -604,7 +623,9 @@ function renderList() {
   document.getElementById("topStatus").textContent = `${samples.length} samples | 显示 ${filtered.length}`;
   filtered.forEach(s => {
     const div = document.createElement("div");
-    div.className = "sample" + (current && current.sample.sample_id === s.sample_id ? " active" : "");
+    div.className = "sample"
+      + (current && current.sample.sample_id === s.sample_id ? " active" : "")
+      + (activeLoadingId === s.sample_id ? " loading" : "");
     div.onclick = () => loadSample(s.sample_id);
     div.innerHTML = `<div class="sample-id">${s.sample_id}</div>
       <div class="tags">
@@ -618,27 +639,37 @@ function renderList() {
   });
 }
 
-async function loadSamples() {
+async function loadSamples(loadFirst=true) {
   const res = await fetch("/api/samples");
   const data = await res.json();
   samples = data.samples;
   renderList();
-  if (samples.length) await loadSample(samples[0].sample_id);
+  if (loadFirst && samples.length && !current) await loadSample(samples[0].sample_id);
 }
 
-async function loadSample(sampleId) {
-  const res = await fetch(`/api/sample?id=${encodeURIComponent(sampleId)}`);
-  if (!res.ok) throw new Error(await res.text());
-  current = await res.json();
+function invalidateProjectionCache() {
+  projectedCache = null;
+  projectedCacheKey = "";
+}
+
+function invalidatePreviewColorCache() {
+  previewColorCache = null;
+  previewColorCacheKey = "";
+}
+
+function applySamplePayload(sampleId, payload) {
+  current = payload;
   currentIndex = samples.findIndex(s => s.sample_id === sampleId);
   positives = new Set();
   candidateSets = new Map();
+  candidateColorById = new Map();
   candidateInfo = (current.candidate_context && current.candidate_context.candidates) || [];
   selectedCandidateIds = new Set();
   focusedCandidateIds = new Set();
   previewLocked = false;
-  candidateInfo.forEach(c => {
+  candidateInfo.forEach((c, idx) => {
     candidateSets.set(c.candidate_id, new Set(c.point_indices || []));
+    candidateColorById.set(c.candidate_id, CANDIDATE_COLORS[idx % CANDIDATE_COLORS.length]);
     if (c.default_checked) selectedCandidateIds.add(c.candidate_id);
   });
   const ch = current.target_channel;
@@ -647,9 +678,59 @@ async function loadSample(sampleId) {
   });
   initialPositives = new Set(positives);
   history = [];
+  invalidateProjectionCache();
+  invalidatePreviewColorCache();
   fillPanel();
   renderList();
   resize();
+}
+
+async function loadSample(sampleId, force=false) {
+  const seq = ++loadSeq;
+  activeLoadingId = sampleId;
+  renderList();
+  document.getElementById("message").textContent = `加载 ${sampleId} ...`;
+  if (pendingSampleController) {
+    pendingSampleController.abort();
+    pendingSampleController = null;
+  }
+  if (!force && sampleCache.has(sampleId)) {
+    applySamplePayload(sampleId, sampleCache.get(sampleId));
+    if (seq === loadSeq) {
+      activeLoadingId = "";
+      document.getElementById("message").textContent = "";
+      renderList();
+    }
+    return;
+  }
+  const controller = new AbortController();
+  pendingSampleController = controller;
+  let res;
+  try {
+    res = await fetch(`/api/sample?id=${encodeURIComponent(sampleId)}`, {signal: controller.signal});
+  } catch (err) {
+    if (err.name === "AbortError") return;
+    if (seq === loadSeq) {
+      activeLoadingId = "";
+      pendingSampleController = null;
+      renderList();
+    }
+    throw err;
+  }
+  if (!res.ok) {
+    activeLoadingId = "";
+    pendingSampleController = null;
+    renderList();
+    throw new Error(await res.text());
+  }
+  const payload = await res.json();
+  if (seq !== loadSeq) return;
+  sampleCache.set(sampleId, payload);
+  applySamplePayload(sampleId, payload);
+  activeLoadingId = "";
+  pendingSampleController = null;
+  document.getElementById("message").textContent = "";
+  renderList();
 }
 
 function fillPanel() {
@@ -669,8 +750,7 @@ function fillPanel() {
 }
 
 function candidateColor(cid) {
-  const idx = candidateInfo.findIndex(c => c.candidate_id === cid);
-  return CANDIDATE_COLORS[(idx < 0 ? 0 : idx) % CANDIDATE_COLORS.length];
+  return candidateColorById.get(cid) || CANDIDATE_COLORS[0];
 }
 
 function updateCandidateFocusStyles() {
@@ -686,6 +766,7 @@ function updateCandidateFocusStyles() {
 function setCandidateFocus(ids, locked) {
   focusedCandidateIds = new Set(ids);
   previewLocked = Boolean(locked && focusedCandidateIds.size);
+  invalidatePreviewColorCache();
   updateCandidateFocusStyles();
   draw();
 }
@@ -756,6 +837,7 @@ function syncMaskToSelectedCandidates(recordHistory=true) {
   initialPositives = new Set(positives);
   focusedCandidateIds = new Set();
   previewLocked = false;
+  invalidatePreviewColorCache();
   updateCandidateFocusStyles();
   draw();
 }
@@ -767,6 +849,7 @@ function applySelectedCandidates() {
 function clearMask() {
   saveHistory();
   positives = new Set();
+  invalidatePreviewColorCache();
   draw();
 }
 
@@ -792,10 +875,21 @@ function project(p) {
 
 function projectedPoints() {
   if (!current) return [];
-  return current.points.map((p, i) => {
+  const key = [
+    current.sample.sample_id,
+    canvas.clientWidth,
+    canvas.clientHeight,
+    rotX.toFixed(5),
+    rotY.toFixed(5),
+    zoom.toFixed(5),
+  ].join("|");
+  if (projectedCache && projectedCacheKey === key) return projectedCache;
+  projectedCache = current.points.map((p, i) => {
     const pr = project(p);
     return {x: pr[0], y: pr[1], z: pr[2], original: current.point_indices[i], i};
-  });
+  }).sort((a,b) => a.z - b.z);
+  projectedCacheKey = key;
+  return projectedCache;
 }
 
 function nearestPoint(x, y, positiveOnly=false) {
@@ -810,19 +904,34 @@ function nearestPoint(x, y, positiveOnly=false) {
   return bestD <= 18 * 18 ? best : null;
 }
 
-function previewColorForPoint(originalIndex) {
+function buildPreviewColorMap(ids) {
+  const map = new Map();
+  ids.forEach(cid => {
+    const s = candidateSets.get(cid);
+    if (!s) return;
+    const color = candidateColor(cid);
+    s.forEach(idx => {
+      if (!map.has(idx)) map.set(idx, color);
+    });
+  });
+  return map;
+}
+
+function previewColorMapForDraw(showPreview) {
+  if (!showPreview) return null;
+  let ids = [];
   if (focusedCandidateIds.size) {
-    for (const cid of focusedCandidateIds) {
-      const s = candidateSets.get(cid);
-      if (s && s.has(originalIndex)) return candidateColor(cid);
-    }
-    return null;
+    ids = [...focusedCandidateIds];
+  } else if (!selectedCandidateIds.size) {
+    ids = candidateInfo.map(c => c.candidate_id);
   }
-  for (const c of candidateInfo) {
-    const s = candidateSets.get(c.candidate_id);
-    if (s && s.has(originalIndex)) return candidateColor(c.candidate_id);
+  if (!ids.length) return null;
+  const key = ids.join("|");
+  if (!previewColorCache || previewColorCacheKey !== key) {
+    previewColorCache = buildPreviewColorMap(ids);
+    previewColorCacheKey = key;
   }
-  return null;
+  return previewColorCache;
 }
 
 function saveHistory() {
@@ -831,15 +940,25 @@ function saveHistory() {
 }
 
 function draw() {
+  if (drawQueued) return;
+  drawQueued = true;
+  window.requestAnimationFrame(() => {
+    drawQueued = false;
+    drawNow();
+  });
+}
+
+function drawNow() {
   const dpr = window.devicePixelRatio || 1;
   ctx.setTransform(dpr,0,0,dpr,0,0);
   ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
   if (!current) return;
-  const pts = projectedPoints().sort((a,b) => a.z - b.z);
+  const pts = projectedPoints();
   const showPreview = document.getElementById("showCandidatePreview").checked;
+  const previewMap = previewColorMapForDraw(showPreview);
   for (const p of pts) {
     const on = positives.has(p.original);
-    let preview = showPreview ? previewColorForPoint(p.original) : null;
+    let preview = previewMap ? previewMap.get(p.original) : null;
     if (!focusedCandidateIds.size && selectedCandidateIds.size && !on) preview = null;
     if (mode === "delete" && !on) preview = null;
     ctx.beginPath();
@@ -923,8 +1042,9 @@ async function saveEdit() {
   if (!res.ok || !data.ok) throw new Error(data.error || "save failed");
   document.getElementById("message").textContent =
     `已保存 refined mask：positive ${data.record.positive_points_before} -> ${data.record.positive_points_after}`;
-  await loadSamples();
-  await loadSample(data.sample_id);
+  sampleCache.delete(data.sample_id);
+  await loadSamples(false);
+  await loadSample(data.sample_id, true);
 }
 
 document.getElementById("search").oninput = renderList;
@@ -940,7 +1060,11 @@ document.getElementById("focusCheckedBtn").onclick = focusCheckedCandidates;
 document.getElementById("clearFocusBtn").onclick = clearCandidateFocus;
 document.getElementById("showCandidatePreview").onchange = draw;
 document.getElementById("saveBtn").onclick = () => saveEdit().catch(err => alert(err.message));
-document.getElementById("reloadBtn").onclick = () => current && loadSample(current.sample.sample_id).catch(err => alert(err.message));
+document.getElementById("reloadBtn").onclick = () => {
+  if (!current) return;
+  sampleCache.delete(current.sample.sample_id);
+  loadSample(current.sample.sample_id, true).catch(err => alert(err.message));
+};
 window.addEventListener("resize", resize);
 setMode("toggle");
 loadSamples().catch(err => alert(err.message));
