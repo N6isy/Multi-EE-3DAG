@@ -81,9 +81,25 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--renders-root", default="processed/vlm_semantic_part/renders", help="VLM-friendly view render root.")
     parser.add_argument(
         "--part-proposal-backend",
-        choices=["geometry", "partslippp"],
-        default="geometry",
-        help="3D part proposal backend. PartSLIP++ is reserved as an external adapter.",
+        choices=["high_recall", "geometry", "partslippp"],
+        default="high_recall",
+        help="3D part proposal backend. high_recall is the default model-free candidate generator.",
+    )
+    parser.add_argument(
+        "--partslippp-root",
+        default="external/partslippp/outputs",
+        help="Root containing external PartSLIP++ predictions for --part-proposal-backend partslippp.",
+    )
+    parser.add_argument(
+        "--partslippp-path",
+        default="",
+        help="Optional explicit PartSLIP++ prediction path template.",
+    )
+    parser.add_argument(
+        "--partslippp-fallback",
+        choices=["error", "geometry"],
+        default="error",
+        help="Fallback when PartSLIP++ output is missing or malformed.",
     )
     parser.add_argument("--selected-candidates", default="", help="Optional manual candidate ids for build/visualize.")
     parser.add_argument("--allow-empty", action="store_true")
@@ -104,6 +120,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--k-neighbors", type=int, default=24, help="kNN neighborhood size for v3 growth.")
     parser.add_argument("--min-points", type=int, default=4, help="Minimum points per grown candidate.")
     parser.add_argument("--max-candidates", type=int, default=12, help="Maximum candidates shown in overlay rendering.")
+    parser.add_argument("--proposal-max-candidates", type=int, default=64, help="Maximum candidates generated before overlay/top-k display.")
+    parser.add_argument("--part-top-k", type=int, default=5, help="Top-k candidates retained per high-recall part group.")
+    parser.add_argument("--dedupe-iou", type=float, default=0.985, help="Near-duplicate IoU threshold for high-recall candidates.")
+    parser.add_argument("--small-part-max-fraction", type=float, default=0.10, help="Maximum object fraction for small-part proposals.")
     parser.add_argument("--min-selected-votes", type=int, default=1, help="Minimum VLM selected votes for part_filter.")
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
@@ -410,9 +430,21 @@ def build_commands(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
                 "--min-points",
                 str(args.min_points),
                 "--max-candidates",
-                str(max(args.max_candidates, 18)),
+                str(max(args.proposal_max_candidates, args.max_candidates)),
                 "--seed-expand-hops",
                 str(args.expand_hops),
+                "--part-top-k",
+                str(args.part_top_k),
+                "--dedupe-iou",
+                str(args.dedupe_iou),
+                "--small-part-max-fraction",
+                str(args.small_part_max_fraction),
+                "--partslippp-root",
+                args.partslippp_root,
+                "--partslippp-path",
+                args.partslippp_path,
+                "--partslippp-fallback",
+                args.partslippp_fallback,
             ],
             args,
         )
@@ -596,9 +628,16 @@ def main() -> int:
             "k_neighbors": args.k_neighbors,
             "min_points": args.min_points,
             "max_candidates": args.max_candidates,
+            "proposal_max_candidates": args.proposal_max_candidates,
+            "part_top_k": args.part_top_k,
+            "dedupe_iou": args.dedupe_iou,
+            "small_part_max_fraction": args.small_part_max_fraction,
             "candidate_source": args.candidate_source,
             "renders_root": args.renders_root,
             "part_proposal_backend": args.part_proposal_backend,
+            "partslippp_root": args.partslippp_root,
+            "partslippp_path": args.partslippp_path,
+            "partslippp_fallback": args.partslippp_fallback,
             "min_selected_votes": args.min_selected_votes,
         },
         "status": "dry_run" if args.dry_run else "ok",

@@ -122,8 +122,23 @@ def family_score(executor: str, family: str, task: str) -> tuple[float, list[str
         "visual_detached_structure",
         "visual_detached_component",
         "visual_small_component",
+        "visual_component_seed",
+        "loop_handle_lip_seed",
+        "expanded_loop_handle_lip_seed",
+        "strict_loop_handle_lip_seed",
+        "expanded_strict_loop_handle_lip_seed",
+        "small_part_seed",
+        "expanded_small_part_seed",
+        "paired_loop_handle_candidate",
     }
-    smooth_like = {"smooth_surface", "smooth_extreme_patch", "central_body"}
+    smooth_like = {
+        "smooth_surface",
+        "smooth_extreme_patch",
+        "central_body",
+        "smooth_surface_component",
+        "expanded_smooth_surface_component",
+        "coarse_axis_partition",
+    }
     if family == "vlm_coverage_missing_region":
         score += 0.42
         reasons.append("VLM coverage check 指出该区域可能是当前候选池漏掉的任务相关目标部件")
@@ -141,6 +156,9 @@ def family_score(executor: str, family: str, task: str) -> tuple[float, list[str
         if family == "paired_loop_or_handle":
             score += 0.18
             reasons.append("成对环/把手候选对 hook 的插入和机械约束尤其重要")
+        if family == "paired_loop_handle_candidate":
+            score += 0.20
+            reasons.append("成对环/把手高召回候选对 hook 的插入和机械约束尤其重要")
         if family in smooth_like:
             score -= 0.35
             reasons.append("普通平滑面或主体区域通常不能形成 hook 机械互锁")
@@ -158,7 +176,7 @@ def family_score(executor: str, family: str, task: str) -> tuple[float, list[str
         if family in {"smooth_surface", "smooth_extreme_patch"} and task not in {"press_push"}:
             score -= 0.20
             reasons.append("普通平滑大面不能泛化为灵巧手正例")
-    if task == "press_push" and executor == "dexterous_hand" and family in {"small_protrusion", "smooth_surface", "smooth_extreme_patch"}:
+    if task == "press_push" and executor == "dexterous_hand" and family in {"small_protrusion", "small_part_seed", "expanded_small_part_seed", "smooth_surface", "smooth_extreme_patch", "smooth_surface_component", "expanded_smooth_surface_component"}:
         score += 0.18
         reasons.append("press_push 任务允许按钮、开关或可推压面作为灵巧手候选")
     if task in {"open_pull", "lift_carry"} and executor == "hook" and family in hook_like:
@@ -278,6 +296,9 @@ def score_candidate(
     if selected_votes >= min_votes:
         score += 0.40
         reasons.append(f"VLM selected votes={selected_votes}")
+        if str(candidate.get("source", "")).lower() == "partslippp" or "partslippp" in str(candidate.get("provenance", "")).lower():
+            score += 0.20
+            reasons.append("VLM 选中的 PartSLIP++ 部件候选优先进入默认候选，后续仍需规则和人工审查")
     elif uncertain_votes > 0:
         score += 0.10
         reasons.append(f"VLM uncertain votes={uncertain_votes}")
