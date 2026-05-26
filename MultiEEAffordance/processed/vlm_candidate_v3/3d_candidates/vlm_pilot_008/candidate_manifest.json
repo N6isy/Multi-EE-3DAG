@@ -1,27 +1,1732 @@
 {
   "version": "v3",
-  "pipeline": "reject_aware_semantic_candidate_growth",
+  "pipeline": "part_segmentation_candidate_proposal",
+  "candidate_source": "partseg",
+  "backend": "high_recall",
   "pilot_id": "vlm_pilot_008",
   "sample_id": "3danet_full_f6517b0bad40b72d36871b478a4420ba_press_push",
   "object_category": "Keyboard",
   "task": "press_push",
   "executor": "dexterous_hand",
   "point_cloud_path": "processed/points/3d_affordancenet_full_shape_val_balanced_v3/3danet_full_f6517b0bad40b72d36871b478a4420ba.npy",
+  "weak_mask_path": "processed/masks_checked_v0_1/3danet_full_f6517b0bad40b72d36871b478a4420ba_press_push.npy",
   "semantic_plan": "processed/vlm_candidate_v3/semantic_plans/vlm_pilot_008/combined_semantic_plan.json",
-  "projected_votes": "processed/vlm_candidate_v3/projected_3d/vlm_pilot_008_target_reject_votes.npz",
+  "renders_root": "processed/vlm_semantic_part/renders",
   "candidate_npz": "processed/vlm_candidate_v3/3d_candidates/vlm_pilot_008/candidates.npz",
-  "candidate_count": 0,
+  "candidate_count": 48,
   "default_selected_candidates": [],
-  "target_seed_points": 0,
-  "reject_veto_points": 0,
-  "candidates": [],
+  "candidates": [
+    {
+      "candidate_id": "A",
+      "candidate_name": "baseline_above_main_body_structure_expanded",
+      "candidate_family": "visual_component_expanded",
+      "part_group": "baseline_visual_component_expanded",
+      "description": "kNN-expanded upper structure proposal; intended to make sparse handles, loops, rings, or top protrusions reviewable.",
+      "recommended_executors": [
+        "hook",
+        "gripper",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull"
+      ],
+      "point_count": 223,
+      "point_fraction": 0.10888671875,
+      "bbox_extent_ratio": [
+        1.0,
+        0.9980263113975525,
+        1.0
+      ],
+      "quality_hint": "expanded_visual_proposal",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 8.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "B",
+      "candidate_name": "baseline_above_main_body_structure",
+      "candidate_family": "visual_detached_structure",
+      "part_group": "baseline_visual_detached_structure",
+      "description": "View-derived points above the dense main body; useful for handles, loops, rings, or top protrusions.",
+      "recommended_executors": [
+        "hook",
+        "gripper",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull"
+      ],
+      "point_count": 33,
+      "point_fraction": 0.01611328125,
+      "bbox_extent_ratio": [
+        1.0,
+        0.5517654418945312,
+        0.9244804382324219
+      ],
+      "quality_hint": "targeted_visual_proposal",
+      "confidence_hint": "medium",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 12.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "C",
+      "candidate_name": "above_main_body_structure_expanded",
+      "candidate_family": "visual_component_expanded",
+      "part_group": "visual_partial_component",
+      "description": "Expanded multi-view foreground component; retained even when partially visible.",
+      "recommended_executors": [
+        "gripper",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 223,
+      "point_fraction": 0.10888671875,
+      "bbox_extent_ratio": [
+        1.0,
+        0.9980263113975525,
+        1.0
+      ],
+      "quality_hint": "visual_high_recall",
+      "confidence_hint": "medium",
+      "need_review": true,
+      "is_partial_candidate": true,
+      "allows_overlap": true,
+      "priority": 12.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "D",
+      "candidate_name": "weak_dexterous_hand_prior_expanded",
+      "candidate_family": "expanded_existing_weak_mask",
+      "part_group": "weak_mask_prior",
+      "description": "Expanded existing weak mask prior; useful but not trusted as final GT.",
+      "recommended_executors": [
+        "dexterous_hand",
+        "hook",
+        "gripper"
+      ],
+      "recommended_tasks": [
+        "press_push"
+      ],
+      "point_count": 240,
+      "point_fraction": 0.1171875,
+      "bbox_extent_ratio": [
+        0.8915147185325623,
+        0.8395183682441711,
+        0.6479601860046387
+      ],
+      "quality_hint": "expanded_source_prior",
+      "confidence_hint": "medium",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 18.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "E",
+      "candidate_name": "baseline_edge_linear_extreme_x_low_expanded",
+      "candidate_family": "expanded_extreme_part_component",
+      "part_group": "baseline_expanded_extreme_part_component",
+      "description": "kNN-expanded high-curvature/linear points near the low extreme of the x axis. Useful for handles, loops, lips, knobs, and side/end functional parts.",
+      "recommended_executors": [
+        "hook",
+        "gripper",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 439,
+      "point_fraction": 0.21435546875,
+      "bbox_extent_ratio": [
+        0.22359734773635864,
+        0.9998847246170044,
+        1.0
+      ],
+      "quality_hint": "extreme_expanded_candidate",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 22.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "F",
+      "candidate_name": "baseline_existing_dexterous_hand_weak_mask_expanded",
+      "candidate_family": "expanded_existing_weak_mask",
+      "part_group": "baseline_expanded_existing_weak_mask",
+      "description": "kNN-expanded checked/weak mask channel for dexterous_hand; useful when the existing prior is sparse but spatially close to a functional part.",
+      "recommended_executors": [
+        "dexterous_hand",
+        "hook",
+        "gripper"
+      ],
+      "recommended_tasks": [
+        "press_push"
+      ],
+      "point_count": 240,
+      "point_fraction": 0.1171875,
+      "bbox_extent_ratio": [
+        0.8915147185325623,
+        0.8395183682441711,
+        0.6479601860046387
+      ],
+      "quality_hint": "expanded_source_prior",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 28.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "G",
+      "candidate_name": "above_main_body_structure",
+      "candidate_family": "visual_component_seed",
+      "part_group": "visual_partial_component_seed",
+      "description": "Raw multi-view foreground component seed for precise review.",
+      "recommended_executors": [
+        "gripper",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 33,
+      "point_fraction": 0.01611328125,
+      "bbox_extent_ratio": [
+        1.0,
+        0.5517654418945312,
+        0.9244804382324219
+      ],
+      "quality_hint": "visual_seed",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": true,
+      "allows_overlap": true,
+      "priority": 28.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "H",
+      "candidate_name": "small_button_knob_joint_01_seed",
+      "candidate_family": "small_part_seed",
+      "part_group": "small_part_seed",
+      "description": "small compact or high-curvature component for buttons, knobs, switches, handle joints, and thin legs.",
+      "recommended_executors": [
+        "gripper",
+        "dexterous_hand",
+        "suction",
+        "hook"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 34,
+      "point_fraction": 0.0166015625,
+      "bbox_extent_ratio": [
+        0.23462827503681183,
+        0.7093573212623596,
+        0.4978604018688202
+      ],
+      "quality_hint": "small_part_high_recall",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": true,
+      "allows_overlap": true,
+      "priority": 28.01,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "I",
+      "candidate_name": "baseline_existing_dexterous_hand_weak_mask",
+      "candidate_family": "existing_weak_mask",
+      "part_group": "baseline_existing_weak_mask",
+      "description": "Existing checked/weak mask channel for dexterous_hand; useful as a spatial prior, not final truth. A gripper/hand prior may overlap handles that are relevant to hook.",
+      "recommended_executors": [
+        "dexterous_hand",
+        "hook",
+        "gripper"
+      ],
+      "recommended_tasks": [
+        "press_push"
+      ],
+      "point_count": 25,
+      "point_fraction": 0.01220703125,
+      "bbox_extent_ratio": [
+        0.7753045558929443,
+        0.27447715401649475,
+        0.4198612570762634
+      ],
+      "quality_hint": "source_prior",
+      "confidence_hint": "medium",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 34.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "J",
+      "candidate_name": "weak_dexterous_hand_prior_seed",
+      "candidate_family": "existing_weak_mask",
+      "part_group": "weak_mask_prior_seed",
+      "description": "Raw existing weak mask prior retained for traceability.",
+      "recommended_executors": [
+        "dexterous_hand",
+        "hook",
+        "gripper"
+      ],
+      "recommended_tasks": [
+        "press_push"
+      ],
+      "point_count": 25,
+      "point_fraction": 0.01220703125,
+      "bbox_extent_ratio": [
+        0.7753045558929443,
+        0.27447715401649475,
+        0.4198612570762634
+      ],
+      "quality_hint": "source_prior_seed",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": true,
+      "allows_overlap": true,
+      "priority": 34.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "K",
+      "candidate_name": "loop_handle_or_lip_strict_01_seed",
+      "candidate_family": "strict_loop_handle_lip_seed",
+      "part_group": "loop_handle_lip_strict_seed",
+      "description": "strict high-curvature/linear component for more precise functional boundaries.",
+      "recommended_executors": [
+        "gripper",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 465,
+      "point_fraction": 0.22705078125,
+      "bbox_extent_ratio": [
+        1.0,
+        0.9998847246170044,
+        1.0
+      ],
+      "quality_hint": "strict_functional_component",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": true,
+      "allows_overlap": true,
+      "priority": 36.01,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "L",
+      "candidate_name": "baseline_compact_protrusion_or_button",
+      "candidate_family": "small_protrusion",
+      "part_group": "baseline_small_protrusion",
+      "description": "Compact protruding/high-curvature points; may be buttons, knobs, small handles, or switch-like regions.",
+      "recommended_executors": [
+        "dexterous_hand",
+        "gripper"
+      ],
+      "recommended_tasks": [
+        "press_push",
+        "open_pull",
+        "pick_up"
+      ],
+      "point_count": 57,
+      "point_fraction": 0.02783203125,
+      "bbox_extent_ratio": [
+        1.0,
+        0.9729825854301453,
+        1.0
+      ],
+      "quality_hint": "weak",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 42.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "M",
+      "candidate_name": "baseline_loop_or_handle_component_01_seed",
+      "candidate_family": "loop_or_hole_boundary",
+      "part_group": "baseline_loop_or_hole_boundary",
+      "description": "Connected high-curvature/linear seed component before expansion; useful for precise boundary review.",
+      "recommended_executors": [
+        "hook",
+        "gripper",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 709,
+      "point_fraction": 0.34619140625,
+      "bbox_extent_ratio": [
+        1.0,
+        0.9999999403953552,
+        1.0
+      ],
+      "quality_hint": "part_level_seed_candidate",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": true,
+      "allows_overlap": true,
+      "priority": 44.1,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "N",
+      "candidate_name": "baseline_high_curvature_boundary",
+      "candidate_family": "edge_or_boundary",
+      "part_group": "baseline_edge_or_boundary",
+      "description": "High-curvature boundary points; may indicate edges, lips, holes, knobs, or handles.",
+      "recommended_executors": [
+        "gripper",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 369,
+      "point_fraction": 0.18017578125,
+      "bbox_extent_ratio": [
+        1.0,
+        0.9729825854301453,
+        1.0
+      ],
+      "quality_hint": "weak",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": true,
+      "allows_overlap": true,
+      "priority": 48.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "O",
+      "candidate_name": "baseline_thin_or_linear_structure",
+      "candidate_family": "thin_structure",
+      "part_group": "baseline_thin_structure",
+      "description": "Locally linear points; may correspond to stems, handles, rods, rings, or thin graspable structures.",
+      "recommended_executors": [
+        "gripper",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull"
+      ],
+      "point_count": 369,
+      "point_fraction": 0.18017578125,
+      "bbox_extent_ratio": [
+        1.0,
+        0.9999999403953552,
+        1.0
+      ],
+      "quality_hint": "weak",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 49.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "P",
+      "candidate_name": "baseline_edge_extreme_y_low",
+      "candidate_family": "extreme_edge_or_lip",
+      "part_group": "baseline_extreme_edge_or_lip",
+      "description": "High-curvature points near the low extreme of the y axis.",
+      "recommended_executors": [
+        "gripper",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull"
+      ],
+      "point_count": 78,
+      "point_fraction": 0.0380859375,
+      "bbox_extent_ratio": [
+        0.8925062417984009,
+        0.12662217020988464,
+        0.9681399464607239
+      ],
+      "quality_hint": "weak",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 52.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "Q",
+      "candidate_name": "baseline_linear_extreme_z_high",
+      "candidate_family": "protruding_or_thin_part",
+      "part_group": "baseline_protruding_or_thin_part",
+      "description": "Linear structure near the high extreme of the z axis.",
+      "recommended_executors": [
+        "gripper",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull"
+      ],
+      "point_count": 131,
+      "point_fraction": 0.06396484375,
+      "bbox_extent_ratio": [
+        1.0,
+        0.4809684455394745,
+        0.09750666469335556
+      ],
+      "quality_hint": "weak",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 53.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "R",
+      "candidate_name": "baseline_smooth_low_curvature_surface",
+      "candidate_family": "smooth_surface",
+      "part_group": "baseline_smooth_surface",
+      "description": "Low-curvature and planar points; potential suction or push/panel candidate.",
+      "recommended_executors": [
+        "suction"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 506,
+      "point_fraction": 0.2470703125,
+      "bbox_extent_ratio": [
+        0.9965158104896545,
+        0.9591885209083557,
+        0.9694643616676331
+      ],
+      "quality_hint": "weak",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 55.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "S",
+      "candidate_name": "baseline_smooth_extreme_y_high",
+      "candidate_family": "smooth_extreme_patch",
+      "part_group": "baseline_smooth_extreme_patch",
+      "description": "Smooth patch near the high extreme of the y axis.",
+      "recommended_executors": [
+        "suction"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 138,
+      "point_fraction": 0.0673828125,
+      "bbox_extent_ratio": [
+        0.9554142951965332,
+        0.09711817651987076,
+        0.32905784249305725
+      ],
+      "quality_hint": "weak",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 60.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "T",
+      "candidate_name": "coarse_axis_x_band_1",
+      "candidate_family": "coarse_axis_partition",
+      "part_group": "coarse_partition_x",
+      "description": "Coarse axis partition retained for high recall and complete object decomposition.",
+      "recommended_executors": [
+        "gripper",
+        "suction",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 696,
+      "point_fraction": 0.33984375,
+      "bbox_extent_ratio": [
+        0.33535632491111755,
+        0.9998847246170044,
+        1.0
+      ],
+      "quality_hint": "coarse_review_partition",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": true,
+      "allows_overlap": true,
+      "priority": 70.01,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "U",
+      "candidate_name": "coarse_axis_y_band_1",
+      "candidate_family": "coarse_axis_partition",
+      "part_group": "coarse_partition_y",
+      "description": "Coarse axis partition retained for high recall and complete object decomposition.",
+      "recommended_executors": [
+        "gripper",
+        "suction",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 696,
+      "point_fraction": 0.33984375,
+      "bbox_extent_ratio": [
+        1.0,
+        0.34189242124557495,
+        1.0
+      ],
+      "quality_hint": "coarse_review_partition",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": true,
+      "allows_overlap": true,
+      "priority": 71.01,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "V",
+      "candidate_name": "coarse_axis_z_band_1",
+      "candidate_family": "coarse_axis_partition",
+      "part_group": "coarse_partition_z",
+      "description": "Coarse axis partition retained for high recall and complete object decomposition.",
+      "recommended_executors": [
+        "gripper",
+        "suction",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 696,
+      "point_fraction": 0.33984375,
+      "bbox_extent_ratio": [
+        1.0,
+        0.9999999403953552,
+        0.30862218141555786
+      ],
+      "quality_hint": "coarse_review_partition",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": true,
+      "allows_overlap": true,
+      "priority": 72.01,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "W",
+      "candidate_name": "baseline_central_body_wrapping_region",
+      "candidate_family": "central_body",
+      "part_group": "baseline_central_body",
+      "description": "Central object body; only useful for dexterous wrapping or grasping if task semantics support it.",
+      "recommended_executors": [
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry"
+      ],
+      "point_count": 471,
+      "point_fraction": 0.22998046875,
+      "bbox_extent_ratio": [
+        0.6272077560424805,
+        0.6135217547416687,
+        0.636974036693573
+      ],
+      "quality_hint": "needs_strict_review",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 80.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "X",
+      "candidate_name": "baseline_edge_linear_extreme_x_high_expanded",
+      "candidate_family": "expanded_extreme_part_component",
+      "part_group": "baseline_expanded_extreme_part_component",
+      "description": "kNN-expanded high-curvature/linear points near the high extreme of the x axis. Useful for handles, loops, lips, knobs, and side/end functional parts.",
+      "recommended_executors": [
+        "hook",
+        "gripper",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 444,
+      "point_fraction": 0.216796875,
+      "bbox_extent_ratio": [
+        0.21806685626506805,
+        0.9999999403953552,
+        1.0
+      ],
+      "quality_hint": "extreme_expanded_candidate",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 22.1,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 2,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "Y",
+      "candidate_name": "baseline_edge_extreme_x_high",
+      "candidate_family": "extreme_edge_or_lip",
+      "part_group": "baseline_extreme_edge_or_lip",
+      "description": "High-curvature points near the high extreme of the x axis.",
+      "recommended_executors": [
+        "gripper",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull"
+      ],
+      "point_count": 33,
+      "point_fraction": 0.01611328125,
+      "bbox_extent_ratio": [
+        0.10329282283782959,
+        0.9566547870635986,
+        0.9574722647666931
+      ],
+      "quality_hint": "weak",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 52.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 2,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "Z",
+      "candidate_name": "baseline_linear_extreme_z_low",
+      "candidate_family": "protruding_or_thin_part",
+      "part_group": "baseline_protruding_or_thin_part",
+      "description": "Linear structure near the low extreme of the z axis.",
+      "recommended_executors": [
+        "gripper",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull"
+      ],
+      "point_count": 113,
+      "point_fraction": 0.05517578125,
+      "bbox_extent_ratio": [
+        0.9916854500770569,
+        0.9999999403953552,
+        0.05194390192627907
+      ],
+      "quality_hint": "weak",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 53.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 2,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "AA",
+      "candidate_name": "baseline_smooth_extreme_z_low",
+      "candidate_family": "smooth_extreme_patch",
+      "part_group": "baseline_smooth_extreme_patch",
+      "description": "Smooth patch near the low extreme of the z axis.",
+      "recommended_executors": [
+        "suction"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 108,
+      "point_fraction": 0.052734375,
+      "bbox_extent_ratio": [
+        1.0,
+        0.9165501594543457,
+        0.07172910869121552
+      ],
+      "quality_hint": "weak",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 60.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 2,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "AB",
+      "candidate_name": "coarse_axis_x_band_2",
+      "candidate_family": "coarse_axis_partition",
+      "part_group": "coarse_partition_x",
+      "description": "Coarse axis partition retained for high recall and complete object decomposition.",
+      "recommended_executors": [
+        "gripper",
+        "suction",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 676,
+      "point_fraction": 0.330078125,
+      "bbox_extent_ratio": [
+        0.34312182664871216,
+        0.998481810092926,
+        1.0
+      ],
+      "quality_hint": "coarse_review_partition",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": true,
+      "allows_overlap": true,
+      "priority": 70.02,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 2,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "AC",
+      "candidate_name": "coarse_axis_y_band_2",
+      "candidate_family": "coarse_axis_partition",
+      "part_group": "coarse_partition_y",
+      "description": "Coarse axis partition retained for high recall and complete object decomposition.",
+      "recommended_executors": [
+        "gripper",
+        "suction",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 676,
+      "point_fraction": 0.330078125,
+      "bbox_extent_ratio": [
+        1.0,
+        0.3689935803413391,
+        0.9694643616676331
+      ],
+      "quality_hint": "coarse_review_partition",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": true,
+      "allows_overlap": true,
+      "priority": 71.02,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 2,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "AD",
+      "candidate_name": "coarse_axis_z_band_2",
+      "candidate_family": "coarse_axis_partition",
+      "part_group": "coarse_partition_z",
+      "description": "Coarse axis partition retained for high recall and complete object decomposition.",
+      "recommended_executors": [
+        "gripper",
+        "suction",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 676,
+      "point_fraction": 0.330078125,
+      "bbox_extent_ratio": [
+        1.0,
+        0.7422064542770386,
+        0.35304200649261475
+      ],
+      "quality_hint": "coarse_review_partition",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": true,
+      "allows_overlap": true,
+      "priority": 72.02,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 2,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "AE",
+      "candidate_name": "baseline_edge_linear_extreme_y_high_expanded",
+      "candidate_family": "expanded_extreme_part_component",
+      "part_group": "baseline_expanded_extreme_part_component",
+      "description": "kNN-expanded high-curvature/linear points near the high extreme of the y axis. Useful for handles, loops, lips, knobs, and side/end functional parts.",
+      "recommended_executors": [
+        "hook",
+        "gripper",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 635,
+      "point_fraction": 0.31005859375,
+      "bbox_extent_ratio": [
+        1.0,
+        0.6749273538589478,
+        0.43392810225486755
+      ],
+      "quality_hint": "extreme_expanded_candidate",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 22.3,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 3,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "AF",
+      "candidate_name": "baseline_edge_extreme_x_low",
+      "candidate_family": "extreme_edge_or_lip",
+      "part_group": "baseline_extreme_edge_or_lip",
+      "description": "High-curvature points near the low extreme of the x axis.",
+      "recommended_executors": [
+        "gripper",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull"
+      ],
+      "point_count": 31,
+      "point_fraction": 0.01513671875,
+      "bbox_extent_ratio": [
+        0.10246345400810242,
+        0.957089364528656,
+        0.9883670806884766
+      ],
+      "quality_hint": "weak",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 52.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 3,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "AG",
+      "candidate_name": "baseline_linear_extreme_x_high",
+      "candidate_family": "protruding_or_thin_part",
+      "part_group": "baseline_protruding_or_thin_part",
+      "description": "Linear structure near the high extreme of the x axis.",
+      "recommended_executors": [
+        "gripper",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull"
+      ],
+      "point_count": 84,
+      "point_fraction": 0.041015625,
+      "bbox_extent_ratio": [
+        0.09355152398347855,
+        0.9999999403953552,
+        1.0
+      ],
+      "quality_hint": "weak",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 53.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 3,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "AH",
+      "candidate_name": "baseline_smooth_extreme_x_low",
+      "candidate_family": "smooth_extreme_patch",
+      "part_group": "baseline_smooth_extreme_patch",
+      "description": "Smooth patch near the low extreme of the x axis.",
+      "recommended_executors": [
+        "suction"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 104,
+      "point_fraction": 0.05078125,
+      "bbox_extent_ratio": [
+        0.10316351801156998,
+        0.9704592823982239,
+        1.0
+      ],
+      "quality_hint": "weak",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 60.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 3,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "AI",
+      "candidate_name": "coarse_axis_x_band_3",
+      "candidate_family": "coarse_axis_partition",
+      "part_group": "coarse_partition_x",
+      "description": "Coarse axis partition retained for high recall and complete object decomposition.",
+      "recommended_executors": [
+        "gripper",
+        "suction",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 676,
+      "point_fraction": 0.330078125,
+      "bbox_extent_ratio": [
+        0.3213580548763275,
+        0.9999999403953552,
+        1.0
+      ],
+      "quality_hint": "coarse_review_partition",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": true,
+      "allows_overlap": true,
+      "priority": 70.03,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 3,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "AJ",
+      "candidate_name": "coarse_axis_y_band_3",
+      "candidate_family": "coarse_axis_partition",
+      "part_group": "coarse_partition_y",
+      "description": "Coarse axis partition retained for high recall and complete object decomposition.",
+      "recommended_executors": [
+        "gripper",
+        "suction",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 676,
+      "point_fraction": 0.330078125,
+      "bbox_extent_ratio": [
+        1.0,
+        0.288250207901001,
+        0.7108791470527649
+      ],
+      "quality_hint": "coarse_review_partition",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": true,
+      "allows_overlap": true,
+      "priority": 71.03,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 3,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "AK",
+      "candidate_name": "coarse_axis_z_band_3",
+      "candidate_family": "coarse_axis_partition",
+      "part_group": "coarse_partition_z",
+      "description": "Coarse axis partition retained for high recall and complete object decomposition.",
+      "recommended_executors": [
+        "gripper",
+        "suction",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 676,
+      "point_fraction": 0.330078125,
+      "bbox_extent_ratio": [
+        1.0,
+        0.7346054315567017,
+        0.33752116560935974
+      ],
+      "quality_hint": "coarse_review_partition",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": true,
+      "allows_overlap": true,
+      "priority": 72.03,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 3,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "AL",
+      "candidate_name": "baseline_edge_linear_extreme_z_low_expanded",
+      "candidate_family": "expanded_extreme_part_component",
+      "part_group": "baseline_expanded_extreme_part_component",
+      "description": "kNN-expanded high-curvature/linear points near the low extreme of the z axis. Useful for handles, loops, lips, knobs, and side/end functional parts.",
+      "recommended_executors": [
+        "hook",
+        "gripper",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 528,
+      "point_fraction": 0.2578125,
+      "bbox_extent_ratio": [
+        1.0,
+        0.9999999403953552,
+        0.2624385952949524
+      ],
+      "quality_hint": "extreme_expanded_candidate",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 22.4,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 4,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "AM",
+      "candidate_name": "baseline_edge_extreme_z_high",
+      "candidate_family": "extreme_edge_or_lip",
+      "part_group": "baseline_extreme_edge_or_lip",
+      "description": "High-curvature points near the high extreme of the z axis.",
+      "recommended_executors": [
+        "gripper",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull"
+      ],
+      "point_count": 27,
+      "point_fraction": 0.01318359375,
+      "bbox_extent_ratio": [
+        1.0,
+        0.4935741126537323,
+        0.11104405671358109
+      ],
+      "quality_hint": "weak",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 52.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 4,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "AN",
+      "candidate_name": "baseline_linear_extreme_y_low",
+      "candidate_family": "protruding_or_thin_part",
+      "part_group": "baseline_protruding_or_thin_part",
+      "description": "Linear structure near the low extreme of the y axis.",
+      "recommended_executors": [
+        "gripper",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull"
+      ],
+      "point_count": 80,
+      "point_fraction": 0.0390625,
+      "bbox_extent_ratio": [
+        1.0,
+        0.12636566162109375,
+        1.0
+      ],
+      "quality_hint": "weak",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 53.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 4,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "AO",
+      "candidate_name": "baseline_smooth_extreme_x_high",
+      "candidate_family": "smooth_extreme_patch",
+      "part_group": "baseline_smooth_extreme_patch",
+      "description": "Smooth patch near the high extreme of the x axis.",
+      "recommended_executors": [
+        "suction"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 92,
+      "point_fraction": 0.044921875,
+      "bbox_extent_ratio": [
+        0.10135535895824432,
+        0.9959061741828918,
+        1.0
+      ],
+      "quality_hint": "weak",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 60.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 4,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "AP",
+      "candidate_name": "baseline_edge_linear_extreme_z_high_expanded",
+      "candidate_family": "expanded_extreme_part_component",
+      "part_group": "baseline_expanded_extreme_part_component",
+      "description": "kNN-expanded high-curvature/linear points near the high extreme of the z axis. Useful for handles, loops, lips, knobs, and side/end functional parts.",
+      "recommended_executors": [
+        "hook",
+        "gripper",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 551,
+      "point_fraction": 0.26904296875,
+      "bbox_extent_ratio": [
+        1.0,
+        0.7123203277587891,
+        0.30359503626823425
+      ],
+      "quality_hint": "extreme_expanded_candidate",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 22.5,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 5,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "AQ",
+      "candidate_name": "baseline_edge_extreme_y_high",
+      "candidate_family": "extreme_edge_or_lip",
+      "part_group": "baseline_extreme_edge_or_lip",
+      "description": "High-curvature points near the high extreme of the y axis.",
+      "recommended_executors": [
+        "gripper",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull"
+      ],
+      "point_count": 25,
+      "point_fraction": 0.01220703125,
+      "bbox_extent_ratio": [
+        0.9100735187530518,
+        0.07029970735311508,
+        0.14055772125720978
+      ],
+      "quality_hint": "weak",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 52.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 5,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "AR",
+      "candidate_name": "baseline_linear_extreme_x_low",
+      "candidate_family": "protruding_or_thin_part",
+      "part_group": "baseline_protruding_or_thin_part",
+      "description": "Linear structure near the low extreme of the x axis.",
+      "recommended_executors": [
+        "gripper",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull"
+      ],
+      "point_count": 75,
+      "point_fraction": 0.03662109375,
+      "bbox_extent_ratio": [
+        0.10316351801156998,
+        0.9977331757545471,
+        1.0
+      ],
+      "quality_hint": "weak",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 53.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 5,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "AS",
+      "candidate_name": "baseline_smooth_extreme_z_high",
+      "candidate_family": "smooth_extreme_patch",
+      "part_group": "baseline_smooth_extreme_patch",
+      "description": "Smooth patch near the high extreme of the z axis.",
+      "recommended_executors": [
+        "suction"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 46,
+      "point_fraction": 0.0224609375,
+      "bbox_extent_ratio": [
+        0.9991255402565002,
+        0.4469519257545471,
+        0.10843604803085327
+      ],
+      "quality_hint": "weak",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 60.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 5,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "AT",
+      "candidate_name": "baseline_edge_extreme_z_low",
+      "candidate_family": "extreme_edge_or_lip",
+      "part_group": "baseline_extreme_edge_or_lip",
+      "description": "High-curvature points near the low extreme of the z axis.",
+      "recommended_executors": [
+        "gripper",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull"
+      ],
+      "point_count": 18,
+      "point_fraction": 0.0087890625,
+      "bbox_extent_ratio": [
+        0.932722270488739,
+        0.9729825854301453,
+        0.06476786732673645
+      ],
+      "quality_hint": "weak",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 52.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 6,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "AU",
+      "candidate_name": "baseline_linear_extreme_y_high",
+      "candidate_family": "protruding_or_thin_part",
+      "part_group": "baseline_protruding_or_thin_part",
+      "description": "Linear structure near the high extreme of the y axis.",
+      "recommended_executors": [
+        "gripper",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull"
+      ],
+      "point_count": 51,
+      "point_fraction": 0.02490234375,
+      "bbox_extent_ratio": [
+        0.9991173148155212,
+        0.08596781641244888,
+        0.24808040261268616
+      ],
+      "quality_hint": "weak",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 53.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 6,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "AV",
+      "candidate_name": "baseline_smooth_extreme_y_low",
+      "candidate_family": "smooth_extreme_patch",
+      "part_group": "baseline_smooth_extreme_patch",
+      "description": "Smooth patch near the low extreme of the y axis.",
+      "recommended_executors": [
+        "suction"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 32,
+      "point_fraction": 0.015625,
+      "bbox_extent_ratio": [
+        0.9910575747489929,
+        0.1229158267378807,
+        1.0
+      ],
+      "quality_hint": "weak",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 60.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 6,
+      "retention_policy": "high_recall_top_k_per_group"
+    }
+  ],
+  "generation_warning": "",
   "parameters": {
-    "target_score_threshold": 0.2,
-    "reject_score_threshold": 0.1,
-    "min_target_votes": 1.0,
-    "min_reject_votes": 1.0,
-    "expand_hops": 2,
-    "k_neighbors": 24
+    "partslippp_root": "external/partslippp/outputs",
+    "partslippp_path": "",
+    "partslippp_fallback": "error",
+    "k_neighbors": 24,
+    "min_points": 4,
+    "max_candidate_fraction": 0.7,
+    "max_candidates": 64,
+    "part_top_k": 5,
+    "dedupe_iou": 0.985,
+    "small_part_max_fraction": 0.1,
+    "seed_expand_hops": 1,
+    "component_max_candidates": 8,
+    "view_dilation_radius": 3,
+    "body_row_threshold_ratio": 0.18,
+    "body_top_margin": 8
   },
-  "notes": "v3 candidates grow only from semantic target seeds and are clipped by reject-veto points. They remain proposals requiring human review."
+  "notes": "Part candidates are high-recall proposals over original point indices only. The default high_recall backend favors recall over precision, permits overlapping candidates, keeps top-k candidates per part group, and marks uncertain regions for human review.",
+  "vlm_selected_candidates": [],
+  "vlm_uncertain_candidates": [],
+  "vlm_selection_path": "processed/vlm_candidate_v3/vlm_selection/vlm_pilot_008/combined_selection.json",
+  "selection_default_policy": "selected_candidates_only; uncertain candidates remain visible for human review but are not auto-filled",
+  "rule_filter_path": "processed/vlm_candidate_v3/rule_filter/vlm_pilot_008/rule_filter.json",
+  "rule_filter_default_policy": "accept_only",
+  "rule_filter_accepted_candidates": [],
+  "rule_filter_uncertain_candidates": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H",
+    "I",
+    "J",
+    "K",
+    "L",
+    "M",
+    "N",
+    "O",
+    "P",
+    "Q",
+    "T",
+    "U",
+    "V",
+    "W",
+    "X",
+    "Y",
+    "Z",
+    "AB",
+    "AC",
+    "AD",
+    "AE",
+    "AF",
+    "AG",
+    "AI",
+    "AJ",
+    "AK",
+    "AL",
+    "AM",
+    "AN",
+    "AP",
+    "AQ",
+    "AR",
+    "AT",
+    "AU"
+  ]
 }
