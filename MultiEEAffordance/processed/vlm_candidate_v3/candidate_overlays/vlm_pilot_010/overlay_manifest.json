@@ -10,80 +10,851 @@
   "candidate_ids": [
     "A",
     "B",
-    "C"
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H",
+    "I",
+    "J",
+    "K",
+    "L",
+    "M",
+    "N",
+    "O",
+    "P",
+    "Q",
+    "R",
+    "S",
+    "T",
+    "U",
+    "V",
+    "W",
+    "X"
   ],
   "candidates": [
     {
       "candidate_id": "A",
-      "candidate_name": "target_component_01_expanded",
-      "candidate_family": "semantic_target_component_expanded",
-      "description": "Connected target component grown locally without crossing reject-veto points.",
+      "candidate_name": "baseline_above_main_body_structure_expanded",
+      "candidate_family": "visual_component_expanded",
+      "part_group": "baseline_visual_component_expanded",
+      "description": "kNN-expanded upper structure proposal; intended to make sparse handles, loops, rings, or top protrusions reviewable.",
       "recommended_executors": [
-        "hook"
+        "hook",
+        "gripper",
+        "dexterous_hand"
       ],
       "recommended_tasks": [
-        "pick_up"
+        "pick_up",
+        "lift_carry",
+        "open_pull"
       ],
-      "point_count": 628,
-      "point_fraction": 0.306640625,
+      "point_count": 333,
+      "point_fraction": 0.16259765625,
       "bbox_extent_ratio": [
-        0.2809692919254303,
-        0.9999997615814209,
-        0.48197221755981445
-      ],
-      "quality_hint": "v3_reject_aware_candidate",
-      "priority": 8.1,
-      "mean_target_score": 0.4217429757118225,
-      "max_reject_score_after_veto": 0.0,
-      "provenance": "v3_target_seed_growth_with_reject_veto"
-    },
-    {
-      "candidate_id": "B",
-      "candidate_name": "target_component_02_expanded",
-      "candidate_family": "semantic_target_component_expanded",
-      "description": "Connected target component grown locally without crossing reject-veto points.",
-      "recommended_executors": [
-        "hook"
-      ],
-      "recommended_tasks": [
-        "pick_up"
-      ],
-      "point_count": 259,
-      "point_fraction": 0.12646484375,
-      "bbox_extent_ratio": [
-        0.18242695927619934,
-        0.6064980030059814,
-        0.3663712739944458
-      ],
-      "quality_hint": "v3_reject_aware_candidate",
-      "priority": 8.2,
-      "mean_target_score": 0.4467930197715759,
-      "max_reject_score_after_veto": 0.0,
-      "provenance": "v3_target_seed_growth_with_reject_veto"
-    },
-    {
-      "candidate_id": "C",
-      "candidate_name": "target_seed_union_reject_aware_expanded",
-      "candidate_family": "semantic_target_union",
-      "description": "Union of all VLM target seeds after removing reject-veto points and applying small kNN expansion.",
-      "recommended_executors": [
-        "hook"
-      ],
-      "recommended_tasks": [
-        "pick_up"
-      ],
-      "point_count": 888,
-      "point_fraction": 0.43359375,
-      "bbox_extent_ratio": [
-        0.34397563338279724,
+        0.9787737131118774,
         0.9999997615814209,
         1.0
       ],
-      "quality_hint": "v3_reject_aware_candidate",
-      "priority": 20.0,
-      "mean_target_score": 0.42875590920448303,
-      "max_reject_score_after_veto": 0.0,
-      "provenance": "v3_target_seed_growth_with_reject_veto"
+      "quality_hint": "expanded_visual_proposal",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 8.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "B",
+      "candidate_name": "baseline_above_main_body_structure",
+      "candidate_family": "visual_detached_structure",
+      "part_group": "baseline_visual_detached_structure",
+      "description": "View-derived points above the dense main body; useful for handles, loops, rings, or top protrusions.",
+      "recommended_executors": [
+        "hook",
+        "gripper",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull"
+      ],
+      "point_count": 136,
+      "point_fraction": 0.06640625,
+      "bbox_extent_ratio": [
+        0.9573315978050232,
+        0.8536189198493958,
+        0.9968935251235962
+      ],
+      "quality_hint": "targeted_visual_proposal",
+      "confidence_hint": "medium",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 12.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "C",
+      "candidate_name": "above_main_body_structure_expanded",
+      "candidate_family": "visual_component_expanded",
+      "part_group": "visual_partial_component",
+      "description": "Expanded multi-view foreground component; retained even when partially visible.",
+      "recommended_executors": [
+        "gripper",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 333,
+      "point_fraction": 0.16259765625,
+      "bbox_extent_ratio": [
+        0.9787737131118774,
+        0.9999997615814209,
+        1.0
+      ],
+      "quality_hint": "visual_high_recall",
+      "confidence_hint": "medium",
+      "need_review": true,
+      "is_partial_candidate": true,
+      "allows_overlap": true,
+      "priority": 12.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "D",
+      "candidate_name": "paired_loop_handle_or_ring_components",
+      "candidate_family": "paired_loop_handle_candidate",
+      "part_group": "paired_parts",
+      "description": "Union of two strong functional components for paired handles, rings, scissor holes, or symmetric structures.",
+      "recommended_executors": [
+        "gripper",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull"
+      ],
+      "point_count": 310,
+      "point_fraction": 0.1513671875,
+      "bbox_extent_ratio": [
+        0.3135519027709961,
+        0.9999997615814209,
+        0.3379500210285187
+      ],
+      "quality_hint": "paired_high_recall",
+      "confidence_hint": "medium",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 14.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "E",
+      "candidate_name": "small_button_knob_joint_01_expanded",
+      "candidate_family": "expanded_small_part_seed",
+      "part_group": "small_part",
+      "description": "kNN-expanded small compact or high-curvature component for buttons, knobs, switches, handle joints, and thin legs.",
+      "recommended_executors": [
+        "gripper",
+        "dexterous_hand",
+        "suction",
+        "hook"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 76,
+      "point_fraction": 0.037109375,
+      "bbox_extent_ratio": [
+        0.06603415310382843,
+        0.9999997615814209,
+        0.13925811648368835
+      ],
+      "quality_hint": "expanded_small_part_high_recall",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": true,
+      "allows_overlap": true,
+      "priority": 16.01,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "F",
+      "candidate_name": "weak_gripper_prior_expanded",
+      "candidate_family": "expanded_existing_weak_mask",
+      "part_group": "weak_mask_prior",
+      "description": "Expanded existing weak mask prior; useful but not trusted as final GT.",
+      "recommended_executors": [
+        "gripper",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up"
+      ],
+      "point_count": 1524,
+      "point_fraction": 0.744140625,
+      "bbox_extent_ratio": [
+        0.4236195683479309,
+        0.9999997615814209,
+        1.0
+      ],
+      "quality_hint": "expanded_source_prior",
+      "confidence_hint": "medium",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 18.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "G",
+      "candidate_name": "loop_handle_or_lip_loose_02_expanded",
+      "candidate_family": "expanded_loop_handle_lip_seed",
+      "part_group": "loop_handle_lip",
+      "description": "kNN-expanded connected high-curvature or linear component for handles, rings, holes, lips, and thin parts.",
+      "recommended_executors": [
+        "gripper",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 141,
+      "point_fraction": 0.06884765625,
+      "bbox_extent_ratio": [
+        0.16366934776306152,
+        0.9999997615814209,
+        0.23645341396331787
+      ],
+      "quality_hint": "expanded_loose_functional_component",
+      "confidence_hint": "medium",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 20.02,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "H",
+      "candidate_name": "baseline_loop_or_handle_component_02_expanded",
+      "candidate_family": "expanded_loop_or_handle",
+      "part_group": "baseline_expanded_loop_or_handle",
+      "description": "kNN-expanded connected high-curvature/linear component; designed for complete handles, rings, holes, loops, lips, or similar functional structures.",
+      "recommended_executors": [
+        "hook",
+        "gripper",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 82,
+      "point_fraction": 0.0400390625,
+      "bbox_extent_ratio": [
+        0.06695670634508133,
+        0.9999997615814209,
+        0.15090923011302948
+      ],
+      "quality_hint": "part_level_expanded_candidate",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 20.2,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "I",
+      "candidate_name": "baseline_edge_linear_extreme_x_low_expanded",
+      "candidate_family": "expanded_extreme_part_component",
+      "part_group": "baseline_expanded_extreme_part_component",
+      "description": "kNN-expanded high-curvature/linear points near the low extreme of the x axis. Useful for handles, loops, lips, knobs, and side/end functional parts.",
+      "recommended_executors": [
+        "hook",
+        "gripper",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 382,
+      "point_fraction": 0.1865234375,
+      "bbox_extent_ratio": [
+        0.5016583800315857,
+        0.35974228382110596,
+        0.1445939987897873
+      ],
+      "quality_hint": "extreme_expanded_candidate",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 22.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "J",
+      "candidate_name": "loop_handle_or_lip_strict_02_expanded",
+      "candidate_family": "expanded_strict_loop_handle_lip_seed",
+      "part_group": "loop_handle_lip_strict",
+      "description": "kNN-expanded strict high-curvature/linear component for more precise functional boundaries.",
+      "recommended_executors": [
+        "gripper",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 67,
+      "point_fraction": 0.03271484375,
+      "bbox_extent_ratio": [
+        0.049934931099414825,
+        0.9999997615814209,
+        0.1310242861509323
+      ],
+      "quality_hint": "expanded_strict_functional_component",
+      "confidence_hint": "medium",
+      "need_review": true,
+      "is_partial_candidate": true,
+      "allows_overlap": true,
+      "priority": 24.02,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "K",
+      "candidate_name": "above_main_body_structure",
+      "candidate_family": "visual_component_seed",
+      "part_group": "visual_partial_component_seed",
+      "description": "Raw multi-view foreground component seed for precise review.",
+      "recommended_executors": [
+        "gripper",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 136,
+      "point_fraction": 0.06640625,
+      "bbox_extent_ratio": [
+        0.9573315978050232,
+        0.8536189198493958,
+        0.9968935251235962
+      ],
+      "quality_hint": "visual_seed",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": true,
+      "allows_overlap": true,
+      "priority": 28.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "L",
+      "candidate_name": "small_button_knob_joint_01_seed",
+      "candidate_family": "small_part_seed",
+      "part_group": "small_part_seed",
+      "description": "small compact or high-curvature component for buttons, knobs, switches, handle joints, and thin legs.",
+      "recommended_executors": [
+        "gripper",
+        "dexterous_hand",
+        "suction",
+        "hook"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 16,
+      "point_fraction": 0.0078125,
+      "bbox_extent_ratio": [
+        0.025256438180804253,
+        0.9999997615814209,
+        0.05241551995277405
+      ],
+      "quality_hint": "small_part_high_recall",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": true,
+      "allows_overlap": true,
+      "priority": 28.01,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "M",
+      "candidate_name": "loop_handle_or_lip_loose_01_seed",
+      "candidate_family": "loop_handle_lip_seed",
+      "part_group": "loop_handle_lip_seed",
+      "description": "connected high-curvature or linear component for handles, rings, holes, lips, and thin parts.",
+      "recommended_executors": [
+        "gripper",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 887,
+      "point_fraction": 0.43310546875,
+      "bbox_extent_ratio": [
+        0.8490882515907288,
+        0.9999997615814209,
+        0.6522207856178284
+      ],
+      "quality_hint": "loose_functional_component",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": true,
+      "allows_overlap": true,
+      "priority": 32.01,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "N",
+      "candidate_name": "weak_gripper_prior_seed",
+      "candidate_family": "existing_weak_mask",
+      "part_group": "weak_mask_prior_seed",
+      "description": "Raw existing weak mask prior retained for traceability.",
+      "recommended_executors": [
+        "gripper",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up"
+      ],
+      "point_count": 1474,
+      "point_fraction": 0.7197265625,
+      "bbox_extent_ratio": [
+        0.40373557806015015,
+        0.9999997615814209,
+        1.0
+      ],
+      "quality_hint": "source_prior_seed",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": true,
+      "allows_overlap": true,
+      "priority": 34.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "O",
+      "candidate_name": "loop_handle_or_lip_strict_01_seed",
+      "candidate_family": "strict_loop_handle_lip_seed",
+      "part_group": "loop_handle_lip_strict_seed",
+      "description": "strict high-curvature/linear component for more precise functional boundaries.",
+      "recommended_executors": [
+        "gripper",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 466,
+      "point_fraction": 0.2275390625,
+      "bbox_extent_ratio": [
+        0.8490882515907288,
+        0.656868040561676,
+        0.5775458812713623
+      ],
+      "quality_hint": "strict_functional_component",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": true,
+      "allows_overlap": true,
+      "priority": 36.01,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "P",
+      "candidate_name": "smooth_panel_or_surface_01_expanded",
+      "candidate_family": "expanded_smooth_surface_component",
+      "part_group": "smooth_panel_surface",
+      "description": "kNN-expanded smooth/planar component for suction, press, panel, door, or broad contact regions.",
+      "recommended_executors": [
+        "suction",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 1043,
+      "point_fraction": 0.50927734375,
+      "bbox_extent_ratio": [
+        0.40986496210098267,
+        0.9999997615814209,
+        0.5148149728775024
+      ],
+      "quality_hint": "expanded_surface_component",
+      "confidence_hint": "medium",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 38.01,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "Q",
+      "candidate_name": "baseline_compact_protrusion_or_button",
+      "candidate_family": "small_protrusion",
+      "part_group": "baseline_small_protrusion",
+      "description": "Compact protruding/high-curvature points; may be buttons, knobs, small handles, or switch-like regions.",
+      "recommended_executors": [
+        "dexterous_hand",
+        "gripper"
+      ],
+      "recommended_tasks": [
+        "press_push",
+        "open_pull",
+        "pick_up"
+      ],
+      "point_count": 108,
+      "point_fraction": 0.052734375,
+      "bbox_extent_ratio": [
+        0.1835969239473343,
+        0.8032488822937012,
+        0.6025774478912354
+      ],
+      "quality_hint": "weak",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 42.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "R",
+      "candidate_name": "baseline_loop_or_handle_component_01_seed",
+      "candidate_family": "loop_or_hole_boundary",
+      "part_group": "baseline_loop_or_hole_boundary",
+      "description": "Connected high-curvature/linear seed component before expansion; useful for precise boundary review.",
+      "recommended_executors": [
+        "hook",
+        "gripper",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 621,
+      "point_fraction": 0.30322265625,
+      "bbox_extent_ratio": [
+        0.8490882515907288,
+        0.656868040561676,
+        0.6186887621879578
+      ],
+      "quality_hint": "part_level_seed_candidate",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": true,
+      "allows_overlap": true,
+      "priority": 44.1,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "S",
+      "candidate_name": "baseline_high_curvature_boundary",
+      "candidate_family": "edge_or_boundary",
+      "part_group": "baseline_edge_or_boundary",
+      "description": "High-curvature boundary points; may indicate edges, lips, holes, knobs, or handles.",
+      "recommended_executors": [
+        "gripper",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 369,
+      "point_fraction": 0.18017578125,
+      "bbox_extent_ratio": [
+        0.2473340630531311,
+        0.9348070621490479,
+        0.819952666759491
+      ],
+      "quality_hint": "weak",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": true,
+      "allows_overlap": true,
+      "priority": 48.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "T",
+      "candidate_name": "baseline_thin_or_linear_structure",
+      "candidate_family": "thin_structure",
+      "part_group": "baseline_thin_structure",
+      "description": "Locally linear points; may correspond to stems, handles, rods, rings, or thin graspable structures.",
+      "recommended_executors": [
+        "gripper",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull"
+      ],
+      "point_count": 369,
+      "point_fraction": 0.18017578125,
+      "bbox_extent_ratio": [
+        1.0,
+        0.9999997615814209,
+        0.9932331442832947
+      ],
+      "quality_hint": "weak",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 49.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "U",
+      "candidate_name": "baseline_edge_extreme_z_high",
+      "candidate_family": "extreme_edge_or_lip",
+      "part_group": "baseline_extreme_edge_or_lip",
+      "description": "High-curvature points near the high extreme of the z axis.",
+      "recommended_executors": [
+        "gripper",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull"
+      ],
+      "point_count": 187,
+      "point_fraction": 0.09130859375,
+      "bbox_extent_ratio": [
+        0.21399852633476257,
+        0.6064980030059814,
+        0.27017050981521606
+      ],
+      "quality_hint": "weak",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 52.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "V",
+      "candidate_name": "baseline_linear_extreme_x_low",
+      "candidate_family": "protruding_or_thin_part",
+      "part_group": "baseline_protruding_or_thin_part",
+      "description": "Linear structure near the low extreme of the x axis.",
+      "recommended_executors": [
+        "gripper",
+        "hook",
+        "dexterous_hand"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull"
+      ],
+      "point_count": 146,
+      "point_fraction": 0.0712890625,
+      "bbox_extent_ratio": [
+        0.37929239869117737,
+        0.35360944271087646,
+        0.10995835810899734
+      ],
+      "quality_hint": "weak",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 53.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "W",
+      "candidate_name": "baseline_smooth_low_curvature_surface",
+      "candidate_family": "smooth_surface",
+      "part_group": "baseline_smooth_surface",
+      "description": "Low-curvature and planar points; potential suction or push/panel candidate.",
+      "recommended_executors": [
+        "suction"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 500,
+      "point_fraction": 0.244140625,
+      "bbox_extent_ratio": [
+        0.5798628330230713,
+        0.9999997615814209,
+        0.5245087742805481
+      ],
+      "quality_hint": "weak",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 55.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
+    },
+    {
+      "candidate_id": "X",
+      "candidate_name": "baseline_smooth_extreme_y_low",
+      "candidate_family": "smooth_extreme_patch",
+      "part_group": "baseline_smooth_extreme_patch",
+      "description": "Smooth patch near the low extreme of the y axis.",
+      "recommended_executors": [
+        "suction"
+      ],
+      "recommended_tasks": [
+        "pick_up",
+        "lift_carry",
+        "open_pull",
+        "press_push"
+      ],
+      "point_count": 200,
+      "point_fraction": 0.09765625,
+      "bbox_extent_ratio": [
+        0.3706400692462921,
+        0.07449772208929062,
+        0.4413086473941803
+      ],
+      "quality_hint": "weak",
+      "confidence_hint": "low",
+      "need_review": true,
+      "is_partial_candidate": false,
+      "allows_overlap": true,
+      "priority": 60.0,
+      "provenance": "v3_high_recall_3d_candidate_generator",
+      "source": "self_high_recall_3d",
+      "rank_in_group": 1,
+      "retention_policy": "high_recall_top_k_per_group"
     }
   ],
   "views": [
@@ -94,33 +865,180 @@
       "overlay_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_010/yaw000_elev20_overlay.png",
       "selector_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_010/yaw000_elev20_selector.png",
       "selector_crop_bbox": [
-        404,
+        0,
         0,
         767,
         767
       ],
       "positive_pixels": {
-        "C": 4340,
-        "B": 1279,
-        "A": 3058
+        "X": 1000,
+        "W": 2426,
+        "V": 715,
+        "U": 917,
+        "T": 1808,
+        "S": 1807,
+        "R": 3040,
+        "Q": 532,
+        "P": 5059,
+        "O": 2280,
+        "N": 7182,
+        "M": 4346,
+        "L": 73,
+        "K": 660,
+        "J": 312,
+        "I": 1874,
+        "H": 377,
+        "G": 685,
+        "F": 7422,
+        "E": 358,
+        "D": 1513,
+        "C": 1631,
+        "B": 660,
+        "A": 1631
       },
       "candidate_bboxes": {
-        "C": [
-          484,
+        "X": [
+          457,
+          442,
+          697,
+          707
+        ],
+        "W": [
+          328,
+          336,
+          704,
+          707
+        ],
+        "V": [
+          60,
+          341,
+          307,
+          443
+        ],
+        "U": [
+          467,
+          61,
+          607,
+          277
+        ],
+        "T": [
+          60,
+          71,
+          707,
+          683
+        ],
+        "S": [
+          446,
+          61,
+          607,
+          566
+        ],
+        "R": [
+          60,
+          61,
+          609,
+          465
+        ],
+        "Q": [
+          486,
+          61,
+          607,
+          380
+        ],
+        "P": [
+          441,
+          336,
+          707,
+          707
+        ],
+        "O": [
+          60,
+          64,
+          609,
+          453
+        ],
+        "N": [
+          445,
           60,
           707,
           707
         ],
-        "B": [
-          490,
+        "M": [
+          60,
           60,
           609,
-          327
+          501
+        ],
+        "L": [
+          479,
+          361,
+          497,
+          501
+        ],
+        "K": [
+          60,
+          60,
+          678,
+          666
+        ],
+        "J": [
+          475,
+          343,
+          509,
+          530
+        ],
+        "I": [
+          60,
+          322,
+          386,
+          446
+        ],
+        "H": [
+          471,
+          338,
+          515,
+          530
+        ],
+        "G": [
+          493,
+          428,
+          601,
+          624
+        ],
+        "F": [
+          432,
+          60,
+          707,
+          707
+        ],
+        "E": [
+          464,
+          339,
+          509,
+          530
+        ],
+        "D": [
+          493,
+          358,
+          697,
+          624
+        ],
+        "C": [
+          60,
+          60,
+          693,
+          707
+        ],
+        "B": [
+          60,
+          60,
+          678,
+          666
         ],
         "A": [
-          524,
-          354,
-          707,
+          60,
+          60,
+          693,
           707
         ]
       }
@@ -132,34 +1050,181 @@
       "overlay_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_010/yaw045_elev20_overlay.png",
       "selector_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_010/yaw045_elev20_selector.png",
       "selector_crop_bbox": [
-        341,
-        225,
+        0,
+        0,
         767,
         767
       ],
       "positive_pixels": {
-        "C": 4288,
-        "B": 1269,
-        "A": 3019
+        "X": 1000,
+        "W": 2397,
+        "V": 710,
+        "U": 911,
+        "T": 1795,
+        "S": 1766,
+        "R": 2998,
+        "Q": 531,
+        "P": 5003,
+        "O": 2253,
+        "N": 7095,
+        "M": 4292,
+        "L": 77,
+        "K": 652,
+        "J": 313,
+        "I": 1865,
+        "H": 386,
+        "G": 684,
+        "F": 7337,
+        "E": 356,
+        "D": 1505,
+        "C": 1602,
+        "B": 652,
+        "A": 1602
       },
       "candidate_bboxes": {
-        "C": [
-          421,
-          305,
-          707,
+        "X": [
+          416,
+          434,
+          618,
           707
         ],
-        "B": [
-          557,
+        "W": [
+          319,
+          278,
+          626,
+          707
+        ],
+        "V": [
+          60,
+          60,
+          316,
+          294
+        ],
+        "U": [
+          522,
           305,
           707,
           457
         ],
-        "A": [
-          421,
-          479,
+        "T": [
+          60,
+          60,
+          707,
+          689
+        ],
+        "S": [
+          408,
+          305,
+          707,
+          548
+        ],
+        "R": [
+          60,
+          60,
+          707,
+          457
+        ],
+        "Q": [
+          439,
+          305,
+          707,
+          428
+        ],
+        "P": [
+          403,
+          362,
           630,
           707
+        ],
+        "O": [
+          60,
+          60,
+          707,
+          457
+        ],
+        "N": [
+          403,
+          305,
+          707,
+          707
+        ],
+        "M": [
+          60,
+          60,
+          707,
+          533
+        ],
+        "L": [
+          435,
+          393,
+          455,
+          480
+        ],
+        "K": [
+          60,
+          60,
+          703,
+          675
+        ],
+        "J": [
+          420,
+          386,
+          472,
+          500
+        ],
+        "I": [
+          60,
+          60,
+          397,
+          362
+        ],
+        "H": [
+          419,
+          378,
+          483,
+          500
+        ],
+        "G": [
+          420,
+          443,
+          472,
+          603
+        ],
+        "F": [
+          403,
+          305,
+          707,
+          707
+        ],
+        "E": [
+          418,
+          378,
+          472,
+          500
+        ],
+        "D": [
+          420,
+          443,
+          618,
+          674
+        ],
+        "C": [
+          60,
+          60,
+          707,
+          706
+        ],
+        "B": [
+          60,
+          60,
+          703,
+          675
+        ],
+        "A": [
+          60,
+          60,
+          707,
+          706
         ]
       }
     },
@@ -171,33 +1236,180 @@
       "selector_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_010/yaw090_elev20_selector.png",
       "selector_crop_bbox": [
         0,
-        363,
+        0,
         767,
         767
       ],
       "positive_pixels": {
-        "C": 4317,
-        "B": 1269,
-        "A": 3043
+        "X": 998,
+        "W": 2408,
+        "V": 700,
+        "U": 921,
+        "T": 1774,
+        "S": 1798,
+        "R": 3004,
+        "Q": 532,
+        "P": 5040,
+        "O": 2246,
+        "N": 7151,
+        "M": 4306,
+        "L": 73,
+        "K": 644,
+        "J": 320,
+        "I": 1847,
+        "H": 391,
+        "G": 681,
+        "F": 7394,
+        "E": 365,
+        "D": 1510,
+        "C": 1602,
+        "B": 644,
+        "A": 1602
       },
       "candidate_bboxes": {
-        "C": [
+        "X": [
+          83,
+          473,
+          369,
+          707
+        ],
+        "W": [
+          65,
+          320,
+          404,
+          707
+        ],
+        "V": [
+          355,
           60,
-          443,
+          428,
+          317
+        ],
+        "U": [
+          531,
+          448,
+          707,
+          604
+        ],
+        "T": [
+          64,
+          60,
+          706,
+          692
+        ],
+        "S": [
+          176,
+          425,
+          707,
+          604
+        ],
+        "R": [
+          306,
+          60,
+          707,
+          604
+        ],
+        "Q": [
+          316,
+          444,
+          707,
+          602
+        ],
+        "P": [
+          60,
+          417,
+          394,
+          707
+        ],
+        "O": [
+          333,
+          60,
+          707,
+          604
+        ],
+        "N": [
+          60,
+          417,
           707,
           707
         ],
-        "B": [
-          469,
-          470,
+        "M": [
+          284,
+          60,
           707,
           606
         ],
+        "L": [
+          302,
+          438,
+          338,
+          513
+        ],
+        "K": [
+          62,
+          60,
+          707,
+          636
+        ],
+        "J": [
+          271,
+          433,
+          357,
+          526
+        ],
+        "I": [
+          348,
+          60,
+          443,
+          397
+        ],
+        "H": [
+          271,
+          429,
+          370,
+          526
+        ],
+        "G": [
+          141,
+          469,
+          296,
+          593
+        ],
+        "F": [
+          60,
+          417,
+          707,
+          707
+        ],
+        "E": [
+          278,
+          426,
+          370,
+          526
+        ],
+        "D": [
+          131,
+          469,
+          351,
+          703
+        ],
+        "C": [
+          60,
+          60,
+          707,
+          681
+        ],
+        "B": [
+          62,
+          60,
+          707,
+          636
+        ],
         "A": [
           60,
-          513,
-          373,
-          707
+          60,
+          707,
+          681
         ]
       }
     },
@@ -209,33 +1421,180 @@
       "selector_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_010/yaw135_elev20_selector.png",
       "selector_crop_bbox": [
         0,
-        308,
-        519,
+        0,
+        767,
         767
       ],
       "positive_pixels": {
-        "C": 4311,
-        "B": 1233,
-        "A": 3073
+        "X": 1000,
+        "W": 2435,
+        "V": 720,
+        "U": 887,
+        "T": 1792,
+        "S": 1740,
+        "R": 2980,
+        "Q": 518,
+        "P": 5067,
+        "O": 2245,
+        "N": 7104,
+        "M": 4247,
+        "L": 72,
+        "K": 655,
+        "J": 321,
+        "I": 1868,
+        "H": 389,
+        "G": 685,
+        "F": 7345,
+        "E": 361,
+        "D": 1515,
+        "C": 1620,
+        "B": 655,
+        "A": 1620
       },
       "candidate_bboxes": {
-        "C": [
+        "X": [
+          73,
+          441,
+          358,
+          640
+        ],
+        "W": [
+          63,
+          311,
+          479,
+          640
+        ],
+        "V": [
+          491,
           60,
+          707,
+          336
+        ],
+        "U": [
+          311,
+          493,
+          439,
+          705
+        ],
+        "T": [
+          71,
+          60,
+          707,
+          702
+        ],
+        "S": [
+          203,
           388,
           439,
+          705
+        ],
+        "R": [
+          311,
+          60,
+          707,
+          705
+        ],
+        "Q": [
+          316,
+          388,
+          439,
+          705
+        ],
+        "P": [
+          60,
+          368,
+          378,
+          640
+        ],
+        "O": [
+          311,
+          60,
+          707,
+          705
+        ],
+        "N": [
+          60,
+          368,
+          439,
+          707
+        ],
+        "M": [
+          250,
+          60,
+          707,
+          707
+        ],
+        "L": [
+          304,
+          388,
+          330,
+          483
+        ],
+        "K": [
+          68,
+          60,
+          707,
+          681
+        ],
+        "J": [
+          286,
+          369,
+          332,
+          501
+        ],
+        "I": [
+          420,
+          60,
+          707,
+          410
+        ],
+        "H": [
+          286,
+          368,
+          338,
+          501
+        ],
+        "G": [
+          152,
+          377,
+          298,
+          489
+        ],
+        "F": [
+          60,
+          368,
+          439,
+          707
+        ],
+        "E": [
+          289,
+          368,
+          346,
+          501
+        ],
+        "D": [
+          76,
+          377,
+          298,
+          640
+        ],
+        "C": [
+          60,
+          60,
+          707,
           707
         ],
         "B": [
-          311,
-          533,
-          439,
-          707
+          68,
+          60,
+          707,
+          681
         ],
         "A": [
           60,
-          388,
-          274,
-          640
+          60,
+          707,
+          707
         ]
       }
     },
@@ -248,32 +1607,179 @@
       "selector_crop_bbox": [
         0,
         0,
-        364,
+        767,
         767
       ],
       "positive_pixels": {
-        "C": 4327,
-        "B": 1276,
-        "A": 3046
+        "X": 1000,
+        "W": 2421,
+        "V": 724,
+        "U": 923,
+        "T": 1809,
+        "S": 1792,
+        "R": 3037,
+        "Q": 530,
+        "P": 5056,
+        "O": 2290,
+        "N": 7170,
+        "M": 4339,
+        "L": 76,
+        "K": 673,
+        "J": 319,
+        "I": 1887,
+        "H": 391,
+        "G": 694,
+        "F": 7407,
+        "E": 359,
+        "D": 1512,
+        "C": 1636,
+        "B": 673,
+        "A": 1636
       },
       "candidate_bboxes": {
+        "X": [
+          70,
+          173,
+          310,
+          432
+        ],
+        "W": [
+          63,
+          60,
+          439,
+          432
+        ],
+        "V": [
+          460,
+          367,
+          707,
+          472
+        ],
+        "U": [
+          160,
+          491,
+          300,
+          705
+        ],
+        "T": [
+          60,
+          100,
+          707,
+          694
+        ],
+        "S": [
+          160,
+          204,
+          321,
+          705
+        ],
+        "R": [
+          158,
+          319,
+          707,
+          705
+        ],
+        "Q": [
+          160,
+          273,
+          281,
+          705
+        ],
+        "P": [
+          60,
+          60,
+          326,
+          433
+        ],
+        "O": [
+          158,
+          339,
+          707,
+          701
+        ],
+        "N": [
+          60,
+          60,
+          322,
+          707
+        ],
+        "M": [
+          158,
+          250,
+          707,
+          706
+        ],
+        "L": [
+          270,
+          273,
+          288,
+          401
+        ],
+        "K": [
+          88,
+          60,
+          707,
+          682
+        ],
+        "J": [
+          259,
+          231,
+          292,
+          424
+        ],
+        "I": [
+          381,
+          359,
+          707,
+          481
+        ],
+        "H": [
+          251,
+          231,
+          296,
+          424
+        ],
+        "G": [
+          166,
+          114,
+          274,
+          365
+        ],
+        "F": [
+          60,
+          60,
+          335,
+          707
+        ],
+        "E": [
+          259,
+          249,
+          303,
+          425
+        ],
+        "D": [
+          70,
+          104,
+          274,
+          413
+        ],
         "C": [
+          74,
           60,
-          60,
-          284,
+          707,
           707
         ],
         "B": [
-          158,
-          452,
-          276,
-          707
+          88,
+          60,
+          707,
+          682
         ],
         "A": [
+          74,
           60,
-          60,
-          243,
-          422
+          707,
+          707
         ]
       }
     },
@@ -286,32 +1792,179 @@
       "selector_crop_bbox": [
         0,
         0,
-        426,
-        531
+        767,
+        767
       ],
       "positive_pixels": {
-        "C": 4307,
-        "B": 1268,
-        "A": 3036
+        "X": 1000,
+        "W": 2407,
+        "V": 718,
+        "U": 907,
+        "T": 1788,
+        "S": 1771,
+        "R": 3003,
+        "Q": 523,
+        "P": 5003,
+        "O": 2258,
+        "N": 7084,
+        "M": 4291,
+        "L": 72,
+        "K": 656,
+        "J": 312,
+        "I": 1877,
+        "H": 387,
+        "G": 668,
+        "F": 7319,
+        "E": 360,
+        "D": 1482,
+        "C": 1627,
+        "B": 656,
+        "A": 1627
       },
       "candidate_bboxes": {
+        "X": [
+          149,
+          124,
+          351,
+          396
+        ],
+        "W": [
+          141,
+          60,
+          448,
+          476
+        ],
+        "V": [
+          452,
+          488,
+          707,
+          707
+        ],
+        "U": [
+          60,
+          304,
+          244,
+          451
+        ],
+        "T": [
+          60,
+          75,
+          707,
+          707
+        ],
+        "S": [
+          60,
+          216,
+          359,
+          451
+        ],
+        "R": [
+          60,
+          303,
+          707,
+          707
+        ],
+        "Q": [
+          60,
+          286,
+          328,
+          451
+        ],
+        "P": [
+          137,
+          60,
+          364,
+          398
+        ],
+        "O": [
+          60,
+          304,
+          707,
+          707
+        ],
+        "N": [
+          60,
+          60,
+          364,
+          451
+        ],
+        "M": [
+          60,
+          225,
+          707,
+          707
+        ],
+        "L": [
+          312,
+          286,
+          332,
+          369
+        ],
+        "K": [
+          64,
+          60,
+          707,
+          707
+        ],
+        "J": [
+          295,
+          259,
+          347,
+          371
+        ],
+        "I": [
+          370,
+          419,
+          707,
+          707
+        ],
+        "H": [
+          284,
+          259,
+          348,
+          376
+        ],
+        "G": [
+          295,
+          138,
+          347,
+          339
+        ],
+        "F": [
+          60,
+          60,
+          364,
+          451
+        ],
+        "E": [
+          295,
+          273,
+          349,
+          385
+        ],
+        "D": [
+          149,
+          61,
+          347,
+          339
+        ],
         "C": [
           60,
           60,
-          346,
-          451
+          707,
+          707
         ],
         "B": [
+          64,
           60,
-          303,
-          210,
-          451
+          707,
+          707
         ],
         "A": [
-          137,
           60,
-          346,
-          317
+          60,
+          707,
+          707
         ]
       }
     },
@@ -325,31 +1978,178 @@
         0,
         0,
         767,
-        373
+        767
       ],
       "positive_pixels": {
-        "C": 4294,
-        "B": 1250,
-        "A": 3039
+        "X": 1000,
+        "W": 2401,
+        "V": 698,
+        "U": 893,
+        "T": 1770,
+        "S": 1783,
+        "R": 2991,
+        "Q": 515,
+        "P": 5028,
+        "O": 2245,
+        "N": 7121,
+        "M": 4286,
+        "L": 79,
+        "K": 635,
+        "J": 324,
+        "I": 1838,
+        "H": 395,
+        "G": 687,
+        "F": 7363,
+        "E": 367,
+        "D": 1512,
+        "C": 1584,
+        "B": 635,
+        "A": 1584
       },
       "candidate_bboxes": {
-        "C": [
+        "X": [
+          398,
+          111,
+          684,
+          343
+        ],
+        "W": [
+          363,
+          60,
+          702,
+          437
+        ],
+        "V": [
+          339,
+          458,
+          412,
+          707
+        ],
+        "U": [
+          60,
+          157,
+          236,
+          316
+        ],
+        "T": [
+          61,
+          74,
+          703,
+          707
+        ],
+        "S": [
+          60,
+          157,
+          591,
+          344
+        ],
+        "R": [
+          60,
+          157,
+          461,
+          707
+        ],
+        "Q": [
+          60,
+          159,
+          451,
+          287
+        ],
+        "P": [
+          373,
+          60,
+          707,
+          350
+        ],
+        "O": [
+          60,
+          157,
+          434,
+          707
+        ],
+        "N": [
           60,
           60,
           707,
-          293
+          343
+        ],
+        "M": [
+          60,
+          157,
+          483,
+          707
+        ],
+        "L": [
+          429,
+          254,
+          465,
+          323
+        ],
+        "K": [
+          60,
+          77,
+          705,
+          707
+        ],
+        "J": [
+          410,
+          239,
+          496,
+          327
+        ],
+        "I": [
+          324,
+          385,
+          418,
+          707
+        ],
+        "H": [
+          397,
+          229,
+          496,
+          328
+        ],
+        "G": [
+          471,
+          155,
+          626,
+          309
+        ],
+        "F": [
+          60,
+          60,
+          707,
+          355
+        ],
+        "E": [
+          397,
+          239,
+          489,
+          337
+        ],
+        "D": [
+          416,
+          61,
+          636,
+          309
+        ],
+        "C": [
+          60,
+          67,
+          707,
+          707
         ],
         "B": [
           60,
-          157,
-          298,
-          293
+          77,
+          705,
+          707
         ],
         "A": [
-          394,
           60,
+          67,
           707,
-          279
+          707
         ]
       }
     },
@@ -360,34 +2160,181 @@
       "overlay_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_010/yaw315_elev20_overlay.png",
       "selector_path": "processed/vlm_candidate_v3/candidate_overlays/vlm_pilot_010/yaw315_elev20_selector.png",
       "selector_crop_bbox": [
-        248,
+        0,
         0,
         767,
-        455
+        767
       ],
       "positive_pixels": {
-        "C": 4334,
-        "B": 1255,
-        "A": 3074
+        "X": 1000,
+        "W": 2419,
+        "V": 715,
+        "U": 916,
+        "T": 1786,
+        "S": 1778,
+        "R": 3005,
+        "Q": 533,
+        "P": 5077,
+        "O": 2259,
+        "N": 7151,
+        "M": 4292,
+        "L": 80,
+        "K": 659,
+        "J": 330,
+        "I": 1866,
+        "H": 403,
+        "G": 691,
+        "F": 7392,
+        "E": 376,
+        "D": 1511,
+        "C": 1618,
+        "B": 659,
+        "A": 1618
       },
       "candidate_bboxes": {
-        "C": [
-          328,
-          60,
-          707,
-          375
+        "X": [
+          409,
+          196,
+          694,
+          386
         ],
-        "B": [
+        "W": [
+          287,
+          124,
+          704,
+          443
+        ],
+        "V": [
+          60,
+          445,
+          276,
+          707
+        ],
+        "U": [
           328,
           60,
           456,
-          240
+          269
         ],
-        "A": [
-          493,
+        "T": [
+          60,
+          62,
+          696,
+          707
+        ],
+        "S": [
+          328,
+          60,
+          564,
+          370
+        ],
+        "R": [
+          60,
+          60,
+          456,
+          707
+        ],
+        "Q": [
+          328,
+          60,
+          451,
+          290
+        ],
+        "P": [
+          389,
           124,
           707,
-          375
+          386
+        ],
+        "O": [
+          60,
+          62,
+          456,
+          707
+        ],
+        "N": [
+          328,
+          60,
+          707,
+          386
+        ],
+        "M": [
+          60,
+          60,
+          517,
+          707
+        ],
+        "L": [
+          437,
+          278,
+          463,
+          370
+        ],
+        "K": [
+          60,
+          60,
+          699,
+          707
+        ],
+        "J": [
+          435,
+          259,
+          481,
+          384
+        ],
+        "I": [
+          60,
+          368,
+          347,
+          707
+        ],
+        "H": [
+          427,
+          249,
+          481,
+          384
+        ],
+        "G": [
+          469,
+          263,
+          615,
+          384
+        ],
+        "F": [
+          328,
+          60,
+          707,
+          386
+        ],
+        "E": [
+          421,
+          259,
+          478,
+          386
+        ],
+        "D": [
+          469,
+          124,
+          691,
+          384
+        ],
+        "C": [
+          60,
+          60,
+          707,
+          707
+        ],
+        "B": [
+          60,
+          60,
+          699,
+          707
+        ],
+        "A": [
+          60,
+          60,
+          707,
+          707
         ]
       }
     }

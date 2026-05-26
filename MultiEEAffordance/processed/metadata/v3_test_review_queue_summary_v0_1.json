@@ -1,9 +1,9 @@
 {
   "version": "v0_1",
-  "created_at": "2026-05-25T07:47:51.223827+00:00",
+  "created_at": "2026-05-26T04:56:14.937074+00:00",
   "input_samples": "processed/metadata/samples_v3_large_batch_v0_1.jsonl",
-  "output_csv": "processed/metadata/v3_large_scale_review_queue_v0_1.csv",
-  "rows": 300,
+  "output_csv": "processed/metadata/v3_test_review_queue_v0_1.csv",
+  "rows": 24,
   "task_policy": {
     "include_tasks": [
       "open_pull",
@@ -25,44 +25,24 @@
   "limit_strategy": "round_robin_category_task_executor",
   "common_sense_filter": true,
   "counts_by_task": {
-    "open_pull": 56,
-    "pick_up": 176,
-    "press_push": 68
+    "open_pull": 8,
+    "pick_up": 12,
+    "press_push": 4
   },
   "counts_by_executor": {
-    "dexterous_hand": 75,
-    "gripper": 75,
-    "hook": 75,
-    "suction": 75
+    "dexterous_hand": 6,
+    "gripper": 6,
+    "hook": 6,
+    "suction": 6
   },
   "counts_by_decision": {
-    "empty_review_required": 232,
-    "review": 68
+    "empty_review_required": 17,
+    "review": 7
   },
   "counts_by_category": {
-    "Bag": 8,
-    "Bed": 8,
-    "Bottle": 8,
-    "Bowl": 8,
-    "Chair": 8,
-    "Clock": 8,
-    "Dishwasher": 24,
-    "Display": 16,
-    "Door": 24,
-    "Earphone": 8,
-    "Faucet": 24,
-    "Hat": 8,
-    "Keyboard": 16,
-    "Knife": 8,
-    "Laptop": 12,
-    "Microwave": 24,
-    "Mug": 8,
-    "Refrigerator": 24,
-    "Scissors": 8,
-    "StorageFurniture": 24,
-    "Table": 8,
-    "TrashCan": 8,
-    "Vase": 8
+    "Clock": 4,
+    "Dishwasher": 8,
+    "Door": 12
   },
   "skipped": {
     "common_sense_object_task_mismatch:Bag:open_pull": 12,
