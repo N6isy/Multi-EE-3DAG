@@ -46,6 +46,7 @@ MultiEEAffordance/processed/metadata/v3_manual_refined_samples_v0_1.jsonl
 MultiEEAffordance/splits_v3_candidates/
 MultiEEAffordance/processed/mesh_surface_vlm/
 MultiEEAffordance/processed/natural_surface_vlm/
+MultiEEAffordance/processed/annotation_batches/
 
 
 # Large model/data files

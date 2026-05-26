@@ -2,6 +2,10 @@
 
 更新时间：2026-05-21 +08:00
 
+> 当前状态：历史设计文档。本文记录的是旧的 `ground -> project -> grow` target/reject seed-growth 方案。当前推荐主线已经切换为 `candidate-source partseg` + `part-proposal-backend high_recall`，具体命令见 `v3自研高召回3D候选生成器说明.md` 和 `大规模人工审查与已审查数据集可视化.md`。
+
+> 标注版本说明：当前轻量自动候选 + 人工点级审查版本将冻结为 `annotation/mvp-v0.1`，用于双人协作标注。后续候选生成器改进进入 `dev/high-recall-candidate-v0.2`，不要在同一标注批次中混用不同候选生成版本。
+
 ## 1. 当前问题判断
 
 v2 / v2.2 的核心问题不是“候选数量不够多”，而是候选生成逻辑仍然偏几何优先。对于 `Scissors / pick_up / hook` 这类样本，剪刀刃因为细长、高曲率、边界明显，很容易被几何规则当成 hook 候选；但从执行器机制看，hook 需要插入、挂住、形成机械互锁并沿任务方向施力，剪刀刃和刀尖显然不应该作为正例。
@@ -79,28 +83,37 @@ v3 不再把“细长、高曲率、边界、极值区域”直接当成正例�
 
 人工最终面对的是“v3 推荐候选 + 可手动切换的候选组合 + 可点级增删的当前 mask”，不是固定的单个自动 mask。
 
-## 6. 推荐远程运行命令
+## 6. 历史复现实验命令
 
-先对 10 条 pilot 跑完整 v3 自动候选流程：
+如需复现旧 target/reject seed-growth 方案，可以使用下面命令。当前正式标注不推荐使用这条链路，因为它依赖 VLM 粗定位和 target seed，容易在稀疏点云、小部件、空标签样本上产生 `candidate_count=0`。
 
 ```bash
 CUDA_VISIBLE_DEVICES=1,2 python MultiEEAffordance/tools/run_v3_pipeline.py \
   --dataset-root MultiEEAffordance \
   --config configs/qwen3vl_sam2_pilot.yaml \
-  --limit 10 \
-  --stages views,plan,ground,project,grow,render,build \
+  --pilot-csv processed/metadata/v3_large_scale_review_queue_v0_1.csv \
+  --samples processed/metadata/samples_v3_large_batch_v0_1.jsonl \
+  --candidate-source grounding \
+  --stages views,plan,ground,project,grow,render,coverage,build \
   --allow-empty \
   --overwrite
 ```
 
-对某个样本额外生成候选审查可视化：
+当前推荐主线如下：
 
 ```bash
-python MultiEEAffordance/tools/run_v3_pipeline.py \
+CUDA_VISIBLE_DEVICES=1,2 python MultiEEAffordance/tools/run_v3_pipeline.py \
   --dataset-root MultiEEAffordance \
   --config configs/qwen3vl_sam2_pilot.yaml \
-  --pilot-id vlm_pilot_010 \
-  --stages render,visualize \
+  --pilot-csv processed/metadata/v3_large_scale_review_queue_v0_1.csv \
+  --samples processed/metadata/samples_v3_large_batch_v0_1.jsonl \
+  --candidate-source partseg \
+  --part-proposal-backend high_recall \
+  --stages views,plan,part_propose,render,part_select,part_filter,build \
+  --proposal-max-candidates 64 \
+  --max-candidates 12 \
+  --part-top-k 5 \
+  --allow-empty \
   --overwrite
 ```
 
@@ -111,7 +124,7 @@ python MultiEEAffordance/tools/serve_v2_annotation_app.py \
   --dataset-root MultiEEAffordance \
   --samples processed/metadata/v3_candidate_samples_v0_1.jsonl \
   --port 8765 \
-  --top-k-candidates 0
+  --top-k-candidates 8
 ```
 
 ## 7. 调参建议
@@ -130,6 +143,8 @@ python MultiEEAffordance/tools/serve_v2_annotation_app.py \
 ## 8. 当前结论
 
 v3 的核心定位是“最终可用的候选生成与人工审查加速框架”，不是完全自动标注器。它利用 VLM 最擅长的语义和机制判断，同时把最终 3D mask 限制在真实点云和人工审查闭环内。
+
+当前落地策略是先把这套框架作为稳定标注工具使用：自动阶段只负责生成和排序候选，人工阶段负责最终 mask。双人协作时使用 `reviewer_a/reviewer_b` 独立样本文件、独立 review log、独立 refined mask 目录；候选生成器本身的下一轮改进不进入 `annotation/mvp-v0.1` 标注分支。
 
 下一步应优先用 `vlm_pilot_010: Scissors / pick_up / hook` 检查：
 
