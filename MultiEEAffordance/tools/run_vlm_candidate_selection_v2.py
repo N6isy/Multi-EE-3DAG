@@ -132,6 +132,7 @@ Input-data limitations:
 - Candidate regions are high-recall proposals for human review. They are not final ground truth.
 - Do not reject a candidate only because the sparse points do not perfectly resolve the full mechanical interface.
 - If a candidate plausibly overlaps a task-relevant functional part, keep it as selected or uncertain so a human can inspect it.
+- In this project, recall is more important than precision at this stage. The final decision will be made by rule checks and human point-level review.
 
 Object category: {row.get('object_category', '')}
 Task: {task}
@@ -163,12 +164,14 @@ Decision principles:
 12. If no candidate clearly covers an obvious functional part, still mark nearby plausible candidates as uncertain when they could help a human locate the target. Explain the missing part in the reason.
 13. Candidates named like M1/M2 or family=vlm_coverage_missing_region come from a previous coverage check. Treat them like normal proposals: select them if they cover the functional target part, mark uncertain if they are plausible but incomplete, reject only if clearly wrong.
 14. Do not output pixel coordinates, boxes, or segmentation masks.
+15. If the image contains any colored candidate near a plausible operation/contact/constraint area, do not return both selected_candidates and uncertain_candidates empty. Put weak but plausible candidates into uncertain_candidates.
+16. Returning no selected and no uncertain candidates is only allowed when every visible candidate is clearly unrelated to the task/executor or clearly a negative part.
 
 Executor-specific tolerance:
-- gripper: keep plausible handles, rims, thin parts, local edges, or small protrusions as selected/uncertain if they could support pinch/contact for the task.
-- suction: be more conservative; prefer flat or broad local panels, but uncertain is acceptable for incomplete flat surfaces.
-- hook: reject obvious blades, tips, ordinary long edges, and body surfaces; keep plausible holes, loops, rings, inner rims, lips, or handle gaps as selected/uncertain even if partially visible.
-- dexterous_hand: allow broader functional regions than gripper, especially handles, buttons, knobs, switches, and operation surfaces, but reject unrelated main-body mass.
+- gripper: keep plausible handles, rims, thin parts, local edges, small protrusions, paired surfaces, or local operation regions as selected/uncertain if they could support pinch/contact. Do not require a perfectly visible opposing jaw pair.
+- suction: prefer flat or broad local panels, but keep incomplete or noisy flat/panel-like surfaces as uncertain. Do not require a perfect seal at candidate-selection time.
+- hook: keep plausible catchable structures as selected/uncertain: holes, loops, rings, inner rims, lips, gaps, behind-edge regions, protrusions, local seams, raised boundaries, or pullable edges. Do not require a complete visible interlocking hole. Reject only clearly negative sharp blades/tips, pure body panels, or regions with no possible catch/contact role.
+- dexterous_hand: allow broader functional regions than gripper, especially handles, buttons, knobs, switches, operation surfaces, support/contact patches, and local manipulation areas. Use uncertain rather than reject for plausible but broad regions.
 
 Return strict JSON only:
 {{

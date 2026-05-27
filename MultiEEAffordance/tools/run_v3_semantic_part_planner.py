@@ -37,21 +37,26 @@ from run_qwen3vl_sam2_pilot import (
 
 EXECUTOR_RULES = {
     "gripper": (
-        "parallel two-finger gripper: select opposing or potentially paired contact surfaces; "
-        "reject surfaces that are merely visible but cannot form a stable clamp."
+        "parallel two-finger gripper, candidate-review stage: propose plausible pinch, clamp, edge, handle, rim, "
+        "thin-part, or opposing-contact regions even when the exact opposing surface is incomplete in the sparse render. "
+        "Use uncertain_parts for weak or partial evidence. Reject only clearly unrelated body/background regions."
     ),
     "suction": (
-        "single suction cup: select continuous low-curvature, sealable, normally accessible surfaces; "
-        "reject holes, handles, rods, narrow rims, porous-looking gaps, and ordinary sharp edges."
+        "single suction cup, candidate-review stage: propose plausible flat, smooth, broad, low-curvature, or panel-like "
+        "contact regions. The surface does not need to be perfectly continuous in the sparse render. Use uncertain_parts "
+        "for partial flat surfaces. Reject only clear rods, holes, thin rims, highly curved parts, or unrelated regions."
     ),
     "hook": (
-        "single hook: select holes, rings, handle-loop inner rims, lips, or back-side flanges that support "
-        "insertion, mechanical interlocking, and pulling/lifting constraint; reject blades, cutting edges, "
-        "tips, ordinary long edges, flat panels, and surfaces that cannot catch a hook."
+        "single hook, candidate-review stage: propose plausible catch, lip, gap, rim, edge-behind, handle, loop, ring, "
+        "opening, protrusion, or pullable boundary regions. The candidate does not need to show a complete visible hole "
+        "or perfect interlock in the sparse render. Use uncertain_parts for partial or ambiguous catchable structures. "
+        "Reject only clearly unsafe or unrelated negatives such as sharp blades, cutting edges, isolated tips, pure body panels, "
+        "or ordinary surfaces with no possible catch/contact role."
     ),
     "dexterous_hand": (
-        "multi-finger hand: select task-related grasp, wrap, pinch, press, pull, or fine-manipulation regions; "
-        "reject generic touchable surfaces not needed for the specified task."
+        "multi-finger hand, candidate-review stage: propose task-related grasp, wrap, pinch, press, pull, support, or "
+        "fine-manipulation regions. This executor is broad; preserve plausible local operation/contact regions as target "
+        "or uncertain. Reject only clearly unrelated object mass or background-like regions."
     ),
 }
 

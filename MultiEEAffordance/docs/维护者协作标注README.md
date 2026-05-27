@@ -402,6 +402,47 @@ Mug / pick_up / suction
 
 ## 11. 第七步：拆分 reviewer_a / reviewer_b 样本
 
+这一步的目标是：把自动候选阶段生成的待审查样本表，拆成两份。
+
+当前输入文件是：
+
+```text
+MultiEEAffordance/processed/metadata/v3_candidate_samples_v0_1.jsonl
+```
+
+这个文件来自上一步 `run_v3_pipeline.py ... --stages ... build`。里面每一行是一个待人工审查样本，包含：
+
+```text
+sample_id
+object_id
+object_category
+task
+target_executor
+point_cloud_path
+checked_mask_path 或 multi_channel_mask_path
+v3_candidate_update / candidate_manifest
+```
+
+本步骤要做的操作是：
+
+```text
+读取 v3_candidate_samples_v0_1.jsonl
+  -> 按 object_id 或 sample_id 分组
+  -> 一部分写给 reviewer_a
+  -> 一部分写给 reviewer_b
+  -> 生成拆分统计 batch_manifest.json
+```
+
+输出文件是：
+
+```text
+MultiEEAffordance/processed/annotation_batches/v0_1/reviewer_a_samples.jsonl
+MultiEEAffordance/processed/annotation_batches/v0_1/reviewer_b_samples.jsonl
+MultiEEAffordance/processed/annotation_batches/v0_1/batch_manifest.json
+```
+
+如果维护者本人也参与标注，就把维护者自己的审查身份固定为 `reviewer_a`。另一个人使用 `reviewer_b`。不要因为维护者自己标注就改成 `owner_samples.jsonl`，否则后续合并规则会变复杂。
+
 拆分原则：
 
 1. 两个人不要写同一个输出文件。
@@ -415,12 +456,124 @@ processed/annotation_batches/v0_1/reviewer_a_samples.jsonl
 processed/annotation_batches/v0_1/reviewer_b_samples.jsonl
 ```
 
-如果当前没有专门拆分脚本，可以先用一个简单规则：
+当前可以直接使用下面这段命令拆分。这个命令在服务器项目根目录运行：
 
-- 按 `sample_id` 去重后排序。
-- 奇数 object 给 `reviewer_a`。
-- 偶数 object 给 `reviewer_b`。
-- 每人额外给 5 条相同的 calibration samples。
+```bash
+cd /home/lzq/Multi-EE-3DAG
+
+python - <<'PY'
+import json
+from collections import defaultdict, Counter
+from pathlib import Path
+
+root = Path("MultiEEAffordance")
+input_path = root / "processed/metadata/v3_candidate_samples_v0_1.jsonl"
+batch_dir = root / "processed/annotation_batches/v0_1"
+batch_dir.mkdir(parents=True, exist_ok=True)
+
+reviewer_a_path = batch_dir / "reviewer_a_samples.jsonl"
+reviewer_b_path = batch_dir / "reviewer_b_samples.jsonl"
+manifest_path = batch_dir / "batch_manifest.json"
+
+# 如果你想保留少量重叠样本用于两人标注一致性校准，把这里改成 5。
+# 第一次正式分工不想产生冲突，可以先保持 0。
+CALIBRATION_OBJECTS = 0
+
+def read_jsonl(path: Path):
+    rows = []
+    with path.open("r", encoding="utf-8") as f:
+        for line_no, line in enumerate(f, 1):
+            line = line.strip()
+            if not line:
+                continue
+            row = json.loads(line)
+            row["_line_no"] = line_no
+            rows.append(row)
+    return rows
+
+def object_key(row):
+    # 优先使用 object_id；如果没有，就用 sample_id 去掉最后一个 task 后缀作为近似 object key。
+    object_id = row.get("object_id")
+    if object_id:
+        return str(object_id)
+    sample_id = str(row.get("sample_id") or "")
+    for suffix in ("_pick_up", "_open_pull", "_press_push", "_lift_carry"):
+        if sample_id.endswith(suffix):
+            return sample_id[: -len(suffix)]
+    return sample_id
+
+def sample_key(row):
+    return "|".join([
+        str(row.get("pilot_id") or row.get("review_id") or ""),
+        str(row.get("sample_id") or ""),
+        str(row.get("task") or ""),
+        str(row.get("target_executor") or row.get("executor") or ""),
+    ])
+
+def write_jsonl(path: Path, rows):
+    with path.open("w", encoding="utf-8", newline="\n") as f:
+        for row in rows:
+            row = dict(row)
+            row.pop("_line_no", None)
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+rows = read_jsonl(input_path)
+groups = defaultdict(list)
+for row in rows:
+    groups[object_key(row)].append(row)
+
+group_items = sorted(groups.items(), key=lambda item: item[0])
+
+reviewer_a = []
+reviewer_b = []
+for idx, (_, group_rows) in enumerate(group_items):
+    if idx % 2 == 0:
+        reviewer_a.extend(group_rows)
+    else:
+        reviewer_b.extend(group_rows)
+
+if CALIBRATION_OBJECTS > 0:
+    calibration_groups = group_items[:CALIBRATION_OBJECTS]
+    calibration_rows = [row for _, group_rows in calibration_groups for row in group_rows]
+    existing_a = {sample_key(row) for row in reviewer_a}
+    existing_b = {sample_key(row) for row in reviewer_b}
+    reviewer_a.extend([row for row in calibration_rows if sample_key(row) not in existing_a])
+    reviewer_b.extend([row for row in calibration_rows if sample_key(row) not in existing_b])
+
+write_jsonl(reviewer_a_path, reviewer_a)
+write_jsonl(reviewer_b_path, reviewer_b)
+
+summary = {
+    "input": str(input_path),
+    "batch_dir": str(batch_dir),
+    "rows_total": len(rows),
+    "object_groups_total": len(group_items),
+    "calibration_objects": CALIBRATION_OBJECTS,
+    "reviewers": {
+        "reviewer_a": {
+            "samples": str(reviewer_a_path),
+            "rows": len(reviewer_a),
+            "objects": len({object_key(row) for row in reviewer_a}),
+            "tasks": Counter(str(row.get("task", "")) for row in reviewer_a),
+            "executors": Counter(str(row.get("target_executor") or row.get("executor") or "") for row in reviewer_a),
+        },
+        "reviewer_b": {
+            "samples": str(reviewer_b_path),
+            "rows": len(reviewer_b),
+            "objects": len({object_key(row) for row in reviewer_b}),
+            "tasks": Counter(str(row.get("task", "")) for row in reviewer_b),
+            "executors": Counter(str(row.get("target_executor") or row.get("executor") or "") for row in reviewer_b),
+        },
+    },
+}
+
+with manifest_path.open("w", encoding="utf-8") as f:
+    json.dump(summary, f, ensure_ascii=False, indent=2)
+    f.write("\n")
+
+print(json.dumps(summary, ensure_ascii=False, indent=2))
+PY
+```
 
 拆分后检查：
 
@@ -432,7 +585,45 @@ reviewer_b 样本数
 每个 reviewer 的执行器分布
 ```
 
+也可以直接运行：
+
+```bash
+wc -l MultiEEAffordance/processed/annotation_batches/v0_1/reviewer_a_samples.jsonl
+wc -l MultiEEAffordance/processed/annotation_batches/v0_1/reviewer_b_samples.jsonl
+cat MultiEEAffordance/processed/annotation_batches/v0_1/batch_manifest.json
+```
+
+如果维护者本人就是 `reviewer_a`，你可以直接使用：
+
+```text
+MultiEEAffordance/processed/annotation_batches/v0_1/reviewer_a_samples.jsonl
+```
+
+在本机或服务器上开始标注。另一个人只需要拿到 `reviewer_b_samples.jsonl` 和它引用的数据包。
+
 ## 12. 第八步：给审查者准备本地数据包
+
+这一步的目标是：让另一个审查者不用登录服务器，也能在本地运行审查网页。
+
+注意：`reviewer_b_samples.jsonl` 只是索引文件，不是完整数据。它里面会引用点云、mask、候选 manifest、候选 npz 等文件。如果只把 `reviewer_b_samples.jsonl` 放进仓库，另一个人本地大概率会报：
+
+```text
+FileNotFoundError
+JSON not found
+NPY not found
+candidate_manifest not found
+```
+
+所以完整数据包至少要包含：
+
+```text
+1. reviewer_b_samples.jsonl
+2. reviewer_b_samples.jsonl 引用到的 point_cloud_path
+3. reviewer_b_samples.jsonl 引用到的 mask 路径
+4. candidate_manifest.json
+5. candidates.npz
+6. candidate overlay / rule filter / selection 相关文件，如果网页会读取
+```
 
 审查者本地需要三类东西：
 
@@ -456,29 +647,253 @@ Multi-EE-3DAG/
 
 维护者不要只发 `reviewer_a_samples.jsonl`。如果不带点云和候选文件，审查者本地网页会找不到 `.npy/.npz`。
 
+### 12.1 当前到底操作哪个文件
+
+以给另一个人准备数据为例，当前操作的主文件是：
+
+```text
+MultiEEAffordance/processed/annotation_batches/v0_1/reviewer_b_samples.jsonl
+```
+
+操作内容是：
+
+```text
+读取 reviewer_b_samples.jsonl
+  -> 找出每一行引用到的数据文件
+  -> 把这些文件复制到一个 package staging 目录
+  -> 压缩 staging 目录
+  -> 把压缩包发给 reviewer_b
+```
+
+推荐输出：
+
+```text
+MultiEEAffordance/processed/annotation_batches/v0_1/packages/reviewer_b_annotation_package_v0_1.tar.gz
+```
+
+### 12.2 精确收集 reviewer_b 需要的文件
+
+下面这段命令会创建一个 staging 目录，并尽量复制 `reviewer_b_samples.jsonl` 引用到的文件。它不会修改原始数据，只是复制。
+
+```bash
+cd /home/lzq/Multi-EE-3DAG
+
+python - <<'PY'
+import json
+import shutil
+from pathlib import Path
+
+repo = Path(".").resolve()
+root = repo / "MultiEEAffordance"
+batch_dir = root / "processed/annotation_batches/v0_1"
+reviewer = "reviewer_b"
+
+samples_path = batch_dir / f"{reviewer}_samples.jsonl"
+stage_root = batch_dir / "packages" / f"{reviewer}_package_staging"
+copied_manifest = stage_root / "PACKAGE_FILE_LIST.txt"
+
+if stage_root.exists():
+    shutil.rmtree(stage_root)
+stage_root.mkdir(parents=True, exist_ok=True)
+
+def read_json(path: Path):
+    with path.open("r", encoding="utf-8") as f:
+        return json.load(f)
+
+def read_jsonl(path: Path):
+    rows = []
+    with path.open("r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                rows.append(json.loads(line))
+    return rows
+
+def as_path(value):
+    if not value:
+        return None
+    p = Path(str(value))
+    if p.is_absolute():
+        return p
+    return root / p
+
+def add_path(paths, value):
+    p = as_path(value)
+    if p and p.exists() and p.is_file():
+        paths.add(p.resolve())
+
+def collect_from_obj(paths, obj):
+    if isinstance(obj, dict):
+        for key, value in obj.items():
+            lower = str(key).lower()
+            if lower.endswith("_path") or lower in {
+                "point_cloud_path",
+                "multi_channel_mask_path",
+                "checked_mask_path",
+                "candidate_manifest",
+                "selection_path",
+                "render_manifest",
+            }:
+                add_path(paths, value)
+            collect_from_obj(paths, value)
+    elif isinstance(obj, list):
+        for item in obj:
+            collect_from_obj(paths, item)
+
+rows = read_jsonl(samples_path)
+paths = {samples_path.resolve()}
+
+for row in rows:
+    collect_from_obj(paths, row)
+
+    # 常见 v3 candidate manifest 位置：按 pilot_id 查找。
+    pilot_id = row.get("pilot_id") or row.get("review_id")
+    if pilot_id:
+        candidate_manifest = root / "processed/vlm_candidate_v3/3d_candidates" / str(pilot_id) / "candidate_manifest.json"
+        add_path(paths, candidate_manifest)
+        if candidate_manifest.exists():
+            manifest = read_json(candidate_manifest)
+            add_path(paths, manifest.get("candidate_npz"))
+            add_path(paths, manifest.get("projected_votes"))
+            add_path(paths, manifest.get("semantic_plan"))
+
+        overlay_manifest = root / "processed/vlm_candidate_v3/candidate_overlays" / str(pilot_id) / "overlay_manifest.json"
+        add_path(paths, overlay_manifest)
+
+        selection = root / "processed/vlm_candidate_v3/vlm_selection" / str(pilot_id) / "combined_selection.json"
+        add_path(paths, selection)
+
+        rule_filter = root / "processed/vlm_candidate_v3/rule_filter" / str(pilot_id) / "filtered_candidates.json"
+        add_path(paths, rule_filter)
+
+missing = []
+copied = []
+for src in sorted(paths):
+    try:
+        rel = src.relative_to(repo)
+    except ValueError:
+        missing.append(str(src))
+        continue
+    dst = stage_root / rel
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src, dst)
+    copied.append(str(rel))
+
+with copied_manifest.open("w", encoding="utf-8") as f:
+    for item in copied:
+        f.write(item + "\n")
+
+summary = {
+    "reviewer": reviewer,
+    "samples": str(samples_path),
+    "rows": len(rows),
+    "stage_root": str(stage_root),
+    "files_copied": len(copied),
+    "missing_or_external": missing,
+    "file_list": str(copied_manifest),
+}
+print(json.dumps(summary, ensure_ascii=False, indent=2))
+PY
+```
+
+运行后先检查：
+
+```bash
+find MultiEEAffordance/processed/annotation_batches/v0_1/packages/reviewer_b_package_staging -type f | wc -l
+cat MultiEEAffordance/processed/annotation_batches/v0_1/packages/reviewer_b_package_staging/PACKAGE_FILE_LIST.txt | head
+```
+
+如果 `files_copied` 很少，比如只有 1 个，说明 samples 里的路径没有被正确识别，需要检查 `reviewer_b_samples.jsonl` 的字段。
+
 ## 13. 第九步：打包 reviewer 数据
 
-如果批次较小，可以直接打包必要目录。示例：
+这一步的目标是：把第八步的 staging 目录压缩成一个文件，发给另一个审查者。
 
-```bash
-tar -czf processed/annotation_batches/v0_1/packages/reviewer_a_annotation_package_v0_1.tar.gz \
-  MultiEEAffordance/processed/annotation_batches/v0_1/reviewer_a_samples.jsonl \
-  MultiEEAffordance/processed/points/3d_affordancenet_full_shape_val_batch_v3 \
-  MultiEEAffordance/processed/masks/3d_affordancenet_full_shape_val_batch_v3 \
-  MultiEEAffordance/processed/vlm_candidate_v3
+当前操作目录是：
+
+```text
+MultiEEAffordance/processed/annotation_batches/v0_1/packages/reviewer_b_package_staging/
 ```
 
-`reviewer_b` 同理：
+输出压缩包是：
 
-```bash
-tar -czf processed/annotation_batches/v0_1/packages/reviewer_b_annotation_package_v0_1.tar.gz \
-  MultiEEAffordance/processed/annotation_batches/v0_1/reviewer_b_samples.jsonl \
-  MultiEEAffordance/processed/points/3d_affordancenet_full_shape_val_batch_v3 \
-  MultiEEAffordance/processed/masks/3d_affordancenet_full_shape_val_batch_v3 \
-  MultiEEAffordance/processed/vlm_candidate_v3
+```text
+MultiEEAffordance/processed/annotation_batches/v0_1/packages/reviewer_b_annotation_package_v0_1.tar.gz
 ```
 
-如果数据包过大，后续应该写一个精确打包脚本，只复制 `samples.jsonl` 实际引用到的文件。当前第一版可以先以稳定为主，允许包稍大一些。
+命令：
+
+```bash
+cd /home/lzq/Multi-EE-3DAG
+
+tar -czf MultiEEAffordance/processed/annotation_batches/v0_1/packages/reviewer_b_annotation_package_v0_1.tar.gz \
+  -C MultiEEAffordance/processed/annotation_batches/v0_1/packages/reviewer_b_package_staging \
+  .
+```
+
+打包后检查大小：
+
+```bash
+ls -lh MultiEEAffordance/processed/annotation_batches/v0_1/packages/reviewer_b_annotation_package_v0_1.tar.gz
+tar -tzf MultiEEAffordance/processed/annotation_batches/v0_1/packages/reviewer_b_annotation_package_v0_1.tar.gz | head
+```
+
+发给对方的就是这个压缩包。
+
+如果对方是 Windows，可以改成 zip。服务器上如果安装了 zip：
+
+```bash
+cd /home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/annotation_batches/v0_1/packages/reviewer_b_package_staging
+zip -r ../reviewer_b_annotation_package_v0_1.zip .
+```
+
+### 13.1 可以把 reviewer_x_samples.jsonl 直接放进仓库吗
+
+可以，但要分清楚“能不能放”和“放了够不够”。
+
+`reviewer_x_samples.jsonl` 通常是小文本文件，理论上可以放进 GitHub 仓库，方便另一个人直接 pull。比如可以放到一个专门跟踪的小目录：
+
+```text
+MultiEEAffordance/annotation_tasks/v0_1/reviewer_b_samples.jsonl
+```
+
+但是当前 `.gitignore` 已经忽略：
+
+```text
+MultiEEAffordance/processed/annotation_batches/
+```
+
+所以如果你把文件放在：
+
+```text
+MultiEEAffordance/processed/annotation_batches/v0_1/reviewer_b_samples.jsonl
+```
+
+它默认不会被 Git 跟踪。你可以强行 `git add -f`，但不建议把 `processed/` 下面的批次输出长期作为代码仓库内容管理。
+
+更推荐的做法是：
+
+1. 仓库里只提交一个轻量任务索引副本：
+
+```text
+MultiEEAffordance/annotation_tasks/v0_1/reviewer_b_samples.jsonl
+```
+
+2. 数据包里仍然放网页实际读取的路径：
+
+```text
+MultiEEAffordance/processed/annotation_batches/v0_1/reviewer_b_samples.jsonl
+```
+
+3. 对方 pull 仓库后，再解压你给他的数据包。数据包会把 `processed/annotation_batches/v0_1/reviewer_b_samples.jsonl` 和它引用的数据文件放到正确位置。
+
+结论：
+
+```text
+只把 reviewer_b_samples.jsonl 放进仓库，不够。
+```
+
+因为它只是索引，不包含点云和候选文件。另一个人仍然需要数据包。你可以把 samples JSONL 的副本放进仓库用于透明分工，但真正运行网页仍以数据包里的 `processed/annotation_batches/v0_1/reviewer_b_samples.jsonl` 为准。
 
 ## 14. 第十步：审查者本地怎么运行
 
