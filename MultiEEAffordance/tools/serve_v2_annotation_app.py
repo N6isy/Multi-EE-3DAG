@@ -661,7 +661,7 @@ APP_HTML = r"""<!doctype html>
     <div class="box">
       <b>候选选择：</b>勾选框表示当前准备采用的候选组合，点云会实时显示已勾选候选的集合。点击候选卡片只用于单独查看某个候选；确认组合后再点击“应用勾选候选”，随后进行点级删除/补点。
       <label style="display:flex;align-items:center;gap:7px;margin-top:8px;color:#334155;">
-        <input id="showCandidatePreview" type="checkbox" checked style="width:auto;"> 显示候选预览颜色
+        <input id="showCandidatePreview" type="checkbox" style="width:auto;"> 显示候选预览颜色
       </label>
       <div class="candidate-list" id="candidateList"></div>
       <div class="candidate-actions">

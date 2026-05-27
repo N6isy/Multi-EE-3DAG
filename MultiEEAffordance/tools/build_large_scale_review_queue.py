@@ -200,6 +200,20 @@ def source_executor_feasible(row: dict[str, Any], executor: str) -> bool:
     return False
 
 
+PICK_UP_EXCLUDED_CATEGORIES = {
+    "Door",
+    "Faucet",
+    "Refrigerator",
+    "Dishwasher",
+    "StorageFurniture",
+    "Bed",
+    "Table",
+    "Microwave",
+    "Chair",
+    "Display",
+    "TrashCan"
+}
+
 OPEN_PULL_CATEGORIES = {
     "Door",
     "Dishwasher",
@@ -210,6 +224,7 @@ OPEN_PULL_CATEGORIES = {
     "StorageFurniture",
     "TrashCan",
 }
+
 PRESS_PUSH_CATEGORIES = {
     "Door",
     "Display",
@@ -220,12 +235,15 @@ PRESS_PUSH_CATEGORIES = {
     "Microwave",
     "Refrigerator",
     "StorageFurniture",
+    "TrashCan",
 }
 
 
 def object_task_feasible(category: str, task: str, common_sense_filter: bool) -> tuple[bool, str]:
     if not common_sense_filter:
         return True, ""
+    if task == "pick_up" and category in PICK_UP_EXCLUDED_CATEGORIES:
+        return False, f"common_sense_object_task_mismatch:{category}:{task}"
     if task == "open_pull" and category not in OPEN_PULL_CATEGORIES:
         return False, f"common_sense_object_task_mismatch:{category}:{task}"
     if task == "press_push" and category not in PRESS_PUSH_CATEGORIES:

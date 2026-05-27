@@ -23,15 +23,22 @@ import numpy as np
 from path_utils import relative_to_dataset
 
 
+# DEFAULT_VIEWS = [
+#     "yaw000_elev20",
+#     "yaw045_elev20",
+#     "yaw090_elev20",
+#     "yaw135_elev20",
+#     "yaw180_elev20",
+#     "yaw225_elev20",
+#     "yaw270_elev20",
+#     "yaw315_elev20",
+# ]
+
 DEFAULT_VIEWS = [
     "yaw000_elev20",
-    "yaw045_elev20",
     "yaw090_elev20",
-    "yaw135_elev20",
     "yaw180_elev20",
-    "yaw225_elev20",
     "yaw270_elev20",
-    "yaw315_elev20",
 ]
 
 
