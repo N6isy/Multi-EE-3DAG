@@ -126,6 +126,13 @@ You will see a rendered 3D point-cloud image with colored candidate regions.
 The left panel is usually the full object view; the right panel is a zoomed crop.
 Your job is to select candidate IDs, not to draw boxes or masks.
 
+Input-data limitations:
+- The image is rendered from sparse 3D point clouds, not from real RGB photos.
+- Fine part boundaries, holes, handles, buttons, rings, and thin structures may be incomplete, noisy, or only partially visible.
+- Candidate regions are high-recall proposals for human review. They are not final ground truth.
+- Do not reject a candidate only because the sparse points do not perfectly resolve the full mechanical interface.
+- If a candidate plausibly overlaps a task-relevant functional part, keep it as selected or uncertain so a human can inspect it.
+
 Object category: {row.get('object_category', '')}
 Task: {task}
 Task definition: {TASK_DEFINITIONS.get(task, task)}
@@ -142,17 +149,26 @@ Candidate list:
 {candidate_lines}
 
 Decision principles:
-1. Select only candidates that are task-related functional contact regions, not all touchable surfaces.
-2. A selected region must satisfy the mechanism of the specified end-effector.
-3. Candidate families are proposals, not labels. You may reject a geometrically plausible candidate if it is not semantically functional.
-4. Do not reject a candidate only because its name is generic, such as "thin_structure" or "existing_gripper_weak_mask".
-5. If a candidate spatially overlaps the semantic target part from the part plan, select it or mark it uncertain even if its original weak-label source came from another executor.
-6. If the view is ambiguous, put the candidate into uncertain_candidates instead of selected_candidates.
-7. Reject broad fallback/body regions unless they are clearly the functional operation area for this task.
-8. Expanded or paired candidates are intentionally denser for human review. Prefer them when they cover a complete functional part better than sparse seed candidates.
-9. If no candidate covers an obvious functional part, explain the missing part in the reason and leave the wrong candidates rejected.
-10. Candidates named like M1/M2 or family=vlm_coverage_missing_region come from a previous coverage check. Treat them like normal proposals: select them only if they really cover the functional target part.
-11. Do not output pixel coordinates, boxes, or segmentation masks.
+1. This is a high-recall candidate selection step. Prefer keeping plausible task-related candidates for human review over rejecting them too early.
+2. Select candidates that clearly cover task-related functional contact regions. Do not select all touchable surfaces.
+3. Use uncertain_candidates for candidates that may cover the target part but are incomplete, noisy, partially visible, or mechanically ambiguous in the sparse point-cloud render.
+4. A selected region should plausibly satisfy the mechanism of the specified end-effector, but it does not need to be a perfect final mask.
+5. Reject only candidates that are clearly unrelated, broad body/background fallback regions, ordinary surfaces, or known negative parts for this task/executor.
+6. Candidate families are proposals, not labels. You may reject a geometrically plausible candidate if it is clearly not semantically functional.
+7. Do not reject a candidate only because its name is generic, such as "thin_structure" or "existing_gripper_weak_mask".
+8. If a candidate spatially overlaps the semantic target part from the part plan, select it or mark it uncertain even if its original weak-label source came from another executor.
+9. If the view is ambiguous, put the candidate into uncertain_candidates instead of rejected_candidates.
+10. Reject broad fallback/body regions unless they are clearly the functional operation area for this task.
+11. Expanded or paired candidates are intentionally denser for human review. Prefer them when they cover a complete functional part better than sparse seed candidates.
+12. If no candidate clearly covers an obvious functional part, still mark nearby plausible candidates as uncertain when they could help a human locate the target. Explain the missing part in the reason.
+13. Candidates named like M1/M2 or family=vlm_coverage_missing_region come from a previous coverage check. Treat them like normal proposals: select them if they cover the functional target part, mark uncertain if they are plausible but incomplete, reject only if clearly wrong.
+14. Do not output pixel coordinates, boxes, or segmentation masks.
+
+Executor-specific tolerance:
+- gripper: keep plausible handles, rims, thin parts, local edges, or small protrusions as selected/uncertain if they could support pinch/contact for the task.
+- suction: be more conservative; prefer flat or broad local panels, but uncertain is acceptable for incomplete flat surfaces.
+- hook: reject obvious blades, tips, ordinary long edges, and body surfaces; keep plausible holes, loops, rings, inner rims, lips, or handle gaps as selected/uncertain even if partially visible.
+- dexterous_hand: allow broader functional regions than gripper, especially handles, buttons, knobs, switches, and operation surfaces, but reject unrelated main-body mass.
 
 Return strict JSON only:
 {{

@@ -215,6 +215,13 @@ You are designing annotation targets for a 3D affordance dataset.
 You see a VLM-friendly render made from a sparse 3D point cloud. The render may be incomplete or sparse.
 Your task is to produce a semantic annotation plan, not masks.
 
+Input-data limitations:
+- The render is not a real RGB photo. It is a visual proxy created from sparse 3D points.
+- Thin structures, handles, loops, rings, holes, switches, buttons, and small parts may be broken, noisy, or only partially visible.
+- Do not conclude that a target part is absent only because the sparse render does not show a clean continuous surface.
+- If a part is semantically expected for the object/task/executor and is plausible from the visible geometry, include it with lower confidence or put it into uncertain_parts.
+- This planning stage should maximize recall for downstream human review while still listing clear negative/reject parts.
+
 Object category: {row.get('object_category', '')}
 Task: {task}
 Task definition: {TASK_DEFINITIONS.get(task, task)}
@@ -263,7 +270,8 @@ Rules:
 3. Explicitly list reject parts that should be used as a veto layer.
 4. For scissors + hook, target handle/finger holes and inner rings; reject blade, cutting edge, tip, and ordinary blade boundary.
 5. If the target part is semantically expected but hard to see in a sparse point cloud, still name it and mark lower confidence.
-6. If no plausible target exists, set feasible=false and explain why.
+6. Use uncertain_parts for plausible but weakly visible or partially resolved target parts instead of dropping them.
+7. Set feasible=false only when the object/task/executor combination is genuinely implausible or no task-related target part is semantically expected.
 """
 
 
