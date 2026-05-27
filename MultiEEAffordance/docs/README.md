@@ -6,6 +6,8 @@
 
 当前 v3 主线已经切换为自研高召回 3D part candidate generator。默认不要再跑旧的 `ground,project,grow` 候选生长链路，除非是在复现实验。
 
+`dev/high-recall-candidate-v0.2` 研发分支新增可选 hybrid 候选后端：`--part-proposal-backend hybrid_partslippp_high_recall`。它会对 `configs/partslippp_category_map.json` 中覆盖的类别优先读取外部 PartSLIP++ 分割结果，同时保留 `high_recall` 补充和兜底；未覆盖或 PartSLIP++ 输出缺失的类别自动回退到 `high_recall`。稳定标注分支 `annotation/mvp-v0.1` 不应切换到这条研发链路。
+
 ## 当前双人协作标注版本
 
 当前建议把轻量自动候选 + 人工点级审查版本冻结为双人协作标注 v0.1：

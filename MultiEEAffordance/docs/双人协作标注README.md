@@ -46,6 +46,49 @@
   -> 用只读 viewer 抽检
 ```
 
+### 1.1 如果不能 SSH：使用 GitHub + 数据包协作
+
+如果审查者无法 SSH 到服务器，就不能用 SSH tunnel 访问服务器网页。这时仍然可以协作，但方式要换成：
+
+```text
+GitHub 管代码和文档
+数据包/压缩包管点云、候选和 mask
+审查者在自己电脑本地启动网页
+审查结果通过 GitHub 分支/PR、GitHub Release 附件、网盘或压缩包回传
+```
+
+这和共享服务器模式的区别是：
+
+| 项目 | 共享服务器模式 | GitHub + 数据包模式 |
+| --- | --- | --- |
+| 网页在哪里跑 | 服务器 | 审查者本地电脑 |
+| 点云和候选在哪里 | 服务器 | 审查者本地数据包 |
+| 审查者是否需要 SSH | 需要 | 不需要 |
+| 审查者是否需要 VLM/GPU | 不需要 | 不需要 |
+| 审查者是否需要下载数据 | 不需要或很少 | 需要下载维护者准备好的数据包 |
+| 结果怎么回传 | 服务器直接保存 | GitHub PR、Release artifact、网盘或压缩包 |
+
+注意：GitHub 不适合直接存放原始大 zip、VLM 中间结果和大规模点云目录。普通 GitHub 仓库主要放代码、文档、小型 metadata。大文件应使用 GitHub Release 附件、Git LFS、网盘、移动硬盘或其他文件分发方式。
+
+GitHub + 数据包模式的推荐流程：
+
+1. 维护者在服务器端生成候选和样本队列。
+2. 维护者把 `reviewer_a` / `reviewer_b` 各自需要的最小数据打包。
+3. 审查者从 GitHub 拉代码，切到 `annotation/mvp-v0.1`。
+4. 审查者下载自己的数据包，并解压到仓库里的 `MultiEEAffordance/` 下。
+5. 审查者在本地启动 `serve_v2_annotation_app.py`。
+6. 审查者本地完成标注。
+7. 审查者把结果包发回维护者，或者开 PR 提交到约定的结果目录。
+8. 维护者合并两份结果并打包 reviewed dataset。
+
+审查者本地只需要能跑审查网页，不需要跑：
+
+- `run_v3_pipeline.py`
+- Qwen3-VL
+- SAM2
+- PartSLIP++
+- CUDA/GPU 推理环境
+
 ## 2. 拉取稳定标注版本
 
 审查者只需要拉取仓库并切换到稳定标注分支：
@@ -101,6 +144,35 @@ processed/annotation_batches/v0_1/BATCH_INFO.md
 - 本批保留的任务：`pick_up,open_pull,press_push`；
 - 本批排除的任务：`lift_carry`；
 - 审查开始日期和计划完成日期。
+
+### 3.1 本地审查所需的最小数据包
+
+如果使用 GitHub + 数据包模式，审查者本地至少需要这些文件或目录：
+
+```text
+MultiEEAffordance/processed/annotation_batches/v0_1/reviewer_b_samples.jsonl
+MultiEEAffordance/processed/points/...                         # sample 中 point_cloud_path 指向的点云
+MultiEEAffordance/processed/vlm_candidate_v3/fused_masks/...    # sample 中 multi_channel_mask_path 指向的候选 mask
+MultiEEAffordance/processed/vlm_candidate_v3/3d_candidates/...   # candidate_manifest 和 candidates.npz
+```
+
+如果样本里还引用了 `checked_mask_path`、`source_mask_path` 或 `rule_filter_path`，对应文件也应一起打包。最稳妥的方式是维护者先按 `reviewer_b_samples.jsonl` 中的路径收集依赖，打成一个压缩包。
+
+不要只给审查者 `reviewer_b_samples.jsonl`。这个 JSONL 只是索引，真正显示点云和候选还需要它里面引用的 `.npy/.npz/.json` 文件。
+
+本地解压后，路径应该仍然保持相对 `MultiEEAffordance/` 的结构。例如样本里写的是：
+
+```text
+processed/points/xxx/object.npy
+```
+
+那么审查者电脑上也应该存在：
+
+```text
+MultiEEAffordance/processed/points/xxx/object.npy
+```
+
+否则网页会报点云或 mask 路径不存在。
 
 ## 4. 样本分配
 
@@ -245,6 +317,30 @@ http://127.0.0.1:8766
 - 右侧候选列表能显示候选或空标签说明；
 - 点击保存后，对应的 `*_refined_samples.jsonl` 行数增加；
 - refined mask 写入对应的 `manual_refined_masks_reviewer_*` 目录。
+
+### 5.1 本地模式启动命令
+
+如果审查者不能 SSH，而是在自己电脑上解压了数据包，那么审查者可以在本地仓库根目录启动网页。下面以 `reviewer_b` 为例：
+
+```bash
+python MultiEEAffordance/tools/serve_v2_annotation_app.py \
+  --dataset-root MultiEEAffordance \
+  --samples processed/annotation_batches/v0_1/reviewer_b_samples.jsonl \
+  --review-jsonl processed/annotation_batches/v0_1/reviewer_b_review_records.jsonl \
+  --output-mask-root processed/annotation_batches/v0_1/manual_refined_masks_reviewer_b \
+  --output-samples processed/annotation_batches/v0_1/reviewer_b_refined_samples.jsonl \
+  --port 8766 \
+  --top-k-candidates 8 \
+  --candidate-min-selected-votes 2
+```
+
+然后本地浏览器打开：
+
+```text
+http://127.0.0.1:8766
+```
+
+如果网页能打开但点云不显示，通常不是网络问题，而是数据包缺少点云、候选 npz 或 mask 文件。把报错里的路径发给维护者即可。
 
 ## 6. 审查操作规范
 
@@ -409,6 +505,32 @@ python MultiEEAffordance/tools/serve_reviewed_dataset_viewer.py \
 - 小部件、把手、孔洞、按钮是否保留；
 - mask 是否和当前执行器机制一致。
 
+### 8.1 GitHub 模式下如何回传结果
+
+如果审查者不能 SSH，而是在本地电脑完成标注，推荐按“代码走 GitHub，数据走压缩包”的方式回传。
+
+小规模试运行时，可以把结果放到一个单独目录后开 PR：
+
+```text
+annotation_results/v0_1/reviewer_b/
+  reviewer_b_review_records.jsonl
+  reviewer_b_refined_samples.jsonl
+  manual_refined_masks_reviewer_b/
+```
+
+这种方式适合十几条、几十条样本的校准批次。维护者可以直接看 diff、检查文件数量，并把结果合并回服务器。
+
+正式批量标注时，不建议频繁把大量 `.npy` mask 文件提交到普通 Git 仓库。更稳妥的做法是审查者打包自己的结果，再通过 GitHub Release 附件、网盘或其他文件传输方式发回维护者：
+
+```bash
+tar -czf reviewer_b_annotation_v0_1_YYYYMMDD.tar.gz \
+  MultiEEAffordance/processed/annotation_batches/v0_1/reviewer_b_review_records.jsonl \
+  MultiEEAffordance/processed/annotation_batches/v0_1/reviewer_b_refined_samples.jsonl \
+  MultiEEAffordance/processed/annotation_batches/v0_1/manual_refined_masks_reviewer_b
+```
+
+维护者收到后解压到服务器的同名批次目录，再执行合并和 release。这样 GitHub 只负责代码、文档和小型索引文件，大体积点云、候选、人工 mask 不会把仓库变得很重。
+
 ## 9. 每日交付清单
 
 每位审查者每天至少同步：
@@ -442,3 +564,21 @@ python MultiEEAffordance/tools/serve_reviewed_dataset_viewer.py \
 - 不要为了让样本非空而强行补点。
 - 不要把自动候选直接当作 GT。
 - 不要在没有记录的情况下删除或覆盖 refined mask。
+
+## 12. 当前原始数据说明
+
+当前 v0.1 标注主线使用的核心原始数据是：
+
+```text
+/home/lzq/Multi-EE-3DAG/MultiEEAffordance/raw/3d_affordancenet/full-shape.zip
+```
+
+它是当前 3D AffordanceNet full-shape 流程的主要来源。转换脚本会从里面读取 `full_shape_train_data.pkl` 或 `full_shape_val_data.pkl`，得到完整物体点云和原始 affordance 弱标签，再展开成我们现在的 `pick_up / open_pull / press_push` 审查样本。
+
+需要注意三点：
+
+1. 对当前 v3 大规模标注主线来说，`full-shape.zip` 足够作为 3D AffordanceNet 样本池的核心原始数据。
+2. 它不是整个项目里所有可能数据的合集。`partial.zip`、`rotate.zip`、PartNet-Mobility 等数据如果后续接入，会是额外数据源或补充实验源。
+3. 它不包含已经生成好的 VLM 语义计划、候选区域、人工 refined mask 和 reviewed dataset。这些都是后续 pipeline 运行产物，保存在 `processed/`、`manifests/`、`splits/` 等目录中。
+
+因此，如果审查者只是做人工标注，通常不需要下载完整 `full-shape.zip`，也不需要自己重新跑转换和候选生成。维护者应该提前生成候选，并给审查者准备最小数据包。审查者本地只需要能打开点云、候选和保存 refined mask。

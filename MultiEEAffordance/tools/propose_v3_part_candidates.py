@@ -3,14 +3,15 @@
 
 This stage is the part-segmentation candidate backbone for the v3 path:
 
-  original point cloud + optional weak masks / self-developed high-recall proposals
-      -> high-recall 3D part candidates [K, N]
+  original point cloud + optional weak masks / external PartSLIP++ segments /
+  self-developed high-recall proposals
+      -> 3D part candidates [K, N]
       -> VLM selects candidate IDs later
 
 All candidates are binary masks over the original point cloud length N.
 The default high_recall backend is model-free and intentionally favors recall
-over precision. PartSLIP++ remains available only as an optional external
-adapter for historical experiments.
+over precision. The hybrid_partslippp_high_recall backend uses PartSLIP++
+segments for mapped categories and supplements or falls back to high_recall.
 """
 
 from __future__ import annotations
@@ -52,7 +53,15 @@ def parse_args() -> argparse.Namespace:
         default="",
         help=(
             "Optional explicit PartSLIP++ prediction path. Supports {pilot_id}, {sample_id}, "
-            "{task}, {executor}, and {object_category} tokens."
+            "{task}, {executor}, {object_category}, and {partslippp_category} tokens."
+        ),
+    )
+    parser.add_argument(
+        "--partslippp-category-map",
+        default="configs/partslippp_category_map.json",
+        help=(
+            "JSON mapping from 3DAffordanceNet object_category to PartSLIP++ category/checkpoint. "
+            "Used by hybrid_partslippp_high_recall."
         ),
     )
     parser.add_argument(
@@ -63,12 +72,26 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--backend",
-        choices=["high_recall", "geometry", "partslippp"],
+        choices=["high_recall", "geometry", "partslippp", "hybrid_partslippp_high_recall"],
         default="high_recall",
         help=(
             "Candidate backend. high_recall is the default self-developed model-free generator; "
-            "geometry is the old fallback; partslippp reads optional external normalized predictions."
+            "geometry is the old fallback; partslippp reads optional external normalized predictions; "
+            "hybrid_partslippp_high_recall routes mapped categories through PartSLIP++ and supplements "
+            "or falls back with high_recall."
         ),
+    )
+    parser.add_argument(
+        "--hybrid-min-high-recall-supplement",
+        type=int,
+        default=8,
+        help="Minimum high_recall supplement candidates to reserve when hybrid PartSLIP++ candidates are available.",
+    )
+    parser.add_argument(
+        "--hybrid-max-partslippp-primary",
+        type=int,
+        default=48,
+        help="Maximum PartSLIP++ primary candidates kept before high_recall supplements in hybrid mode.",
     )
     parser.add_argument("--pilot-id", default=None)
     parser.add_argument("--limit", type=int, default=None)
@@ -120,6 +143,49 @@ def write_json(path: Path, data: dict[str, Any], overwrite: bool) -> None:
 def read_json(path: Path) -> dict[str, Any]:
     with path.open("r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def normalize_category_key(value: str) -> str:
+    return "".join(ch for ch in str(value).lower() if ch.isalnum())
+
+
+def load_partslippp_category_map(root: Path, args: argparse.Namespace) -> dict[str, dict[str, Any]]:
+    path = resolve_path(root, args.partslippp_category_map)
+    if path is None or not path.exists():
+        return {}
+    payload = read_json(path)
+    raw_categories = payload.get("categories", payload)
+    if not isinstance(raw_categories, dict):
+        raise ValueError(f"PartSLIP++ category map must be a JSON object: {path}")
+
+    mapped: dict[str, dict[str, Any]] = {}
+    for category, value in raw_categories.items():
+        if isinstance(value, str):
+            entry: dict[str, Any] = {"partslippp_category": value, "checkpoint": value, "enabled": True}
+        elif isinstance(value, dict):
+            entry = dict(value)
+            entry.setdefault("partslippp_category", entry.get("category", category))
+            entry.setdefault("checkpoint", entry.get("partslippp_category", category))
+            entry.setdefault("enabled", True)
+        else:
+            continue
+        if not bool(entry.get("enabled", True)):
+            continue
+        entry["object_category"] = str(category)
+        entry["partslippp_category"] = str(entry.get("partslippp_category") or category)
+        entry["checkpoint"] = str(entry.get("checkpoint") or entry["partslippp_category"])
+        mapped[normalize_category_key(str(category))] = entry
+    return mapped
+
+
+def partslippp_mapping_for(
+    root: Path,
+    args: argparse.Namespace,
+    row: dict[str, str],
+) -> dict[str, Any] | None:
+    category = str(row.get("object_category") or "")
+    mapping = load_partslippp_category_map(root, args)
+    return mapping.get(normalize_category_key(category))
 
 
 def selected_rows(root: Path, args: argparse.Namespace) -> list[dict[str, str]]:
@@ -325,7 +391,13 @@ def normalize_masks(raw_masks: Any, n: int, point_indices: np.ndarray | None = N
 
 
 def find_partslippp_path(root: Path, args: argparse.Namespace, row: dict[str, str]) -> Path:
-    tokens = {key: str(row.get(key, "")) for key in ("pilot_id", "sample_id", "task", "executor", "object_category")}
+    tokens = {key: str(value) for key, value in row.items()}
+    for key in ("pilot_id", "sample_id", "task", "executor", "object_category"):
+        tokens.setdefault(key, "")
+    tokens.setdefault("partslippp_category", tokens.get("object_category", ""))
+    tokens.setdefault("partslippp_checkpoint", tokens.get("partslippp_category", ""))
+    tokens["object_category_lower"] = tokens.get("object_category", "").lower()
+    tokens["partslippp_category_lower"] = tokens.get("partslippp_category", "").lower()
     if args.partslippp_path:
         formatted = args.partslippp_path.format(**tokens)
         path = resolve_portable_path(root, formatted)
@@ -336,6 +408,7 @@ def find_partslippp_path(root: Path, args: argparse.Namespace, row: dict[str, st
     base = resolve_path(root, args.partslippp_root)
     pilot_id = tokens["pilot_id"]
     sample_id = tokens["sample_id"]
+    part_category = tokens.get("partslippp_category", "")
     candidates = [
         base / pilot_id / "partslippp_candidates.npz",
         base / pilot_id / "segments.npz",
@@ -353,6 +426,25 @@ def find_partslippp_path(root: Path, args: argparse.Namespace, row: dict[str, st
         base / f"{sample_id}_{tokens['task']}_{tokens['executor']}.json",
         base / f"{sample_id}.json",
     ]
+    if part_category:
+        category_base = base / part_category
+        candidates = [
+            category_base / pilot_id / "partslippp_candidates.npz",
+            category_base / pilot_id / "segments.npz",
+            category_base / pilot_id / "prediction.npz",
+            category_base / pilot_id / "result.npz",
+            category_base / pilot_id / "partslippp_candidates.json",
+            category_base / pilot_id / "segments.json",
+            category_base / sample_id / "segments.npz",
+            category_base / sample_id / "partslippp_candidates.npz",
+            category_base / sample_id / f"{pilot_id}.npz",
+            category_base / f"{sample_id}_{tokens['task']}_{tokens['executor']}.npz",
+            category_base / f"{sample_id}.npz",
+            category_base / f"{pilot_id}.npz",
+            category_base / f"{sample_id}_{tokens['task']}_{tokens['executor']}.json",
+            category_base / f"{sample_id}.json",
+            category_base / f"{pilot_id}.json",
+        ] + candidates
     for path in candidates:
         if path.exists():
             return path
@@ -507,6 +599,84 @@ def load_partslippp_candidates(path: Path, n: int, args: argparse.Namespace) -> 
     if suffix == ".json":
         return load_partslippp_json(path, n, args)
     raise ValueError(f"Unsupported PartSLIP++ prediction format: {path}")
+
+
+def annotate_candidates(
+    candidates: list[dict[str, Any]],
+    *,
+    candidate_source: str,
+    hybrid_role: str,
+    mapping: dict[str, Any] | None = None,
+    prediction_path: Path | None = None,
+) -> list[dict[str, Any]]:
+    annotated: list[dict[str, Any]] = []
+    for item in candidates:
+        meta = dict(item)
+        meta["candidate_source"] = candidate_source
+        meta["hybrid_role"] = hybrid_role
+        meta.setdefault("need_review", True)
+        meta.setdefault("allows_overlap", True)
+        if mapping:
+            meta["partslippp_category"] = mapping.get("partslippp_category", "")
+            meta["partslippp_checkpoint"] = mapping.get("checkpoint", "")
+        if prediction_path is not None:
+            meta["partslippp_prediction_path"] = str(prediction_path)
+        annotated.append(meta)
+    return annotated
+
+
+def merge_hybrid_candidates(
+    primary_masks: np.ndarray,
+    primary_candidates: list[dict[str, Any]],
+    supplement_masks: np.ndarray,
+    supplement_candidates: list[dict[str, Any]],
+    args: argparse.Namespace,
+    n: int,
+) -> tuple[np.ndarray, list[dict[str, Any]]]:
+    max_total = max(1, int(args.max_candidates))
+    min_supplement = max(0, int(args.hybrid_min_high_recall_supplement))
+    max_primary = max(0, int(args.hybrid_max_partslippp_primary))
+
+    primary_limit = min(primary_masks.shape[0], max_total, max_primary or max_total)
+    if supplement_masks.shape[0] > 0 and min_supplement > 0:
+        reserve = min(min_supplement, supplement_masks.shape[0], max_total)
+        primary_limit = min(primary_limit, max(0, max_total - reserve))
+
+    selected: list[tuple[np.ndarray, dict[str, Any]]] = []
+
+    def append_candidate(mask: np.ndarray, meta: dict[str, Any]) -> None:
+        if len(selected) >= max_total:
+            return
+        for existing, _existing_meta in selected:
+            if candidate_iou(mask, existing) >= float(args.dedupe_iou):
+                return
+        selected.append((mask.astype(np.uint8), dict(meta)))
+
+    for idx in range(primary_limit):
+        append_candidate(primary_masks[idx], primary_candidates[idx])
+    for idx in range(min(supplement_masks.shape[0], len(supplement_candidates))):
+        append_candidate(supplement_masks[idx], supplement_candidates[idx])
+        if len(selected) >= max_total:
+            break
+    for idx in range(primary_limit, min(primary_masks.shape[0], len(primary_candidates))):
+        append_candidate(primary_masks[idx], primary_candidates[idx])
+        if len(selected) >= max_total:
+            break
+
+    if not selected:
+        return np.zeros((0, n), dtype=np.uint8), []
+
+    out_masks = np.stack([mask for mask, _meta in selected], axis=0).astype(np.uint8)
+    out_candidates: list[dict[str, Any]] = []
+    source_counts: dict[str, int] = {}
+    for idx, (_mask, meta) in enumerate(selected):
+        source = str(meta.get("candidate_source") or meta.get("source") or "unknown")
+        source_counts[source] = source_counts.get(source, 0) + 1
+        meta["candidate_id"] = candidate_id_for(idx)
+        meta["rank_in_candidate_source"] = source_counts[source]
+        meta["retention_policy"] = "hybrid_partslippp_primary_high_recall_supplement"
+        out_candidates.append(meta)
+    return out_masks, out_candidates
 
 
 def candidate_iou(a: np.ndarray, b: np.ndarray) -> float:
@@ -1090,15 +1260,117 @@ def generate_with_geometry(
     return candidate_masks, [normalize_meta(item) for item in candidates], "", point_path, mask_path
 
 
+def generate_with_hybrid_partslippp_high_recall(
+    root: Path,
+    args: argparse.Namespace,
+    row: dict[str, str],
+    sample_by_id: dict[str, dict[str, Any]],
+) -> tuple[np.ndarray, list[dict[str, Any]], str, Path, Path | None, dict[str, Any]]:
+    enriched = gen.enrich_row(row, sample_by_id)
+    point_path = resolve_portable_path(root, enriched.get("point_cloud_path", ""))
+    mask_value = enriched.get("checked_mask_path") or enriched.get("multi_channel_mask_path") or enriched.get("source_mask_path")
+    mask_path = resolve_portable_path(root, mask_value) if mask_value else None
+    xyz, _normals = gen.load_points(point_path)
+    n = xyz.shape[0]
+
+    route_info: dict[str, Any] = {
+        "backend_route": "hybrid_partslippp_high_recall",
+        "partslippp_status": "not_attempted",
+        "fallback_backend": "high_recall",
+        "fallback_reason": "",
+    }
+    warnings: list[str] = []
+    mapping = partslippp_mapping_for(root, args, enriched)
+
+    part_masks = np.zeros((0, n), dtype=np.uint8)
+    part_candidates: list[dict[str, Any]] = []
+    if mapping is None:
+        route_info["partslippp_status"] = "unmapped_category"
+        route_info["fallback_reason"] = f"category_not_mapped:{enriched.get('object_category', '')}"
+        warnings.append(route_info["fallback_reason"])
+    else:
+        route_row = dict(row)
+        for key in ("sample_id", "task", "executor", "object_category"):
+            if enriched.get(key):
+                route_row[key] = str(enriched.get(key))
+        route_row["partslippp_category"] = str(mapping.get("partslippp_category", ""))
+        route_row["partslippp_checkpoint"] = str(mapping.get("checkpoint", ""))
+        route_info["partslippp_category"] = route_row["partslippp_category"]
+        route_info["partslippp_checkpoint"] = route_row["partslippp_checkpoint"]
+        try:
+            prediction_path = find_partslippp_path(root, args, route_row)
+            part_masks, loaded_part_candidates = load_partslippp_candidates(prediction_path, n, args)
+            part_candidates = annotate_candidates(
+                loaded_part_candidates,
+                candidate_source="partslippp",
+                hybrid_role="primary",
+                mapping=mapping,
+                prediction_path=prediction_path,
+            )
+            route_info["partslippp_status"] = "loaded"
+            route_info["partslippp_prediction_path"] = relative_to_dataset(root, prediction_path)
+        except Exception as exc:
+            route_info["partslippp_status"] = "failed"
+            route_info["fallback_reason"] = f"partslippp_failed:{type(exc).__name__}:{exc}"
+            warnings.append(route_info["fallback_reason"])
+
+    try:
+        high_masks, high_candidates, high_warning, high_point_path, high_mask_path = generate_with_high_recall(
+            root, args, row, sample_by_id
+        )
+        point_path = high_point_path
+        mask_path = high_mask_path
+        high_candidates = annotate_candidates(
+            high_candidates,
+            candidate_source="self_high_recall_3d",
+            hybrid_role="supplement" if part_candidates else "fallback",
+        )
+        if high_warning:
+            warnings.append(high_warning)
+    except Exception as exc:
+        if part_candidates:
+            high_masks = np.zeros((0, n), dtype=np.uint8)
+            high_candidates = []
+            warnings.append(f"high_recall_supplement_failed:{type(exc).__name__}:{exc}")
+        elif args.allow_empty_candidates:
+            candidate_masks, candidates, status = empty_candidates(n)
+            route_info["fallback_reason"] = f"{route_info.get('fallback_reason', '')}; high_recall_failed:{type(exc).__name__}:{exc}"
+            warnings.append(status)
+            return candidate_masks, candidates, "; ".join(item for item in warnings if item), point_path, mask_path, route_info
+        else:
+            raise
+
+    if part_candidates:
+        candidate_masks, candidates = merge_hybrid_candidates(part_masks, part_candidates, high_masks, high_candidates, args, n)
+    else:
+        candidate_masks, candidates = high_masks, high_candidates
+
+    route_info["candidate_count_by_source"] = {}
+    for item in candidates:
+        source = str(item.get("candidate_source") or item.get("source") or "unknown")
+        route_info["candidate_count_by_source"][source] = route_info["candidate_count_by_source"].get(source, 0) + 1
+
+    if candidate_masks.size == 0 or not candidates:
+        if not args.allow_empty_candidates:
+            raise ValueError("Hybrid backend produced no candidates.")
+        candidate_masks, candidates, status = empty_candidates(n)
+        warnings.append(status)
+    return candidate_masks, candidates, "; ".join(item for item in warnings if item), point_path, mask_path, route_info
+
+
 def generate_with_backend(
     root: Path,
     args: argparse.Namespace,
     row: dict[str, str],
     sample_by_id: dict[str, dict[str, Any]],
-) -> tuple[np.ndarray, list[dict[str, Any]], str, Path, Path | None]:
+) -> tuple[np.ndarray, list[dict[str, Any]], str, Path, Path | None, dict[str, Any]]:
     if args.backend == "high_recall":
         try:
-            return generate_with_high_recall(root, args, row, sample_by_id)
+            candidate_masks, candidates, warning, point_path, mask_path = generate_with_high_recall(root, args, row, sample_by_id)
+            return candidate_masks, candidates, warning, point_path, mask_path, {
+                "backend_route": "high_recall",
+                "partslippp_status": "not_used",
+            }
         except Exception as exc:
             if not args.allow_empty_candidates:
                 raise
@@ -1108,7 +1380,11 @@ def generate_with_backend(
             mask_path = resolve_portable_path(root, mask_value) if mask_value else None
             xyz, _normals = gen.load_points(point_path)
             candidate_masks, candidates, status = empty_candidates(xyz.shape[0])
-            return candidate_masks, candidates, f"{status}: high_recall_failed: {type(exc).__name__}: {exc}", point_path, mask_path
+            return candidate_masks, candidates, f"{status}: high_recall_failed: {type(exc).__name__}: {exc}", point_path, mask_path, {
+                "backend_route": "high_recall",
+                "partslippp_status": "not_used",
+                "fallback_reason": f"high_recall_failed:{type(exc).__name__}:{exc}",
+            }
 
     if args.backend == "partslippp":
         enriched = gen.enrich_row(row, sample_by_id)
@@ -1119,19 +1395,36 @@ def generate_with_backend(
         try:
             prediction_path = find_partslippp_path(root, args, row)
             candidate_masks, candidates = load_partslippp_candidates(prediction_path, xyz.shape[0], args)
-            return candidate_masks, candidates, "", point_path, mask_path
+            candidates = annotate_candidates(candidates, candidate_source="partslippp", hybrid_role="primary", prediction_path=prediction_path)
+            return candidate_masks, candidates, "", point_path, mask_path, {
+                "backend_route": "partslippp",
+                "partslippp_status": "loaded",
+                "partslippp_prediction_path": relative_to_dataset(root, prediction_path),
+            }
         except Exception as exc:
             if args.partslippp_fallback == "geometry":
                 candidate_masks, candidates, warning, point_path, mask_path = generate_with_geometry(root, args, row, sample_by_id)
                 fallback_warning = f"partslippp_failed_using_geometry: {type(exc).__name__}: {exc}"
-                return candidate_masks, candidates, fallback_warning if not warning else f"{fallback_warning}; {warning}", point_path, mask_path
+                return candidate_masks, candidates, fallback_warning if not warning else f"{fallback_warning}; {warning}", point_path, mask_path, {
+                    "backend_route": "partslippp_geometry_fallback",
+                    "partslippp_status": "failed",
+                    "fallback_backend": "geometry",
+                    "fallback_reason": f"{type(exc).__name__}: {exc}",
+                }
             raise
+
+    if args.backend == "hybrid_partslippp_high_recall":
+        return generate_with_hybrid_partslippp_high_recall(root, args, row, sample_by_id)
 
     if args.backend != "geometry":
         raise ValueError(f"Unsupported backend: {args.backend}")
 
     try:
-        return generate_with_geometry(root, args, row, sample_by_id)
+        candidate_masks, candidates, warning, point_path, mask_path = generate_with_geometry(root, args, row, sample_by_id)
+        return candidate_masks, candidates, warning, point_path, mask_path, {
+            "backend_route": "geometry",
+            "partslippp_status": "not_used",
+        }
     except Exception as exc:
         if not args.allow_empty_candidates:
             raise
@@ -1141,7 +1434,11 @@ def generate_with_backend(
         mask_path = resolve_portable_path(root, mask_value) if mask_value else None
         xyz, _normals = gen.load_points(point_path)
         candidate_masks, candidates, status = empty_candidates(xyz.shape[0])
-        return candidate_masks, candidates, f"{status}: {type(exc).__name__}: {exc}", point_path, mask_path
+        return candidate_masks, candidates, f"{status}: {type(exc).__name__}: {exc}", point_path, mask_path, {
+            "backend_route": "geometry",
+            "partslippp_status": "not_used",
+            "fallback_reason": f"geometry_failed:{type(exc).__name__}:{exc}",
+        }
 
 
 def write_candidate_outputs(
@@ -1153,6 +1450,7 @@ def write_candidate_outputs(
     generation_warning: str,
     point_path: Path,
     mask_path: Path | None,
+    route_info: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     pilot_id = row["pilot_id"]
     sample_id = row["sample_id"]
@@ -1179,6 +1477,14 @@ def write_candidate_outputs(
         "pipeline": "part_segmentation_candidate_proposal",
         "candidate_source": "partseg",
         "backend": args.backend,
+        "backend_route": (route_info or {}).get("backend_route", args.backend),
+        "partslippp_status": (route_info or {}).get("partslippp_status", "not_used"),
+        "partslippp_category": (route_info or {}).get("partslippp_category", ""),
+        "partslippp_checkpoint": (route_info or {}).get("partslippp_checkpoint", ""),
+        "partslippp_prediction_path": (route_info or {}).get("partslippp_prediction_path", ""),
+        "fallback_backend": (route_info or {}).get("fallback_backend", ""),
+        "fallback_reason": (route_info or {}).get("fallback_reason", ""),
+        "candidate_count_by_source": (route_info or {}).get("candidate_count_by_source", {}),
         "pilot_id": pilot_id,
         "sample_id": sample_id,
         "object_category": row.get("object_category", ""),
@@ -1196,7 +1502,10 @@ def write_candidate_outputs(
         "parameters": {
             "partslippp_root": args.partslippp_root,
             "partslippp_path": args.partslippp_path,
+            "partslippp_category_map": args.partslippp_category_map,
             "partslippp_fallback": args.partslippp_fallback,
+            "hybrid_min_high_recall_supplement": int(args.hybrid_min_high_recall_supplement),
+            "hybrid_max_partslippp_primary": int(args.hybrid_max_partslippp_primary),
             "k_neighbors": int(args.k_neighbors),
             "min_points": int(args.min_points),
             "max_candidate_fraction": float(args.max_candidate_fraction),
@@ -1235,8 +1544,8 @@ def generate_for_row(
     row: dict[str, str],
     sample_by_id: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
-    candidate_masks, candidates, warning, point_path, mask_path = generate_with_backend(root, args, row, sample_by_id)
-    return write_candidate_outputs(root, args, row, candidate_masks, candidates, warning, point_path, mask_path)
+    candidate_masks, candidates, warning, point_path, mask_path, route_info = generate_with_backend(root, args, row, sample_by_id)
+    return write_candidate_outputs(root, args, row, candidate_masks, candidates, warning, point_path, mask_path, route_info)
 
 
 def main() -> int:

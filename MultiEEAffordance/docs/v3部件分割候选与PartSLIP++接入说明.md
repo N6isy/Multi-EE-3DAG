@@ -509,3 +509,37 @@ CUDA_VISIBLE_DEVICES=1,2 python MultiEEAffordance/tools/run_v3_pipeline.py \
 ### PartSLIP++ 输出覆盖整个主体怎么办
 
 大主体候选会被 `--max-candidate-fraction` 过滤。对于 hook/gripper 等需要细部件的执行器，后续 `part_filter` 还会按执行器规则保守筛选。
+
+## 10. v0.2 hybrid 接入方式
+
+当前不建议把 PartSLIP++ 作为唯一候选生成器。v0.2 研发分支采用 hybrid 路由：
+
+- 类别在 `configs/partslippp_category_map.json` 中有映射时，读取 PartSLIP++ 输出作为 primary candidates。
+- 始终保留 `high_recall` supplement，补充小部件、局部可见部件、细长结构和弱标签先验。
+- 类别未映射、输出缺失或格式不匹配时，自动 fallback 到 `high_recall`，不会中断整批 pipeline。
+- `candidate_manifest.json` 会记录 `partslippp_status` 和 `fallback_reason`，用于排查候选为空到底是模型未覆盖、输出缺失，还是高召回生成器也失败。
+
+推荐命令：
+
+```bash
+python MultiEEAffordance/tools/run_v3_pipeline.py \
+  --dataset-root MultiEEAffordance \
+  --config configs/qwen3vl_sam2_pilot.yaml \
+  --pilot-csv processed/metadata/v3_test_review_queue_v0_2.csv \
+  --samples processed/metadata/samples_v3_large_batch_v0_1.jsonl \
+  --include-tasks pick_up,open_pull,press_push \
+  --exclude-tasks lift_carry \
+  --candidate-source partseg \
+  --part-proposal-backend hybrid_partslippp_high_recall \
+  --partslippp-root external/partslippp/outputs \
+  --partslippp-category-map configs/partslippp_category_map.json \
+  --stages views,part_propose,render \
+  --limit 6 \
+  --proposal-max-candidates 64 \
+  --max-candidates 24 \
+  --part-top-k 5 \
+  --allow-empty \
+  --overwrite
+```
+
+外部 PartSLIP++ 输出仍应放在独立环境中生成；Multi-EE 主环境只读取 normalized `.npz` / `.json` 候选，不在主 pipeline 内强行安装或调用 PartSLIP++。
