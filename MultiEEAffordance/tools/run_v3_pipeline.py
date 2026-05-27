@@ -81,9 +81,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--renders-root", default="processed/vlm_semantic_part/renders", help="VLM-friendly view render root.")
     parser.add_argument(
         "--part-proposal-backend",
-        choices=["high_recall", "geometry", "partslippp"],
+        choices=["high_recall", "geometry", "partslippp", "hybrid_partslippp_high_recall"],
         default="high_recall",
-        help="3D part proposal backend. high_recall is the default model-free candidate generator.",
+        help=(
+            "3D part proposal backend. high_recall is the default model-free candidate generator; "
+            "hybrid_partslippp_high_recall uses mapped PartSLIP++ segments plus high_recall supplement/fallback."
+        ),
     )
     parser.add_argument(
         "--partslippp-root",
@@ -96,10 +99,27 @@ def parse_args() -> argparse.Namespace:
         help="Optional explicit PartSLIP++ prediction path template.",
     )
     parser.add_argument(
+        "--partslippp-category-map",
+        default="configs/partslippp_category_map.json",
+        help="JSON category map used by --part-proposal-backend hybrid_partslippp_high_recall.",
+    )
+    parser.add_argument(
         "--partslippp-fallback",
         choices=["error", "geometry"],
         default="error",
         help="Fallback when PartSLIP++ output is missing or malformed.",
+    )
+    parser.add_argument(
+        "--hybrid-min-high-recall-supplement",
+        type=int,
+        default=8,
+        help="Minimum high_recall supplement candidates reserved when hybrid PartSLIP++ candidates are available.",
+    )
+    parser.add_argument(
+        "--hybrid-max-partslippp-primary",
+        type=int,
+        default=48,
+        help="Maximum PartSLIP++ candidates kept before high_recall supplements in hybrid mode.",
     )
     parser.add_argument("--selected-candidates", default="", help="Optional manual candidate ids for build/visualize.")
     parser.add_argument("--allow-empty", action="store_true")
@@ -443,8 +463,14 @@ def build_commands(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
                 args.partslippp_root,
                 "--partslippp-path",
                 args.partslippp_path,
+                "--partslippp-category-map",
+                args.partslippp_category_map,
                 "--partslippp-fallback",
                 args.partslippp_fallback,
+                "--hybrid-min-high-recall-supplement",
+                str(args.hybrid_min_high_recall_supplement),
+                "--hybrid-max-partslippp-primary",
+                str(args.hybrid_max_partslippp_primary),
             ],
             args,
         )
@@ -637,7 +663,10 @@ def main() -> int:
             "part_proposal_backend": args.part_proposal_backend,
             "partslippp_root": args.partslippp_root,
             "partslippp_path": args.partslippp_path,
+            "partslippp_category_map": args.partslippp_category_map,
             "partslippp_fallback": args.partslippp_fallback,
+            "hybrid_min_high_recall_supplement": args.hybrid_min_high_recall_supplement,
+            "hybrid_max_partslippp_primary": args.hybrid_max_partslippp_primary,
             "min_selected_votes": args.min_selected_votes,
         },
         "status": "dry_run" if args.dry_run else "ok",
