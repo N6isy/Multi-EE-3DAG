@@ -26,6 +26,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--pilot-csv", default="processed/metadata/vlm_pilot_samples_v0_1.csv")
     parser.add_argument("--samples", default="processed/metadata/samples_checked_v0_1.jsonl")
     parser.add_argument("--candidate-root", default="processed/vlm_candidate_v3/3d_candidates")
+    parser.add_argument(
+        "--metadata-root",
+        default="",
+        help=(
+            "Optional root used to resolve and write portable generated paths. "
+            "Use the mirrored dataset root under external storage for review packages."
+        ),
+    )
     parser.add_argument("--empty-pilot-csv", default="", help="Optional CSV of empty-review rows to append.")
     parser.add_argument("--output-mask-root", default="processed/vlm_candidate_v3/fused_masks")
     parser.add_argument("--output-samples", default="processed/metadata/v3_candidate_samples_v0_1.jsonl")
@@ -69,6 +77,32 @@ def resolve_path(root: Path, value: str | None) -> Path | None:
         return None
     path = Path(str(value))
     return path if path.is_absolute() else root / path
+
+
+def metadata_root(root: Path, args: argparse.Namespace) -> Path:
+    return resolve_path(root, args.metadata_root) if args.metadata_root else root
+
+
+def metadata_path(root: Path, args: argparse.Namespace, path: Path) -> str:
+    return relative_to_dataset(metadata_root(root, args), path)
+
+
+def resolve_generated_path(root: Path, args: argparse.Namespace, value: str | Path, base_dir: Path | None = None) -> Path:
+    raw = str(value).strip()
+    if not raw:
+        return Path("")
+    path = Path(raw)
+    if path.is_absolute() and path.exists():
+        return path
+    if base_dir is not None and not path.is_absolute():
+        candidate = base_dir / raw
+        if candidate.exists():
+            return candidate
+    if args.metadata_root and not path.is_absolute():
+        candidate = metadata_root(root, args) / raw
+        if candidate.exists():
+            return candidate
+    return resolve_portable_path(root, raw, base_dir)
 
 
 def read_csv(path: Path) -> list[dict[str, str]]:
@@ -190,7 +224,7 @@ def build_for_row(root: Path, args: argparse.Namespace, row: dict[str, str], sam
 
     manifest_path = resolve_path(root, args.candidate_root) / pilot_id / "candidate_manifest.json"
     manifest = read_json(manifest_path)
-    npz_path = resolve_portable_path(root, manifest["candidate_npz"], manifest_path.parent)
+    npz_path = resolve_generated_path(root, args, manifest["candidate_npz"], manifest_path.parent)
     data = np.load(npz_path, allow_pickle=True)
     candidate_ids = [str(item).upper() for item in data["candidate_ids"].tolist()]
     candidate_masks = data["candidate_masks"].astype(np.uint8)
@@ -240,7 +274,7 @@ def build_for_row(root: Path, args: argparse.Namespace, row: dict[str, str], sam
             "point_index_projection",
             "reject_aware_3d_candidate_growth",
         ],
-        "candidate_manifest": relative_to_dataset(root, manifest_path),
+        "candidate_manifest": metadata_path(root, args, manifest_path),
         "selected_candidates": selected_ids,
         "default_selected_candidates": manifest.get("default_selected_candidates", []),
         "positive_points": int(target_mask.sum()),
@@ -248,7 +282,7 @@ def build_for_row(root: Path, args: argparse.Namespace, row: dict[str, str], sam
         "reject_veto_points": int(manifest.get("reject_veto_points", 0)),
         "requires_human_review": True,
     }
-    sample["multi_channel_mask_path"] = relative_to_dataset(root, out_mask_path)
+    sample["multi_channel_mask_path"] = metadata_path(root, args, out_mask_path)
     sample["executor_order"] = EXECUTOR_ORDER
     sample["feasibility"] = feasibility
     sample["label_source"] = label_source
@@ -262,7 +296,7 @@ def build_for_row(root: Path, args: argparse.Namespace, row: dict[str, str], sam
         "pilot_id": pilot_id,
         "executor": executor,
         "source": "v3_semantic_target_reject_candidate",
-        "candidate_manifest": relative_to_dataset(root, manifest_path),
+        "candidate_manifest": metadata_path(root, args, manifest_path),
         "rule_filter_path": "",
         "selected_candidates": selected_ids,
         "positive_points": int(target_mask.sum()),
@@ -280,7 +314,7 @@ def build_for_row(root: Path, args: argparse.Namespace, row: dict[str, str], sam
         "positive_points": int(target_mask.sum()),
         "target_seed_points": int(manifest.get("target_seed_points", 0)),
         "reject_veto_points": int(manifest.get("reject_veto_points", 0)),
-        "output_mask_path": relative_to_dataset(root, out_mask_path),
+        "output_mask_path": metadata_path(root, args, out_mask_path),
     }
     return sample, summary
 
@@ -327,7 +361,7 @@ def build_empty_for_row(root: Path, args: argparse.Namespace, row: dict[str, str
         "review_mode": "confirm_empty",
         "negative_reason": negative_reason[executor],
     }
-    sample["multi_channel_mask_path"] = relative_to_dataset(root, out_mask_path)
+    sample["multi_channel_mask_path"] = metadata_path(root, args, out_mask_path)
     sample["executor_order"] = EXECUTOR_ORDER
     sample["feasibility"] = feasibility
     sample["label_source"] = label_source
@@ -346,7 +380,7 @@ def build_empty_for_row(root: Path, args: argparse.Namespace, row: dict[str, str
         "executor": executor,
         "selected_candidates": [],
         "positive_points": 0,
-        "output_mask_path": relative_to_dataset(root, out_mask_path),
+        "output_mask_path": metadata_path(root, args, out_mask_path),
         "review_mode": "confirm_empty",
     }
     return sample, summary
@@ -400,7 +434,7 @@ def build_failed_candidate_row(
         "review_mode": "point_refine",
         "build_error": error_text,
     }
-    sample["multi_channel_mask_path"] = relative_to_dataset(root, out_mask_path)
+    sample["multi_channel_mask_path"] = metadata_path(root, args, out_mask_path)
     sample["executor_order"] = EXECUTOR_ORDER
     sample["feasibility"] = feasibility
     sample["label_source"] = label_source
@@ -419,7 +453,7 @@ def build_failed_candidate_row(
         "executor": executor,
         "selected_candidates": [],
         "positive_points": 0,
-        "output_mask_path": relative_to_dataset(root, out_mask_path),
+        "output_mask_path": metadata_path(root, args, out_mask_path),
         "review_mode": "point_refine",
         "build_error": error_text,
     }
@@ -507,7 +541,7 @@ def main() -> int:
     summary = {
         "version": "v3",
         "rows": len(summaries),
-        "output_samples": relative_to_dataset(root, output_samples),
+        "output_samples": metadata_path(root, args, output_samples),
         "summaries": summaries,
         "build_errors": build_errors,
         "notes": "v3 candidate masks are review candidates, not checked ground truth.",

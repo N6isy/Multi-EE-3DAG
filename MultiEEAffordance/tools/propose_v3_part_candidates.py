@@ -39,6 +39,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--pilot-csv", default="processed/metadata/vlm_pilot_samples_v0_1.csv")
     parser.add_argument("--samples", default="processed/metadata/samples_checked_v0_1.jsonl")
     parser.add_argument("--output-root", default="processed/vlm_candidate_v3/3d_candidates")
+    parser.add_argument(
+        "--metadata-root",
+        default="",
+        help=(
+            "Optional root used to write portable paths for generated candidate files. "
+            "Use the mirrored dataset root under external storage when packaging review inputs."
+        ),
+    )
     parser.add_argument("--semantic-plan-root", default="processed/vlm_candidate_v3/semantic_plans")
     parser.add_argument("--renders-root", default="processed/vlm_semantic_part/renders")
     parser.add_argument("--fallback-renders-root", default="processed/vlm_pilot/renders")
@@ -99,6 +107,11 @@ def resolve_path(root: Path, value: str | None) -> Path | None:
         return None
     path = Path(str(value))
     return path if path.is_absolute() else root / path
+
+
+def metadata_path(root: Path, args: argparse.Namespace, path: Path) -> str:
+    meta_root = resolve_path(root, args.metadata_root) if args.metadata_root else root
+    return relative_to_dataset(meta_root, path)
 
 
 def read_csv(path: Path) -> list[dict[str, str]]:
@@ -1188,7 +1201,7 @@ def write_candidate_outputs(
         "weak_mask_path": relative_to_dataset(root, mask_path) if mask_path and mask_path.exists() else None,
         "semantic_plan": relative_to_dataset(root, plan_path) if plan_path.exists() else "",
         "renders_root": args.renders_root,
-        "candidate_npz": relative_to_dataset(root, npz_path),
+        "candidate_npz": metadata_path(root, args, npz_path),
         "candidate_count": int(candidate_masks.shape[0]),
         "default_selected_candidates": [],
         "candidates": candidates,
@@ -1224,7 +1237,7 @@ def write_candidate_outputs(
         "executor": row.get("executor", ""),
         "candidate_count": int(candidate_masks.shape[0]),
         "candidate_point_counts": {item["candidate_id"]: int(item["point_count"]) for item in candidates},
-        "candidate_manifest": relative_to_dataset(root, manifest_path),
+        "candidate_manifest": metadata_path(root, args, manifest_path),
         "generation_warning": generation_warning,
     }
 

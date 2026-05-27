@@ -13,6 +13,36 @@
 
 不要把真实姓名写进路径名、文件名或脚本参数。这样合并和排查时更稳定。
 
+## 0.1 当前存储约定
+
+从本轮开始，维护者生成“网页人工审查所需输入文件”时，推荐把中间候选和待审查 samples 写到数据存储盘：
+
+```text
+/home/lzq/data/MultiEEAffordance/
+```
+
+这个目录不是代码仓库，而是一个可打包的数据镜像目录。它里面保存的路径结构尽量和项目里的 `MultiEEAffordance/` 一致，例如：
+
+```text
+/home/lzq/data/MultiEEAffordance/processed/vlm_candidate_v3/3d_candidates/
+/home/lzq/data/MultiEEAffordance/processed/vlm_candidate_v3/fused_masks/
+/home/lzq/data/MultiEEAffordance/processed/metadata/v3_candidate_samples_v0_1.jsonl
+```
+
+这样做的好处是：
+
+1. 服务器中间文件不挤占项目仓库目录。
+2. `v3_candidate_samples_v0_1.jsonl` 里写入的是 `processed/...` 这种相对路径，审查者把数据包解压到本地项目下也能读取。
+3. 审查者的人工输出仍然写回当前项目下的 `processed/annotation_batches/v0_1/`，不要写进 `/home/lzq/data`。
+
+服务器 IP 记录为：
+
+```text
+10.24.1.11
+```
+
+如果维护者要把审查输入包发给审查者，打包时从 `/home/lzq/data/MultiEEAffordance/` 复制所需的 `processed/...` 文件，审查者解压到自己仓库的 `MultiEEAffordance/` 目录下即可。
+
 ## 0. 维护者到底要做什么
 
 维护者的工作可以理解成 6 件事：
@@ -305,20 +335,22 @@ skipped
 
 ## 8. 第四步：先小批 smoke test
 
-不要一上来全量跑 VLM。先用 3 到 5 条样本确认 pipeline 能跑完。
+当前协作标注版先走“纯规则候选 + 人工审查”，不让 VLM 决定候选是否可用。先用 3 到 5 条样本确认 pipeline 能跑完。
 
 ```bash
-CUDA_VISIBLE_DEVICES=1,2 python MultiEEAffordance/tools/run_v3_pipeline.py \
+python MultiEEAffordance/tools/run_v3_pipeline.py \
   --dataset-root MultiEEAffordance \
   --config configs/qwen3vl_sam2_pilot.yaml \
   --pilot-csv processed/metadata/v3_large_scale_review_queue_v0_1.csv \
   --samples processed/metadata/samples_v3_large_batch_v0_1.jsonl \
   --include-tasks pick_up,open_pull,press_push \
   --exclude-tasks lift_carry \
+  --include-decisions all \
   --candidate-source partseg \
   --part-proposal-backend high_recall \
-  --stages views,plan,part_propose,render,part_select,part_filter,build \
+  --stages part_propose,build \
   --limit 5 \
+  --data-storage-root /home/lzq/data \
   --proposal-max-candidates 64 \
   --max-candidates 12 \
   --part-top-k 5 \
@@ -328,11 +360,11 @@ CUDA_VISIBLE_DEVICES=1,2 python MultiEEAffordance/tools/run_v3_pipeline.py \
 
 检查重点：
 
-1. `views` 是否正常输出多视角图。
-2. `part_propose` 是否能产生候选，而不是大量 `candidate_count=0`。
-3. `part_select` 是否只选择候选 ID，不直接生成坐标。
-4. `build` 是否能生成待审查 samples。
-5. 空样本是否能被保留下来，而不是让 pipeline 崩溃。
+1. `part_propose` 是否能产生候选，而不是大量 `candidate_count=0`。
+2. `build` 是否能生成待审查 samples。
+3. 空样本是否能被保留下来，而不是让 pipeline 崩溃。
+4. `/home/lzq/data/MultiEEAffordance/processed/vlm_candidate_v3/3d_candidates/` 是否有候选 manifest 和 npz。
+5. `/home/lzq/data/MultiEEAffordance/processed/metadata/v3_candidate_samples_v0_1.jsonl` 是否生成。
 
 如果小批都不稳定，不要继续全量跑。
 
@@ -341,16 +373,18 @@ CUDA_VISIBLE_DEVICES=1,2 python MultiEEAffordance/tools/run_v3_pipeline.py \
 小批通过后，再跑完整队列。
 
 ```bash
-CUDA_VISIBLE_DEVICES=1,2 python MultiEEAffordance/tools/run_v3_pipeline.py \
+python MultiEEAffordance/tools/run_v3_pipeline.py \
   --dataset-root MultiEEAffordance \
   --config configs/qwen3vl_sam2_pilot.yaml \
   --pilot-csv processed/metadata/v3_large_scale_review_queue_v0_1.csv \
   --samples processed/metadata/samples_v3_large_batch_v0_1.jsonl \
   --include-tasks pick_up,open_pull,press_push \
   --exclude-tasks lift_carry \
+  --include-decisions all \
   --candidate-source partseg \
   --part-proposal-backend high_recall \
-  --stages views,plan,part_propose,render,part_select,part_filter,build \
+  --stages part_propose,build \
+  --data-storage-root /home/lzq/data \
   --proposal-max-candidates 64 \
   --max-candidates 12 \
   --part-top-k 5 \
@@ -407,7 +441,7 @@ Mug / pick_up / suction
 当前输入文件是：
 
 ```text
-MultiEEAffordance/processed/metadata/v3_candidate_samples_v0_1.jsonl
+/home/lzq/data/MultiEEAffordance/processed/metadata/v3_candidate_samples_v0_1.jsonl
 ```
 
 这个文件来自上一步 `run_v3_pipeline.py ... --stages ... build`。里面每一行是一个待人工审查样本，包含：
@@ -436,10 +470,18 @@ v3_candidate_update / candidate_manifest
 输出文件是：
 
 ```text
-MultiEEAffordance/processed/annotation_batches/v0_1/reviewer_a_samples.jsonl
-MultiEEAffordance/processed/annotation_batches/v0_1/reviewer_b_samples.jsonl
-MultiEEAffordance/processed/annotation_batches/v0_1/batch_manifest.json
+/home/lzq/data/MultiEEAffordance/processed/annotation_batches/v0_1/reviewer_a_samples.jsonl
+/home/lzq/data/MultiEEAffordance/processed/annotation_batches/v0_1/reviewer_b_samples.jsonl
+/home/lzq/data/MultiEEAffordance/processed/annotation_batches/v0_1/batch_manifest.json
 ```
+
+打包给审查者时，这些文件会被复制到数据包里的：
+
+```text
+MultiEEAffordance/processed/annotation_batches/v0_1/
+```
+
+审查者本地解压后，网页启动命令仍然使用项目内相对路径。
 
 如果维护者本人也参与标注，就把维护者自己的审查身份固定为 `reviewer_a`。另一个人使用 `reviewer_b`。不要因为维护者自己标注就改成 `owner_samples.jsonl`，否则后续合并规则会变复杂。
 
@@ -466,7 +508,7 @@ import json
 from collections import defaultdict, Counter
 from pathlib import Path
 
-root = Path("MultiEEAffordance")
+root = Path("/home/lzq/data/MultiEEAffordance")
 input_path = root / "processed/metadata/v3_candidate_samples_v0_1.jsonl"
 batch_dir = root / "processed/annotation_batches/v0_1"
 batch_dir.mkdir(parents=True, exist_ok=True)
@@ -673,7 +715,32 @@ MultiEEAffordance/processed/annotation_batches/v0_1/packages/reviewer_b_annotati
 
 ### 12.2 精确收集 reviewer_b 需要的文件
 
-下面这段命令会创建一个 staging 目录，并尽量复制 `reviewer_b_samples.jsonl` 引用到的文件。它不会修改原始数据，只是复制。
+推荐优先使用项目内置打包工具。它会从 `/home/lzq/data/MultiEEAffordance` 和当前项目 `MultiEEAffordance` 两个位置查找文件，把 `reviewer_b_samples.jsonl`、点云、mask、候选 `candidate_manifest.json`、`candidates.npz` 一起打包。
+
+```bash
+cd /home/lzq/Multi-EE-3DAG
+
+python MultiEEAffordance/tools/package_review_inputs.py \
+  --dataset-root MultiEEAffordance \
+  --storage-dataset-root /home/lzq/data/MultiEEAffordance \
+  --samples processed/annotation_batches/v0_1/reviewer_b_samples.jsonl \
+  --reviewer reviewer_b \
+  --output-tar /home/lzq/data/MultiEEAffordance/processed/annotation_batches/v0_1/packages/reviewer_b_annotation_package_v0_1.tar.gz \
+  --overwrite
+```
+
+运行后重点看输出里的：
+
+```text
+rows
+files_copied
+files_skipped
+output_tar
+```
+
+`files_skipped` 正常情况下应该为空。如果不为空，说明有文件没有被打进去，要先修正路径再发给审查者。
+
+下面这段旧命令只作为调试参考。它会创建一个 staging 目录，并尽量复制 `reviewer_b_samples.jsonl` 引用到的文件。它不会修改原始数据，只是复制。
 
 ```bash
 cd /home/lzq/Multi-EE-3DAG

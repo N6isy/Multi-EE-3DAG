@@ -32,6 +32,13 @@ ALL_STAGES = [
 KNOWN_TASKS = ["pick_up", "lift_carry", "open_pull", "press_push"]
 DEFAULT_ACTIVE_TASKS = ["pick_up", "open_pull", "press_push"]
 EMPTY_DECISIONS = {"empty", "empty_review_required", "confirm_empty", "skip_vlm_empty"}
+DEFAULT_V3_OUTPUT_ROOT = "processed/vlm_candidate_v3"
+DEFAULT_FILTERED_PILOT_CSV = "processed/vlm_candidate_v3/pipeline_runs/filtered_pilot_rows_latest.csv"
+DEFAULT_EMPTY_REVIEW_CSV = "processed/vlm_candidate_v3/pipeline_runs/empty_review_rows_latest.csv"
+DEFAULT_RUN_MANIFEST = "processed/vlm_candidate_v3/pipeline_runs/latest_run_manifest.json"
+DEFAULT_REVIEW_OUTPUT_SAMPLES = "processed/metadata/v3_candidate_samples_v0_1.jsonl"
+DEFAULT_REVIEW_SUMMARY_JSON = "processed/metadata/v3_candidate_summary_v0_1.json"
+DEFAULT_REVIEW_SPLIT_DIR = "splits_v3_candidates"
 
 
 def parse_args() -> argparse.Namespace:
@@ -56,12 +63,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--filtered-pilot-csv",
-        default="processed/vlm_candidate_v3/pipeline_runs/filtered_pilot_rows_latest.csv",
+        default=DEFAULT_FILTERED_PILOT_CSV,
         help="Filtered pilot CSV written relative to dataset root when task filtering is active.",
     )
     parser.add_argument(
         "--empty-review-csv",
-        default="processed/vlm_candidate_v3/pipeline_runs/empty_review_rows_latest.csv",
+        default=DEFAULT_EMPTY_REVIEW_CSV,
         help="Task-filtered empty-review rows written relative to dataset root.",
     )
     parser.add_argument(
@@ -77,6 +84,43 @@ def parse_args() -> argparse.Namespace:
         choices=["partseg", "grounding"],
         default="partseg",
         help="partseg uses 3D part proposals plus VLM candidate selection; grounding keeps the old VLM coordinate path.",
+    )
+    parser.add_argument(
+        "--data-storage-root",
+        default="",
+        help=(
+            "Optional external data storage root, e.g. /home/lzq/data. When set, v3 intermediate files, "
+            "review input samples, and run manifests are written under <data-storage-root>/<dataset-root-name>/ "
+            "while metadata paths stay portable for reviewer packages."
+        ),
+    )
+    parser.add_argument(
+        "--v3-output-root",
+        default=DEFAULT_V3_OUTPUT_ROOT,
+        help="Root for v3 generated intermediates such as 3d_candidates/fused_masks/pipeline_runs.",
+    )
+    parser.add_argument(
+        "--metadata-root",
+        default="",
+        help=(
+            "Path root used when writing portable paths into generated manifests/samples. "
+            "Normally auto-filled to <data-storage-root>/<dataset-root-name>."
+        ),
+    )
+    parser.add_argument(
+        "--review-output-samples",
+        default=DEFAULT_REVIEW_OUTPUT_SAMPLES,
+        help="Review input JSONL produced by build stage.",
+    )
+    parser.add_argument(
+        "--review-summary-json",
+        default=DEFAULT_REVIEW_SUMMARY_JSON,
+        help="Summary JSON produced by build stage.",
+    )
+    parser.add_argument(
+        "--review-split-dir",
+        default=DEFAULT_REVIEW_SPLIT_DIR,
+        help="Split directory produced by build stage.",
     )
     parser.add_argument("--renders-root", default="processed/vlm_semantic_part/renders", help="VLM-friendly view render root.")
     parser.add_argument(
@@ -130,10 +174,41 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--planner-dry-run", action="store_true", help="Run VLM-dependent stages as dry-run placeholders.")
     parser.add_argument(
         "--run-manifest",
-        default="processed/vlm_candidate_v3/pipeline_runs/latest_run_manifest.json",
+        default=DEFAULT_RUN_MANIFEST,
         help="Run manifest path relative to dataset root.",
     )
     return parser.parse_args()
+
+
+def join_path(root: str, *parts: str) -> str:
+    return (Path(root) / Path(*parts)).as_posix()
+
+
+def apply_storage_defaults(args: argparse.Namespace, dataset_root: Path) -> None:
+    """Route generated review inputs/intermediates to external storage when requested."""
+    if args.data_storage_root:
+        storage_dataset_root = Path(args.data_storage_root) / dataset_root.name
+        if args.v3_output_root == DEFAULT_V3_OUTPUT_ROOT:
+            args.v3_output_root = (storage_dataset_root / DEFAULT_V3_OUTPUT_ROOT).as_posix()
+        if args.review_output_samples == DEFAULT_REVIEW_OUTPUT_SAMPLES:
+            args.review_output_samples = (storage_dataset_root / DEFAULT_REVIEW_OUTPUT_SAMPLES).as_posix()
+        if args.review_summary_json == DEFAULT_REVIEW_SUMMARY_JSON:
+            args.review_summary_json = (storage_dataset_root / DEFAULT_REVIEW_SUMMARY_JSON).as_posix()
+        if args.review_split_dir == DEFAULT_REVIEW_SPLIT_DIR:
+            args.review_split_dir = (storage_dataset_root / DEFAULT_REVIEW_SPLIT_DIR).as_posix()
+        if not args.metadata_root:
+            args.metadata_root = storage_dataset_root.as_posix()
+
+    if args.filtered_pilot_csv == DEFAULT_FILTERED_PILOT_CSV:
+        args.filtered_pilot_csv = join_path(args.v3_output_root, "pipeline_runs", "filtered_pilot_rows_latest.csv")
+    if args.empty_review_csv == DEFAULT_EMPTY_REVIEW_CSV:
+        args.empty_review_csv = join_path(args.v3_output_root, "pipeline_runs", "empty_review_rows_latest.csv")
+    if args.run_manifest == DEFAULT_RUN_MANIFEST:
+        args.run_manifest = join_path(args.v3_output_root, "pipeline_runs", "latest_run_manifest.json")
+
+
+def v3_path(args: argparse.Namespace, *parts: str) -> str:
+    return join_path(args.v3_output_root, *parts)
 
 
 def stage_list(value: str) -> list[str]:
@@ -331,7 +406,7 @@ def build_commands(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
     root = Path(args.dataset_root)
     stages = effective_stages(args)
     commands: list[tuple[str, list[str]]] = []
-    if "views" in stages or any(stage in stages for stage in ("plan", "ground", "project", "grow", "part_propose", "render", "part_select", "part_filter", "coverage", "build")):
+    if "views" in stages or any(stage in stages for stage in ("plan", "ground", "project", "grow", "render", "part_select", "coverage")):
         cmd = add_common([sys.executable, script(root, "render_vlm_friendly_views.py"), "--output-root", args.renders_root], args)
         if getattr(args, "effective_samples", ""):
             cmd.extend(["--samples", args.effective_samples])
@@ -421,6 +496,8 @@ def build_commands(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
             [
                 sys.executable,
                 script(root, "propose_v3_part_candidates.py"),
+                "--output-root",
+                v3_path(args, "3d_candidates"),
                 "--backend",
                 args.part_proposal_backend,
                 "--renders-root",
@@ -448,6 +525,8 @@ def build_commands(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
             ],
             args,
         )
+        if args.metadata_root:
+            cmd.extend(["--metadata-root", args.metadata_root])
         if getattr(args, "effective_samples", ""):
             cmd.extend(["--samples", args.effective_samples])
         commands.append(("part_propose", cmd))
@@ -457,13 +536,13 @@ def build_commands(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
                 sys.executable,
                 script(root, "render_candidate_overlays_v2.py"),
                 "--candidate-root",
-                "processed/vlm_candidate_v3/3d_candidates",
+                v3_path(args, "3d_candidates"),
                 "--renders-root",
                 args.renders_root,
                 "--fallback-renders-root",
                 args.renders_root,
                 "--output-root",
-                "processed/vlm_candidate_v3/candidate_overlays",
+                v3_path(args, "candidate_overlays"),
                 "--max-candidates",
                 str(args.max_candidates),
             ],
@@ -478,11 +557,11 @@ def build_commands(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
                 "--config",
                 args.config,
                 "--overlay-root",
-                "processed/vlm_candidate_v3/candidate_overlays",
+                v3_path(args, "candidate_overlays"),
                 "--selection-root",
-                "processed/vlm_candidate_v3/vlm_selection",
+                v3_path(args, "vlm_selection"),
                 "--part-plan-root",
-                "processed/vlm_candidate_v3/semantic_plans",
+                v3_path(args, "semantic_plans"),
                 "--update-candidate-manifest",
             ],
             args,
@@ -496,11 +575,11 @@ def build_commands(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
                 sys.executable,
                 script(root, "filter_candidates_by_executor_rules.py"),
                 "--candidate-root",
-                "processed/vlm_candidate_v3/3d_candidates",
+                v3_path(args, "3d_candidates"),
                 "--selection-root",
-                "processed/vlm_candidate_v3/vlm_selection",
+                v3_path(args, "vlm_selection"),
                 "--output-root",
-                "processed/vlm_candidate_v3/rule_filter",
+                v3_path(args, "rule_filter"),
                 "--min-selected-votes",
                 str(args.min_selected_votes),
                 "--update-candidate-manifest",
@@ -516,13 +595,13 @@ def build_commands(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
                 "--config",
                 args.config,
                 "--candidate-root",
-                "processed/vlm_candidate_v3/3d_candidates",
+                v3_path(args, "3d_candidates"),
                 "--overlay-root",
-                "processed/vlm_candidate_v3/candidate_overlays",
+                v3_path(args, "candidate_overlays"),
                 "--part-plan-root",
-                    "processed/vlm_candidate_v3/semantic_plans",
+                v3_path(args, "semantic_plans"),
                 "--output-root",
-                "processed/vlm_candidate_v3/coverage_check",
+                v3_path(args, "coverage_check"),
             ],
             args,
         )
@@ -531,7 +610,26 @@ def build_commands(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
         commands.append(("coverage", cmd))
     if "build" in stages:
         cmd = add_common([sys.executable, script(root, "build_v3_candidate_masks.py")], args)
-        cmd.extend(["--include-tasks", args.include_tasks, "--exclude-tasks", args.exclude_tasks])
+        cmd.extend(
+            [
+                "--include-tasks",
+                args.include_tasks,
+                "--exclude-tasks",
+                args.exclude_tasks,
+                "--candidate-root",
+                v3_path(args, "3d_candidates"),
+                "--output-mask-root",
+                v3_path(args, "fused_masks"),
+                "--output-samples",
+                args.review_output_samples,
+                "--summary-json",
+                args.review_summary_json,
+                "--output-split-dir",
+                args.review_split_dir,
+            ]
+        )
+        if args.metadata_root:
+            cmd.extend(["--metadata-root", args.metadata_root])
         if getattr(args, "effective_samples", ""):
             cmd.extend(["--samples", args.effective_samples])
         if getattr(args, "effective_empty_review_csv", ""):
@@ -549,9 +647,9 @@ def build_commands(args: argparse.Namespace) -> list[tuple[str, list[str]]]:
                 sys.executable,
                 script(root, "visualize_v2_candidates.py"),
                 "--candidate-root",
-                "processed/vlm_candidate_v3/3d_candidates",
+                v3_path(args, "3d_candidates"),
                 "--output-root",
-                "processed/vlm_candidate_v3/review_visualizations",
+                v3_path(args, "review_visualizations"),
             ],
             args,
         )
@@ -576,6 +674,7 @@ def write_manifest(path: Path, data: dict[str, Any]) -> None:
 def main() -> int:
     args = parse_args()
     dataset_root = Path(args.dataset_root).resolve()
+    apply_storage_defaults(args, dataset_root)
     pilot_filter = prepare_pilot_csv(args, dataset_root)
     commands = build_commands(args)
     run_log: list[dict[str, Any]] = []
