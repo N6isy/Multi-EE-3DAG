@@ -21,6 +21,9 @@ env/
 .idea/
 
 # Raw datasets and large generated data
+MultiEEAffordance/processed/candidates
+MultiEEAffordance/processed/masks
+MultiEEAffordance/processed/points
 MultiEEAffordance/processed/vlm_pilot/hook_candidates/
 MultiEEAffordance/processed/vlm_pilot/hook_candidate_overlays/
 MultiEEAffordance/processed/vlm_pilot/hook_candidate_selection/
