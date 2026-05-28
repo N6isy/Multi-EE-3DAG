@@ -24,6 +24,7 @@ import numpy as np
 
 
 EXECUTOR_ORDER = ["gripper", "suction", "hook", "dexterous_hand"]
+VALID_REVIEWERS = {"reviewer_a", "reviewer_b"}
 
 
 def parse_args() -> argparse.Namespace:
@@ -166,14 +167,28 @@ def safe_name(value: str) -> str:
 
 
 def sample_key(row: dict[str, Any]) -> str:
+    """Build a stable row key.
+
+    The annotation app accepts both legacy tasks
+    (pick_up/open_pull/press_push/lift_carry) and the new five-task taxonomy
+    (lift/open/pull/press/push).
+
+    For expanded task samples, one legacy row may become multiple annotation rows.
+    Therefore task is included in the fallback key to avoid collisions between
+    open vs pull and press vs push.
+    """
     explicit = str(row.get("row_key") or "").strip()
     if explicit:
         return explicit
+
     pilot_id = str(row.get("pilot_id") or "").strip()
     sample_id = str(row.get("sample_id") or "").strip()
+    task = str(row.get("task") or row.get("target_task") or "").strip()
+
     update = row.get("v2_candidate_update", {}) if isinstance(row.get("v2_candidate_update", {}), dict) else {}
-    executor = str(update.get("executor") or row.get("executor") or "").strip()
-    parts = [part for part in (pilot_id, sample_id, executor) if part]
+    executor = str(update.get("executor") or row.get("executor") or row.get("target_executor") or "").strip()
+
+    parts = [part for part in (pilot_id, sample_id, task, executor) if part]
     return "|".join(parts) or sample_id
 
 
@@ -221,6 +236,10 @@ class AnnotationStore:
             sample_id = str(sample["sample_id"])
             update = sample.get("v2_candidate_update", {})
             refined = self.refined_by_key.get(key, {})
+
+            task = sample.get("task", "")
+            task_display = sample.get("task_display") or sample.get("target_task") or task
+
             rows.append(
                 {
                     "row_key": key,
@@ -228,8 +247,14 @@ class AnnotationStore:
                     "object_id": sample.get("object_id", ""),
                     "sample_id": sample_id,
                     "object_category": sample.get("object_category", ""),
-                    "task": sample.get("task", ""),
-                    "executor": update.get("executor", sample.get("executor", "")),
+                    "task": task,
+                    "task_display": task_display,
+                    "target_task": sample.get("target_task", ""),
+                    "source_task": sample.get("source_task", ""),
+                    "source_sample_id": sample.get("source_sample_id", ""),
+                    "task_taxonomy_version": sample.get("task_taxonomy_version", ""),
+                    "task_split_source": sample.get("task_split_source", ""),
+                    "executor": update.get("executor", sample.get("executor", sample.get("target_executor", ""))),
                     "selected_candidates": update.get("selected_candidates", []),
                     "positive_points": update.get("positive_points", ""),
                     "review_status": refined.get("point_review_status", "pending"),
@@ -240,6 +265,7 @@ class AnnotationStore:
                 }
             )
         return {"samples": rows, "count": len(rows)}
+
 
     def load_candidate_context(self, sample: dict[str, Any], visible_indices: np.ndarray) -> dict[str, Any]:
         update = sample.get("v2_candidate_update", {})
@@ -483,6 +509,9 @@ class AnnotationStore:
         executor = str(payload.get("executor") or base_sample.get("v2_candidate_update", {}).get("executor") or "hook")
         if executor not in EXECUTOR_ORDER:
             raise ValueError(f"Unknown executor: {executor}")
+        reviewer = str(payload.get("reviewer") or "").strip()
+        if reviewer not in VALID_REVIEWERS:
+            raise ValueError("Reviewer identity is required. Choose reviewer_a or reviewer_b before saving.")
         visible_all_points = bool(payload.get("visible_all_points", False))
         if not visible_all_points and not self.allow_partial_save:
             raise ValueError("Refusing partial save: restart app with --max-points 0 or pass --allow-partial-save.")
@@ -511,10 +540,20 @@ class AnnotationStore:
         refined_sample["multi_channel_mask_path"] = str(output_mask_path.relative_to(self.dataset_root).as_posix())
         refined_sample["quality_flag"] = str(payload.get("quality_after_review") or "checked")
         refined_sample["point_review_status"] = str(payload.get("review_status") or "checked")
-        refined_sample["point_review_reviewer"] = str(payload.get("reviewer") or "")
+        refined_sample["point_review_reviewer"] = reviewer
         refined_sample["point_review_notes"] = str(payload.get("notes") or "")
         refined_sample["point_review_updated_at"] = now
         refined_sample["row_key"] = key
+        refined_sample["task"] = base_sample.get("task", "")
+        refined_sample["task_display"] = base_sample.get(
+            "task_display",
+            base_sample.get("target_task", base_sample.get("task", "")),
+        )
+        refined_sample["target_task"] = base_sample.get("target_task", "")
+        refined_sample["source_task"] = base_sample.get("source_task", "")
+        refined_sample["source_sample_id"] = base_sample.get("source_sample_id", "")
+        refined_sample["task_taxonomy_version"] = base_sample.get("task_taxonomy_version", "")
+        refined_sample["task_split_source"] = base_sample.get("task_split_source", "")
         refined_sample["v2_point_edit"] = {
             "executor": executor,
             "source_mask_path": source_mask_path,
@@ -525,7 +564,7 @@ class AnnotationStore:
             "added_points": sorted(new_positive - old_positive),
             "removed_points": sorted(old_positive - new_positive),
             "review_decision": str(payload.get("review_decision") or ""),
-            "reviewer": str(payload.get("reviewer") or ""),
+            "reviewer": reviewer,
             "updated_at": now,
         }
         self.refined_by_key[key] = refined_sample
@@ -540,8 +579,20 @@ class AnnotationStore:
             "created_at": now,
             "row_key": key,
             "sample_id": sample_id,
+            "object_id": base_sample.get("object_id", ""),
+            "object_category": base_sample.get("object_category", ""),
+            "task": base_sample.get("task", ""),
+            "task_display": base_sample.get(
+                "task_display",
+                base_sample.get("target_task", base_sample.get("task", "")),
+            ),
+            "target_task": base_sample.get("target_task", ""),
+            "source_task": base_sample.get("source_task", ""),
+            "source_sample_id": base_sample.get("source_sample_id", ""),
+            "task_taxonomy_version": base_sample.get("task_taxonomy_version", ""),
+            "task_split_source": base_sample.get("task_split_source", ""),
             "executor": executor,
-            "reviewer": str(payload.get("reviewer") or ""),
+            "reviewer": reviewer,
             "review_status": str(payload.get("review_status") or ""),
             "review_decision": str(payload.get("review_decision") or ""),
             "quality_after_review": str(payload.get("quality_after_review") or ""),
@@ -568,6 +619,17 @@ APP_HTML = r"""<!doctype html>
     body { margin: 0; background: #f4f8ff; color: #172033; font-family: Arial, "Microsoft YaHei", sans-serif; }
     header { height: 52px; padding: 0 16px; background: linear-gradient(90deg, #0f2f57, #1d5fbf); color: white; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 12px rgba(15,47,87,.18); }
     header h1 { margin: 0; font-size: 17px; }
+    .header-right { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+    .reviewer-chip { border: 1px solid rgba(255,255,255,.55); background: rgba(255,255,255,.14); color: white; border-radius: 999px; padding: 6px 10px; font-size: 12px; }
+    .reviewer-chip.missing { background: #b42318; border-color: #fecaca; }
+    .reviewer-modal { position: fixed; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center; background: rgba(15,23,42,.46); }
+    .reviewer-modal.show { display: flex; }
+    .reviewer-dialog { width: min(460px, calc(100vw - 32px)); background: #fff; border-radius: 14px; padding: 20px; box-shadow: 0 24px 80px rgba(15,23,42,.32); border: 1px solid #d7e5f6; }
+    .reviewer-dialog h2 { margin: 0 0 8px; font-size: 18px; color: #0f2f57; }
+    .reviewer-dialog p { margin: 0 0 14px; color: #475569; font-size: 13px; line-height: 1.6; }
+    .reviewer-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+    .reviewer-options button { padding: 12px 10px; font-size: 14px; }
+    .reviewer-note { margin-top: 12px; color: #b42318; font-size: 12px; min-height: 16px; }
     .app { display: grid; grid-template-columns: 330px minmax(620px, 1fr) 380px; height: calc(100vh - 52px); }
     aside, .panel { overflow: auto; background: #fff; border-right: 1px solid #d7e5f6; }
     aside { padding: 12px; }
@@ -581,6 +643,9 @@ APP_HTML = r"""<!doctype html>
     button.active { background: #0f2f57; border-color: #0f2f57; }
     .brush-control { display: flex; align-items: center; gap: 7px; padding: 6px 9px; background: rgba(255,255,255,.92); border: 1px solid #d7e5f6; border-radius: 7px; font-size: 12px; color: #334155; }
     .brush-control input { width: 92px; padding: 0; }
+    .sample-filter-tabs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 9px; }
+    .sample-filter-tabs button { padding: 7px 5px; font-size: 12px; border-color: #d7e5f6; background: #fff; color: #1d5fbf; }
+    .sample-filter-tabs button.active { background: #0f2f57; border-color: #0f2f57; color: #fff; }
     .sample-list { display: flex; flex-direction: column; gap: 7px; margin-top: 10px; }
     .sample-section { margin: 12px 0 5px; padding: 6px 8px; border-radius: 999px; background: #eaf2ff; color: #0f2f57; font-size: 12px; font-weight: 700; display: flex; justify-content: space-between; }
     .sample { border: 1px solid #d7e5f6; border-radius: 8px; padding: 9px; cursor: pointer; }
@@ -622,11 +687,30 @@ APP_HTML = r"""<!doctype html>
 <body>
 <header>
   <h1>Multi-EE v2 点级审查系统</h1>
-  <div id="topStatus">加载中...</div>
+  <div class="header-right">
+    <button id="reviewerSwitch" class="reviewer-chip missing" type="button">reviewer: 未选择</button>
+    <div id="topStatus">加载中...</div>
+  </div>
 </header>
+<div id="reviewerModal" class="reviewer-modal">
+  <div class="reviewer-dialog">
+    <h2>选择当前审查身份</h2>
+    <p>每次打开网页需要确认本次标注身份。保存时该身份会写入 <code>review_records.jsonl</code> 和 refined samples，避免 reviewer 字段为空。</p>
+    <div class="reviewer-options">
+      <button id="chooseReviewerA" type="button">reviewer_a</button>
+      <button id="chooseReviewerB" type="button">reviewer_b</button>
+    </div>
+    <div class="reviewer-note" id="reviewerNote"></div>
+  </div>
+</div>
 <div class="app">
   <aside>
-    <input id="search" placeholder="搜索 sample/category/executor" />
+    <input id="search" placeholder="搜索 sample/category/task/executor" />
+    <div class="sample-filter-tabs">
+      <button id="filterPending" class="active">pending</button>
+      <button id="filterChecked">checked</button>
+      <button id="filterAll">all</button>
+    </div>
     <div class="sample-list" id="sampleList"></div>
   </aside>
   <main class="viewer">
@@ -710,6 +794,8 @@ APP_HTML = r"""<!doctype html>
 </div>
 <script>
 let samples = [];
+let listFilter = "pending";
+let currentReviewer = "";
 let current = null;
 let currentIndex = -1;
 let sampleCache = new Map();
@@ -742,6 +828,78 @@ const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 const CANDIDATE_COLORS = ["#ff4848","#32dc78","#ffd240","#78a0ff","#ff70d2","#46e6eb","#ff9150","#be7dff","#aae65a","#ffffff","#ff7878","#78ffb4"];
 
+function validReviewer(value) {
+  return value === "reviewer_a" || value === "reviewer_b";
+}
+
+function updateReviewerUI() {
+  const btn = document.getElementById("reviewerSwitch");
+  if (!btn) return;
+  if (validReviewer(currentReviewer)) {
+    btn.textContent = `reviewer: ${currentReviewer}`;
+    btn.classList.remove("missing");
+  } else {
+    btn.textContent = "reviewer: 未选择";
+    btn.classList.add("missing");
+  }
+}
+
+function showReviewerModal(force=false) {
+  const modal = document.getElementById("reviewerModal");
+  if (!modal) return;
+  if (force || !validReviewer(currentReviewer)) {
+    modal.classList.add("show");
+    document.getElementById("reviewerNote").textContent = validReviewer(currentReviewer)
+      ? "正在切换当前审查身份。"
+      : "保存前必须选择 reviewer_a 或 reviewer_b。";
+  }
+}
+
+function hideReviewerModal() {
+  const modal = document.getElementById("reviewerModal");
+  if (modal) modal.classList.remove("show");
+}
+
+function setReviewerIdentity(value) {
+  if (!validReviewer(value)) return;
+  currentReviewer = value;
+  window.localStorage.setItem("multi_ee_current_reviewer", value);
+  updateReviewerUI();
+  hideReviewerModal();
+  document.getElementById("message").textContent = `当前审查身份：${value}`;
+}
+
+function initReviewerIdentity() {
+  const saved = window.localStorage.getItem("multi_ee_current_reviewer") || "";
+  currentReviewer = validReviewer(saved) ? saved : "";
+  updateReviewerUI();
+  showReviewerModal(true);
+}
+
+function displayTask(sample) {
+  if (!sample) return "";
+  return sample.task_display || sample.target_task || sample.task || "";
+}
+
+function objectGroupKey(sample) {
+  const sampleId = String(sample.sample_id || "");
+  const stripped = sampleId.replace(/_(pick_up|open_pull|press_push|lift_carry|lift|open|pull|press|push)$/,"");
+  return sample.object_id || stripped;
+}
+
+function reviewStatus(sample) {
+  return sample.review_status || "pending";
+}
+
+function setListFilter(next) {
+  listFilter = next;
+  ["filterPending", "filterChecked", "filterAll"].forEach(id => document.getElementById(id).classList.remove("active"));
+  const activeId = next === "checked" ? "filterChecked" : (next === "all" ? "filterAll" : "filterPending");
+  document.getElementById(activeId).classList.add("active");
+  renderList();
+}
+
+
 function setMode(next) {
   mode = next;
   ["modeView","modeToggle","modeAdd","modeDelete"].forEach(id => document.getElementById(id).classList.remove("active"));
@@ -754,73 +912,97 @@ function renderList() {
   const q = document.getElementById("search").value.toLowerCase();
   const list = document.getElementById("sampleList");
   list.innerHTML = "";
-  const filtered = samples.filter(s => `${s.pilot_id || ""} ${s.sample_id} ${s.object_category} ${s.task} ${s.executor}`.toLowerCase().includes(q));
-  document.getElementById("topStatus").textContent = `${samples.length} samples | 显示 ${filtered.length}`;
-  const objectKey = (s) => s.object_id || String(s.sample_id || "").replace(/_(pick_up|open_pull|press_push|lift_carry)$/,"");
+
+  const searched = samples.filter(s =>
+    `${s.pilot_id || ""} ${s.sample_id || ""} ${s.object_category || ""} ${s.task || ""} ${s.task_display || ""} ${s.target_task || ""} ${s.source_task || ""} ${s.executor || ""}`
+      .toLowerCase()
+      .includes(q)
+  );
+
+  const pendingCount = samples.filter(s => reviewStatus(s) !== "checked").length;
+  const checkedCount = samples.filter(s => reviewStatus(s) === "checked").length;
+
+  const filtered = searched.filter(s => {
+    if (listFilter === "pending") return reviewStatus(s) !== "checked";
+    if (listFilter === "checked") return reviewStatus(s) === "checked";
+    return true;
+  });
+
+  document.getElementById("filterPending").textContent = `pending (${pendingCount})`;
+  document.getElementById("filterChecked").textContent = `checked (${checkedCount})`;
+  document.getElementById("filterAll").textContent = `all (${samples.length})`;
+  document.getElementById("topStatus").textContent = `${samples.length} samples | ${listFilter} 显示 ${filtered.length}`;
+
   const groups = new Map();
   filtered.forEach(s => {
-    const key = objectKey(s);
+    const key = objectGroupKey(s);
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(s);
   });
-  const sectionDefs = [
-    ["pending", "待审查", rows => rows.some(x => (x.review_status || "pending") !== "checked")],
-    ["checked", "已审查", rows => rows.every(x => (x.review_status || "pending") === "checked")],
-  ];
-  sectionDefs.forEach(([statusKey, title, predicate]) => {
-    const grouped = [...groups.entries()].filter(([, rows]) => predicate(rows));
-    if (!grouped.length) return;
-    const header = document.createElement("div");
-    header.className = "sample-section";
-    header.innerHTML = `<span>${title}</span><span>${grouped.length}</span>`;
-    list.appendChild(header);
-    grouped.forEach(([key, rows]) => {
-      rows.sort((a,b) => `${a.task} ${a.executor}`.localeCompare(`${b.task} ${b.executor}`));
-      const first = rows[0];
-      const active = current && rows.some(x => x.row_key === current.row_key);
-      const div = document.createElement("div");
-      div.className = "sample" + (active ? " active" : "");
-      div.onclick = () => loadSample(rows[0].row_key);
-      div.innerHTML = `<div class="sample-id">${key}</div>
-        <div class="tags"><span class="tag">${first.object_category || ""}</span><span class="tag">${rows.length} variants</span></div>`;
-      rows.forEach(s => {
-        const v = document.createElement("div");
-        v.className = "variant-row"
-          + (current && current.row_key === s.row_key ? " active" : "")
-          + (activeLoadingId === s.row_key ? " loading" : "");
-        v.onclick = (event) => { event.stopPropagation(); loadSample(s.row_key); };
-        v.innerHTML = `<div class="tags" style="margin-top:0">
-          <span class="tag">${s.pilot_id || ""}</span>
-          <span class="tag">${s.task}</span>
-          <span class="tag">${s.executor}</span>
-          <span class="tag ${s.review_status || "pending"}">${s.review_status || "pending"}</span>
-          <span class="tag">pos=${s.positive_points}</span>
-        </div>`;
-        div.appendChild(v);
-      });
-      list.appendChild(div);
-    });
-  });
-  return;
-  document.getElementById("topStatus").textContent = `${samples.length} samples | 显示 ${filtered.length}`;
-  filtered.forEach(s => {
+
+  const grouped = [...groups.entries()];
+  if (!grouped.length) {
+    const empty = document.createElement("div");
+    empty.className = "box";
+    empty.textContent = "当前筛选条件下没有样本。";
+    list.appendChild(empty);
+    return;
+  }
+
+  const header = document.createElement("div");
+  header.className = "sample-section";
+  header.innerHTML = `<span>${listFilter}</span><span>${grouped.length} objects</span>`;
+  list.appendChild(header);
+
+  grouped.forEach(([key, rows]) => {
+    rows.sort((a,b) =>
+      `${displayTask(a)} ${a.executor}`.localeCompare(`${displayTask(b)} ${b.executor}`)
+    );
+
+    const first = rows[0];
+    const active = current && rows.some(x => x.row_key === current.row_key);
+
     const div = document.createElement("div");
-    div.className = "sample"
-      + (current && current.row_key === s.row_key ? " active" : "")
-      + (activeLoadingId === s.row_key ? " loading" : "");
-    div.onclick = () => loadSample(s.row_key);
-    div.innerHTML = `<div class="sample-id">${s.sample_id}</div>
+    div.className = "sample" + (active ? " active" : "");
+    div.onclick = () => loadSample(rows[0].row_key);
+
+    div.innerHTML = `<div class="sample-id">${key}</div>
       <div class="tags">
-        <span class="tag">${s.pilot_id || ""}</span>
-        <span class="tag">${s.object_category}</span>
-        <span class="tag">${s.task}</span>
-        <span class="tag">${s.executor}</span>
-        <span class="tag ${s.review_status || "pending"}">${s.review_status || "pending"}</span>
-        <span class="tag">pos=${s.positive_points}</span>
+        <span class="tag">${first.object_category || ""}</span>
+        <span class="tag">${rows.length} variants</span>
       </div>`;
+
+    rows.forEach(s => {
+      const v = document.createElement("div");
+      v.className = "variant-row"
+        + (current && current.row_key === s.row_key ? " active" : "")
+        + (activeLoadingId === s.row_key ? " loading" : "");
+
+      v.onclick = (event) => {
+        event.stopPropagation();
+        loadSample(s.row_key);
+      };
+
+      const sourceTaskTag = s.source_task ? `<span class="tag">src=${s.source_task}</span>` : "";
+      const taxonomyTag = s.task_taxonomy_version ? `<span class="tag">${s.task_taxonomy_version}</span>` : "";
+
+      v.innerHTML = `<div class="tags" style="margin-top:0">
+        <span class="tag">${s.pilot_id || ""}</span>
+        <span class="tag">${displayTask(s)}</span>
+        ${sourceTaskTag}
+        ${taxonomyTag}
+        <span class="tag">${s.executor || ""}</span>
+        <span class="tag ${reviewStatus(s)}">${reviewStatus(s)}</span>
+        <span class="tag">pos=${s.positive_points || ""}</span>
+      </div>`;
+
+      div.appendChild(v);
+    });
+
     list.appendChild(div);
   });
 }
+
 
 async function loadSamples(loadFirst=true) {
   const res = await fetch("/api/samples");
@@ -919,30 +1101,49 @@ async function loadSample(rowKey, force=false) {
 function fillPanel() {
   const s = current.sample;
   const reviewMode = (current.review_hint && current.review_hint.review_mode) || (current.sample && current.sample.review_mode) || "";
+  const taskName = displayTask(s);
+
   if (reviewMode === "confirm_empty") {
     ensureSelectOption("reviewDecision", "confirm_empty", "confirm_empty - 确认空标签");
     document.getElementById("reviewDecision").value = "confirm_empty";
   }
+
+  const sourceTaskHtml = s.source_task ? `<span>src=${s.source_task}</span>` : "";
+  const taxonomyHtml = s.task_taxonomy_version ? `<span>${s.task_taxonomy_version}</span>` : "";
+
   document.getElementById("taskBanner").innerHTML =
-    `<div class="task-banner-inner">${s.object_category || ""}<span>${s.task || ""}</span><span>${current.target_executor}</span><span>${reviewMode || "point_refine"}</span>positive=${positives.size}</div>`;
+    `<div class="task-banner-inner">${s.object_category || ""}<span>${taskName}</span>${sourceTaskHtml}${taxonomyHtml}<span>${current.target_executor}</span><span>${reviewMode || "point_refine"}</span>positive=${positives.size}</div>`;
+
   document.getElementById("sampleId").value = s.sample_id;
   document.getElementById("category").value = s.object_category || "";
-  document.getElementById("task").value = s.task || "";
+  document.getElementById("task").value = taskName;
   document.getElementById("executor").value = current.target_executor;
   document.getElementById("count").value = positives.size;
+
   const hint = current.review_hint || {};
   const ctxInfo = current.candidate_context || {};
   const candidateSummary = ctxInfo.available
     ? `<br/>shown_candidates: <code>${ctxInfo.shown_candidate_count || 0}/${ctxInfo.total_candidate_count || 0}</code>, min_votes=<code>${ctxInfo.candidate_min_selected_votes ?? ""}</code>`
     : "";
   const candidateError = ctxInfo.error ? `<br/><span style="color:#b42318">candidate warning: ${ctxInfo.error}</span>` : "";
+
+  const taskMeta = `
+     task_key: <code>${s.task || ""}</code><br/>
+     task_display: <code>${taskName || ""}</code><br/>
+     source_task: <code>${s.source_task || ""}</code><br/>
+     taxonomy: <code>${s.task_taxonomy_version || ""}</code><br/>
+     reviewer: <code>${currentReviewer || "未选择"}</code><br/>`;
+
   document.getElementById("candidateHint").innerHTML =
     `<b>自动候选来源：</b><br/>
+     ${taskMeta}
      selected_candidates: <code>${(hint.selected_candidates || []).join(",") || "(none)"}</code><br/>
      positive_points_before: <code>${hint.positive_points ?? ""}</code>${candidateSummary}${candidateError}<br/>
      这个页面保存的是人工点级 refinement，不会把自动候选直接当 GT。`;
+
   renderCandidateList();
 }
+
 
 function ensureSelectOption(selectId, value, label) {
   const select = document.getElementById(selectId);
@@ -1335,6 +1536,10 @@ canvas.addEventListener("wheel", e => {
 
 async function saveEdit() {
   if (!current) return;
+  if (!validReviewer(currentReviewer)) {
+    showReviewerModal(true);
+    throw new Error("请先选择当前审查身份 reviewer_a 或 reviewer_b。");
+  }
   const payload = {
     row_key: current.row_key,
     pilot_id: current.sample.pilot_id || "",
@@ -1343,7 +1548,7 @@ async function saveEdit() {
     selected_candidate_ids: [...selectedCandidateIds].sort(),
     positive_indices: [...positives].sort((a,b) => a-b),
     visible_all_points: current.visible_all_points,
-    reviewer: "",
+    reviewer: currentReviewer,
     review_status: document.getElementById("reviewStatus").value,
     review_decision: document.getElementById("reviewDecision").value,
     quality_after_review: document.getElementById("quality").value,
@@ -1353,13 +1558,19 @@ async function saveEdit() {
   const data = await res.json();
   if (!res.ok || !data.ok) throw new Error(data.error || "save failed");
   document.getElementById("message").textContent =
-    `已保存 refined mask：positive ${data.record.positive_points_before} -> ${data.record.positive_points_after}`;
+    `已保存 refined mask：${currentReviewer} | positive ${data.record.positive_points_before} -> ${data.record.positive_points_after}`;
   sampleCache.delete(data.row_key);
   await loadSamples(false);
   await loadSample(data.row_key, true);
 }
 
+document.getElementById("reviewerSwitch").onclick = () => showReviewerModal(true);
+document.getElementById("chooseReviewerA").onclick = () => setReviewerIdentity("reviewer_a");
+document.getElementById("chooseReviewerB").onclick = () => setReviewerIdentity("reviewer_b");
 document.getElementById("search").oninput = renderList;
+document.getElementById("filterPending").onclick = () => setListFilter("pending");
+document.getElementById("filterChecked").onclick = () => setListFilter("checked");
+document.getElementById("filterAll").onclick = () => setListFilter("all");
 document.getElementById("modeView").onclick = () => setMode("view");
 document.getElementById("modeToggle").onclick = () => setMode("toggle");
 document.getElementById("modeAdd").onclick = () => setMode("add");
@@ -1384,6 +1595,7 @@ document.getElementById("reloadBtn").onclick = () => {
 };
 window.addEventListener("resize", resize);
 setMode("toggle");
+initReviewerIdentity();
 loadSamples().catch(err => alert(err.message));
 </script>
 </body>

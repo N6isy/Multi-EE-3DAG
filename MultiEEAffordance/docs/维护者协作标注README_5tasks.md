@@ -963,565 +963,321 @@ Mug / pick_up / suction
 
 如果自动候选质量一般，也可以继续进入人工审查；但要保证网页里有足够候选可选，并且人工可以方便增删点。
 
-## 11. 第七步：拆分 reviewer_a / reviewer_b 样本
+## 11. 第七步：划分审查样本并只打包 reviewer_b 本地数据包
 
-这一步的目标是：把自动候选阶段生成的待审查样本表，拆成两份。
+当前采用 **v0.1_5tasks** 标注批次。这里的五任务文件不是重新跑 `run_v3_pipeline.py` 生成的，而是由旧三任务候选结果展开得到：
 
-当前输入文件是：
+```text
+pick_up    -> lift
+open_pull  -> open + pull
+press_push -> press + push
+```
+
+因此，当前用于人工审查划分的主输入文件是：
+
+```text
+/home/lzq/data/MultiEEAffordance/processed/metadata/v3_candidate_samples_val_5tasks_from_v0_1.jsonl
+```
+
+不要再用旧三任务文件作为正式标注批次输入：
 
 ```text
 /home/lzq/data/MultiEEAffordance/processed/metadata/v3_candidate_samples_v0_1.jsonl
 ```
 
-这个文件来自上一步 `run_v3_pipeline.py ... --stages ... build`。里面每一行是一个待人工审查样本，包含：
+当前协作分工是：
 
 ```text
-sample_id
-object_id
-object_category
-task
-target_executor
-point_cloud_path
-checked_mask_path 或 multi_channel_mask_path
-v3_candidate_update / candidate_manifest
+reviewer_a：维护者本人 / 有服务器数据权限，不需要本地数据压缩包。
+reviewer_b：外部审查者 / 不登录服务器，需要完整本地数据压缩包。
 ```
 
-本步骤要做的操作是：
+所以本步骤只需要：
 
 ```text
-读取 v3_candidate_samples_v0_1.jsonl
-  -> 按 object_id 或 sample_id 分组
-  -> 一部分写给 reviewer_a
-  -> 一部分写给 reviewer_b
-  -> 生成拆分统计 batch_manifest.json
+1. 按 object 分组拆分 reviewer_a_samples.jsonl 和 reviewer_b_samples.jsonl；
+2. 为 reviewer_b 收集点云、mask、candidate manifest、candidate npz 等依赖文件；
+3. 只生成 reviewer_b_annotation_package.tar.gz；
+4. 不生成 reviewer_a 压缩包。
 ```
 
-输出文件是：
+### 11.1 数据都在哪里
+
+候选生成阶段使用了：
+
+```bash
+--data-storage-root /home/lzq/data
+```
+
+因此，网页审查需要的大部分中间文件都在数据存储目录：
 
 ```text
-/home/lzq/data/MultiEEAffordance/processed/annotation_batches/v0_1/reviewer_a_samples.jsonl
-/home/lzq/data/MultiEEAffordance/processed/annotation_batches/v0_1/reviewer_b_samples.jsonl
-/home/lzq/data/MultiEEAffordance/processed/annotation_batches/v0_1/batch_manifest.json
+/home/lzq/data/MultiEEAffordance/
 ```
 
-打包给审查者时，这些文件会被复制到数据包里的：
+典型位置包括：
 
 ```text
-MultiEEAffordance/processed/annotation_batches/v0_1/
+/home/lzq/data/MultiEEAffordance/processed/metadata/v3_candidate_samples_v0_1.jsonl
+/home/lzq/data/MultiEEAffordance/processed/metadata/v3_candidate_samples_val_5tasks_from_v0_1.jsonl
+/home/lzq/data/MultiEEAffordance/processed/vlm_candidate_v3/3d_candidates/
+/home/lzq/data/MultiEEAffordance/processed/vlm_candidate_v3/fused_masks/
+/home/lzq/data/MultiEEAffordance/processed/vlm_candidate_v3/pipeline_runs/
 ```
 
-审查者本地解压后，网页启动命令仍然使用项目内相对路径。
+所以划分和打包脚本应该直接在数据存储服务器上运行。不要先把整个 `/home/lzq/data/MultiEEAffordance` 拷到本地再打包，也不要用 VSCode 文件树去解压大包；候选文件很多，VSCode 远程文件树容易卡住。
 
-如果维护者本人也参与标注，就把维护者自己的审查身份固定为 `reviewer_a`。另一个人使用 `reviewer_b`。不要因为维护者自己标注就改成 `owner_samples.jsonl`，否则后续合并规则会变复杂。
+### 11.2 使用的打包脚本
 
-拆分原则：
-
-1. 两个人不要写同一个输出文件。
-2. 尽量按物体分组拆分，不要把同一个 object 的多个任务-执行器组合分散给不同人。
-3. 可以保留少量重叠样本用于校准，但重叠样本合并时必须进入冲突列表，不自动覆盖。
-
-推荐输出：
+当前使用脚本：
 
 ```text
-processed/annotation_batches/v0_1/reviewer_a_samples.jsonl
-processed/annotation_batches/v0_1/reviewer_b_samples.jsonl
+MultiEEAffordance/tools/package_reviewer_b_only_annotation_batch_progress.py
 ```
 
-当前可以直接使用下面这段命令拆分。这个命令在服务器项目根目录运行：
+这个脚本会完成：
+
+```text
+读取 v3_candidate_samples_val_5tasks_from_v0_1.jsonl
+  -> 按 object_id / sample_id 分组
+  -> 写 reviewer_a_samples.jsonl
+  -> 写 reviewer_b_samples.jsonl
+  -> 只扫描 reviewer_b 的样本依赖
+  -> 复制 reviewer_b 需要的点云、mask、candidate manifest、candidate npz
+  -> 重写数据包内部路径为相对路径
+  -> 只生成 reviewer_b_annotation_package.tar.gz
+  -> 写 batch_manifest.json
+```
+
+进度条含义：
+
+```text
+read xxx.jsonl                    读取输入 samples
+package reviewers                 处理 reviewer_a / reviewer_b
+write reviewer_x samples          写入分工后的 samples
+scan sample rows                  扫描样本里的路径字段
+resolve reviewer_b dependencies   递归解析候选 manifest、npz、mask 等依赖
+copy reviewer_b files             复制 reviewer_b 需要的文件
+archive reviewer_b_annotation_package.tar.gz  压缩打包
+```
+
+如果服务器终端显示进度条乱码，可以加：
+
+```bash
+--no-progress
+```
+
+### 11.3 先 dry-run 检查依赖
+
+正式打包前，先 dry-run。dry-run 会划分样本并扫描依赖，但不真正复制和压缩大文件，适合先检查路径是否完整。
 
 ```bash
 cd /home/lzq/Multi-EE-3DAG
 
-python - <<'PY'
-import json
-from collections import defaultdict, Counter
-from pathlib import Path
-
-root = Path("/home/lzq/data/MultiEEAffordance")
-input_path = root / "processed/metadata/v3_candidate_samples_v0_1.jsonl"
-batch_dir = root / "processed/annotation_batches/v0_1"
-batch_dir.mkdir(parents=True, exist_ok=True)
-
-reviewer_a_path = batch_dir / "reviewer_a_samples.jsonl"
-reviewer_b_path = batch_dir / "reviewer_b_samples.jsonl"
-manifest_path = batch_dir / "batch_manifest.json"
-
-# 如果你想保留少量重叠样本用于两人标注一致性校准，把这里改成 5。
-# 第一次正式分工不想产生冲突，可以先保持 0。
-CALIBRATION_OBJECTS = 0
-
-def read_jsonl(path: Path):
-    rows = []
-    with path.open("r", encoding="utf-8") as f:
-        for line_no, line in enumerate(f, 1):
-            line = line.strip()
-            if not line:
-                continue
-            row = json.loads(line)
-            row["_line_no"] = line_no
-            rows.append(row)
-    return rows
-
-def object_key(row):
-    # 优先使用 object_id；如果没有，就用 sample_id 去掉最后一个 task 后缀作为近似 object key。
-    object_id = row.get("object_id")
-    if object_id:
-        return str(object_id)
-    sample_id = str(row.get("sample_id") or "")
-    for suffix in ("_pick_up", "_open_pull", "_press_push", "_lift_carry"):
-        if sample_id.endswith(suffix):
-            return sample_id[: -len(suffix)]
-    return sample_id
-
-def sample_key(row):
-    return "|".join([
-        str(row.get("pilot_id") or row.get("review_id") or ""),
-        str(row.get("sample_id") or ""),
-        str(row.get("task") or ""),
-        str(row.get("target_executor") or row.get("executor") or ""),
-    ])
-
-def write_jsonl(path: Path, rows):
-    with path.open("w", encoding="utf-8", newline="\n") as f:
-        for row in rows:
-            row = dict(row)
-            row.pop("_line_no", None)
-            f.write(json.dumps(row, ensure_ascii=False) + "\n")
-
-rows = read_jsonl(input_path)
-groups = defaultdict(list)
-for row in rows:
-    groups[object_key(row)].append(row)
-
-group_items = sorted(groups.items(), key=lambda item: item[0])
-
-reviewer_a = []
-reviewer_b = []
-for idx, (_, group_rows) in enumerate(group_items):
-    if idx % 2 == 0:
-        reviewer_a.extend(group_rows)
-    else:
-        reviewer_b.extend(group_rows)
-
-if CALIBRATION_OBJECTS > 0:
-    calibration_groups = group_items[:CALIBRATION_OBJECTS]
-    calibration_rows = [row for _, group_rows in calibration_groups for row in group_rows]
-    existing_a = {sample_key(row) for row in reviewer_a}
-    existing_b = {sample_key(row) for row in reviewer_b}
-    reviewer_a.extend([row for row in calibration_rows if sample_key(row) not in existing_a])
-    reviewer_b.extend([row for row in calibration_rows if sample_key(row) not in existing_b])
-
-write_jsonl(reviewer_a_path, reviewer_a)
-write_jsonl(reviewer_b_path, reviewer_b)
-
-summary = {
-    "input": str(input_path),
-    "batch_dir": str(batch_dir),
-    "rows_total": len(rows),
-    "object_groups_total": len(group_items),
-    "calibration_objects": CALIBRATION_OBJECTS,
-    "reviewers": {
-        "reviewer_a": {
-            "samples": str(reviewer_a_path),
-            "rows": len(reviewer_a),
-            "objects": len({object_key(row) for row in reviewer_a}),
-            "tasks": Counter(str(row.get("task", "")) for row in reviewer_a),
-            "executors": Counter(str(row.get("target_executor") or row.get("executor") or "") for row in reviewer_a),
-        },
-        "reviewer_b": {
-            "samples": str(reviewer_b_path),
-            "rows": len(reviewer_b),
-            "objects": len({object_key(row) for row in reviewer_b}),
-            "tasks": Counter(str(row.get("task", "")) for row in reviewer_b),
-            "executors": Counter(str(row.get("target_executor") or row.get("executor") or "") for row in reviewer_b),
-        },
-    },
-}
-
-with manifest_path.open("w", encoding="utf-8") as f:
-    json.dump(summary, f, ensure_ascii=False, indent=2)
-    f.write("\n")
-
-print(json.dumps(summary, ensure_ascii=False, indent=2))
-PY
+python MultiEEAffordance/tools/package_reviewer_b_only_annotation_batch_progress.py   --dataset-root /home/lzq/data/MultiEEAffordance   --input processed/metadata/v3_candidate_samples_val_5tasks_from_v0_1.jsonl   --batch-dir processed/annotation_batches/v0_1_5tasks   --reviewers reviewer_a,reviewer_b   --package-reviewers reviewer_b   --calibration-objects 0   --archive-format tar.gz   --dry-run   --overwrite
 ```
 
-拆分后检查：
+检查输出和 `batch_manifest.json`，重点看：
 
 ```text
-reviewer_a 样本数
-reviewer_b 样本数
-重叠 sample_key 数
-每个 reviewer 的任务分布
-每个 reviewer 的执行器分布
+rows_total
+object_groups_total
+reviewer_a.rows
+reviewer_b.rows
+reviewer_b.dependencies_found
+reviewer_b.missing_references
 ```
 
-也可以直接运行：
+如果 `missing_references` 很多，说明样本索引里某些路径没有找到，不能直接发包。先排查：
 
 ```bash
-wc -l MultiEEAffordance/processed/annotation_batches/v0_1/reviewer_a_samples.jsonl
-wc -l MultiEEAffordance/processed/annotation_batches/v0_1/reviewer_b_samples.jsonl
-cat MultiEEAffordance/processed/annotation_batches/v0_1/batch_manifest.json
+cat /home/lzq/data/MultiEEAffordance/processed/annotation_batches/v0_1_5tasks/batch_manifest.json
 ```
 
-如果维护者本人就是 `reviewer_a`，你可以直接使用：
+### 11.4 正式划分并只打包 reviewer_b
 
-```text
-MultiEEAffordance/processed/annotation_batches/v0_1/reviewer_a_samples.jsonl
-```
-
-在本机或服务器上开始标注。另一个人只需要拿到 `reviewer_b_samples.jsonl` 和它引用的数据包。
-
-## 12. 第八步：给审查者准备本地数据包
-
-这一步的目标是：让另一个审查者不用登录服务器，也能在本地运行审查网页。
-
-注意：`reviewer_b_samples.jsonl` 只是索引文件，不是完整数据。它里面会引用点云、mask、候选 manifest、候选 npz 等文件。如果只把 `reviewer_b_samples.jsonl` 放进仓库，另一个人本地大概率会报：
-
-```text
-FileNotFoundError
-JSON not found
-NPY not found
-candidate_manifest not found
-```
-
-所以完整数据包至少要包含：
-
-```text
-1. reviewer_b_samples.jsonl
-2. reviewer_b_samples.jsonl 引用到的 point_cloud_path
-3. reviewer_b_samples.jsonl 引用到的 mask 路径
-4. candidate_manifest.json
-5. candidates.npz
-6. candidate overlay / rule filter / selection 相关文件，如果网页会读取
-```
-
-审查者本地需要三类东西：
-
-1. GitHub 仓库代码。
-2. 自己那份 `reviewer_x_samples.jsonl`。
-3. `reviewer_x_samples.jsonl` 引用到的点云、mask、candidate 文件。
-
-数据包解压后，建议仍保持项目目录结构：
-
-```text
-Multi-EE-3DAG/
-  MultiEEAffordance/
-    processed/
-      annotation_batches/v0_1/reviewer_a_samples.jsonl
-      points/...
-      masks/...
-      vlm_candidate_v3/...
-```
-
-这样审查网页里的相对路径不用改。
-
-维护者不要只发 `reviewer_a_samples.jsonl`。如果不带点云和候选文件，审查者本地网页会找不到 `.npy/.npz`。
-
-### 12.1 当前到底操作哪个文件
-
-以给另一个人准备数据为例，当前操作的主文件是：
-
-```text
-MultiEEAffordance/processed/annotation_batches/v0_1/reviewer_b_samples.jsonl
-```
-
-操作内容是：
-
-```text
-读取 reviewer_b_samples.jsonl
-  -> 找出每一行引用到的数据文件
-  -> 把这些文件复制到一个 package staging 目录
-  -> 压缩 staging 目录
-  -> 把压缩包发给 reviewer_b
-```
-
-推荐输出：
-
-```text
-MultiEEAffordance/processed/annotation_batches/v0_1/packages/reviewer_b_annotation_package_v0_1.tar.gz
-```
-
-### 12.2 精确收集 reviewer_b 需要的文件
-
-推荐优先使用项目内置打包工具。它会从 `/home/lzq/data/MultiEEAffordance` 和当前项目 `MultiEEAffordance` 两个位置查找文件，把 `reviewer_b_samples.jsonl`、点云、mask、候选 `candidate_manifest.json`、`candidates.npz` 一起打包。
+确认 dry-run 没有明显缺失后，正式执行：
 
 ```bash
 cd /home/lzq/Multi-EE-3DAG
 
-python MultiEEAffordance/tools/package_review_inputs.py \
-  --dataset-root MultiEEAffordance \
-  --storage-dataset-root /home/lzq/data/MultiEEAffordance \
-  --samples processed/annotation_batches/v0_1/reviewer_b_samples.jsonl \
-  --reviewer reviewer_b \
-  --output-tar /home/lzq/data/MultiEEAffordance/processed/annotation_batches/v0_1/packages/reviewer_b_annotation_package_v0_1.tar.gz \
-  --overwrite
+python MultiEEAffordance/tools/package_reviewer_b_only_annotation_batch_progress.py   --dataset-root /home/lzq/data/MultiEEAffordance   --input processed/metadata/v3_candidate_samples_val_5tasks_from_v0_1.jsonl   --batch-dir processed/annotation_batches/v0_1_5tasks   --reviewers reviewer_a,reviewer_b   --package-reviewers reviewer_b   --calibration-objects 0   --archive-format tar.gz   --overwrite
 ```
 
-运行后重点看输出里的：
+预期输出目录：
 
 ```text
-rows
-files_copied
-files_skipped
-output_tar
+/home/lzq/data/MultiEEAffordance/processed/annotation_batches/v0_1_5tasks/
 ```
 
-`files_skipped` 正常情况下应该为空。如果不为空，说明有文件没有被打进去，要先修正路径再发给审查者。
+预期文件：
 
-下面这段旧命令只作为调试参考。它会创建一个 staging 目录，并尽量复制 `reviewer_b_samples.jsonl` 引用到的文件。它不会修改原始数据，只是复制。
+```text
+reviewer_a_samples.jsonl
+reviewer_b_samples.jsonl
+reviewer_b_annotation_package.tar.gz
+batch_manifest.json
+```
+
+注意：正常情况下不会生成：
+
+```text
+reviewer_a_annotation_package.tar.gz
+```
+
+因为 `reviewer_a` 直接使用服务器数据。
+
+### 11.5 检查打包结果
+
+打包完成后检查文件是否存在：
+
+```bash
+ls -lh /home/lzq/data/MultiEEAffordance/processed/annotation_batches/v0_1_5tasks/
+```
+
+检查压缩包内容，不要直接解压：
+
+```bash
+tar -tzf /home/lzq/data/MultiEEAffordance/processed/annotation_batches/v0_1_5tasks/reviewer_b_annotation_package.tar.gz | head -50
+```
+
+正常应该看到类似：
+
+```text
+README_reviewer_b.md
+package_manifest_reviewer_b.json
+MultiEEAffordance/processed/annotation_batches/v0_1_5tasks/reviewer_b_samples.jsonl
+MultiEEAffordance/processed/points/...
+MultiEEAffordance/processed/masks/...
+MultiEEAffordance/processed/vlm_candidate_v3/3d_candidates/...
+MultiEEAffordance/processed/vlm_candidate_v3/fused_masks/...
+```
+
+检查包大小：
+
+```bash
+du -h /home/lzq/data/MultiEEAffordance/processed/annotation_batches/v0_1_5tasks/reviewer_b_annotation_package.tar.gz
+```
+
+如果压缩包很大，不要用 VSCode 文件树打开或解压；用终端 `tar`。
+
+## 12. 第八步：reviewer_a 在服务器上怎么标注
+
+`reviewer_a` 有服务器数据，不需要压缩包。直接在服务器上启动网页即可。
 
 ```bash
 cd /home/lzq/Multi-EE-3DAG
 
-python - <<'PY'
-import json
-import shutil
-from pathlib import Path
-
-repo = Path(".").resolve()
-root = repo / "MultiEEAffordance"
-batch_dir = root / "processed/annotation_batches/v0_1"
-reviewer = "reviewer_b"
-
-samples_path = batch_dir / f"{reviewer}_samples.jsonl"
-stage_root = batch_dir / "packages" / f"{reviewer}_package_staging"
-copied_manifest = stage_root / "PACKAGE_FILE_LIST.txt"
-
-if stage_root.exists():
-    shutil.rmtree(stage_root)
-stage_root.mkdir(parents=True, exist_ok=True)
-
-def read_json(path: Path):
-    with path.open("r", encoding="utf-8") as f:
-        return json.load(f)
-
-def read_jsonl(path: Path):
-    rows = []
-    with path.open("r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line:
-                rows.append(json.loads(line))
-    return rows
-
-def as_path(value):
-    if not value:
-        return None
-    p = Path(str(value))
-    if p.is_absolute():
-        return p
-    return root / p
-
-def add_path(paths, value):
-    p = as_path(value)
-    if p and p.exists() and p.is_file():
-        paths.add(p.resolve())
-
-def collect_from_obj(paths, obj):
-    if isinstance(obj, dict):
-        for key, value in obj.items():
-            lower = str(key).lower()
-            if lower.endswith("_path") or lower in {
-                "point_cloud_path",
-                "multi_channel_mask_path",
-                "checked_mask_path",
-                "candidate_manifest",
-                "selection_path",
-                "render_manifest",
-            }:
-                add_path(paths, value)
-            collect_from_obj(paths, value)
-    elif isinstance(obj, list):
-        for item in obj:
-            collect_from_obj(paths, item)
-
-rows = read_jsonl(samples_path)
-paths = {samples_path.resolve()}
-
-for row in rows:
-    collect_from_obj(paths, row)
-
-    # 常见 v3 candidate manifest 位置：按 pilot_id 查找。
-    pilot_id = row.get("pilot_id") or row.get("review_id")
-    if pilot_id:
-        candidate_manifest = root / "processed/vlm_candidate_v3/3d_candidates" / str(pilot_id) / "candidate_manifest.json"
-        add_path(paths, candidate_manifest)
-        if candidate_manifest.exists():
-            manifest = read_json(candidate_manifest)
-            add_path(paths, manifest.get("candidate_npz"))
-            add_path(paths, manifest.get("projected_votes"))
-            add_path(paths, manifest.get("semantic_plan"))
-
-        overlay_manifest = root / "processed/vlm_candidate_v3/candidate_overlays" / str(pilot_id) / "overlay_manifest.json"
-        add_path(paths, overlay_manifest)
-
-        selection = root / "processed/vlm_candidate_v3/vlm_selection" / str(pilot_id) / "combined_selection.json"
-        add_path(paths, selection)
-
-        rule_filter = root / "processed/vlm_candidate_v3/rule_filter" / str(pilot_id) / "filtered_candidates.json"
-        add_path(paths, rule_filter)
-
-missing = []
-copied = []
-for src in sorted(paths):
-    try:
-        rel = src.relative_to(repo)
-    except ValueError:
-        missing.append(str(src))
-        continue
-    dst = stage_root / rel
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(src, dst)
-    copied.append(str(rel))
-
-with copied_manifest.open("w", encoding="utf-8") as f:
-    for item in copied:
-        f.write(item + "\n")
-
-summary = {
-    "reviewer": reviewer,
-    "samples": str(samples_path),
-    "rows": len(rows),
-    "stage_root": str(stage_root),
-    "files_copied": len(copied),
-    "missing_or_external": missing,
-    "file_list": str(copied_manifest),
-}
-print(json.dumps(summary, ensure_ascii=False, indent=2))
-PY
+python MultiEEAffordance/tools/serve_v2_annotation_app.py   --dataset-root /home/lzq/data/MultiEEAffordance   --samples processed/annotation_batches/v0_1_5tasks/reviewer_a_samples.jsonl   --review-jsonl processed/annotation_batches/v0_1_5tasks/reviewer_a_review_records.jsonl   --output-mask-root processed/annotation_batches/v0_1_5tasks/manual_refined_masks_reviewer_a   --output-samples processed/annotation_batches/v0_1_5tasks/reviewer_a_refined_samples.jsonl   --port 8765   --top-k-candidates 8
 ```
 
-运行后先检查：
+如果在本地浏览器访问服务器网页，需要按当前服务器连接方式做端口转发或反向隧道。不要把 `reviewer_a` 的数据包再打包给自己。
+
+## 13. 第九步：reviewer_b 本地怎么解压和标注
+
+维护者只需要把这个压缩包发给 `reviewer_b`：
+
+```text
+/home/lzq/data/MultiEEAffordance/processed/annotation_batches/v0_1_5tasks/reviewer_b_annotation_package.tar.gz
+```
+
+`reviewer_b` 本地先准备代码仓库，例如：
+
+```text
+/path/to/Multi-EE-3DAG/
+```
+
+然后用终端解压压缩包。不要用 VSCode 文件树或系统图形界面解压大包。
 
 ```bash
-find MultiEEAffordance/processed/annotation_batches/v0_1/packages/reviewer_b_package_staging -type f | wc -l
-cat MultiEEAffordance/processed/annotation_batches/v0_1/packages/reviewer_b_package_staging/PACKAGE_FILE_LIST.txt | head
+tar -xzf reviewer_b_annotation_package.tar.gz -C /path/to/Multi-EE-3DAG
 ```
 
-如果 `files_copied` 很少，比如只有 1 个，说明 samples 里的路径没有被正确识别，需要检查 `reviewer_b_samples.jsonl` 的字段。
-
-## 13. 第九步：打包 reviewer 数据
-
-这一步的目标是：把第八步的 staging 目录压缩成一个文件，发给另一个审查者。
-
-当前操作目录是：
+解压后应出现：
 
 ```text
-MultiEEAffordance/processed/annotation_batches/v0_1/packages/reviewer_b_package_staging/
+/path/to/Multi-EE-3DAG/MultiEEAffordance/processed/annotation_batches/v0_1_5tasks/reviewer_b_samples.jsonl
 ```
 
-输出压缩包是：
-
-```text
-MultiEEAffordance/processed/annotation_batches/v0_1/packages/reviewer_b_annotation_package_v0_1.tar.gz
-```
-
-命令：
+然后在本地启动标注网页：
 
 ```bash
-cd /home/lzq/Multi-EE-3DAG
+cd /path/to/Multi-EE-3DAG
 
-tar -czf MultiEEAffordance/processed/annotation_batches/v0_1/packages/reviewer_b_annotation_package_v0_1.tar.gz \
-  -C MultiEEAffordance/processed/annotation_batches/v0_1/packages/reviewer_b_package_staging \
-  .
+python MultiEEAffordance/tools/serve_v2_annotation_app.py   --dataset-root MultiEEAffordance   --samples processed/annotation_batches/v0_1_5tasks/reviewer_b_samples.jsonl   --review-jsonl processed/annotation_batches/v0_1_5tasks/reviewer_b_review_records.jsonl   --output-mask-root processed/annotation_batches/v0_1_5tasks/manual_refined_masks_reviewer_b   --output-samples processed/annotation_batches/v0_1_5tasks/reviewer_b_refined_samples.jsonl   --port 8765   --top-k-candidates 8
 ```
 
-打包后检查大小：
+两个人如果在不同机器上标注，都可以使用 `8765`。只有同一台机器同时开两个网页时，才需要改成不同端口，例如 `8765` 和 `8766`。
+
+## 14. 第十步：当前数据包流程常见检查
+
+### 14.1 为什么文件树里只有 `reviewer_samples.jsonl`
+
+当前正式流程应该输出：
+
+```text
+reviewer_a_samples.jsonl
+reviewer_b_samples.jsonl
+reviewer_b_annotation_package.tar.gz
+batch_manifest.json
+```
+
+如果只看到：
+
+```text
+reviewer_samples.jsonl
+```
+
+通常说明运行的不是当前 `reviewer_b only` 打包脚本，或者看到的是某个旧包 / 旧 staging 目录。请重新检查执行命令和输出目录。
+
+### 14.2 为什么 VSCode 解压一直卡住
+
+候选数据包里包含大量小文件，例如点云、mask、candidate manifest、candidate npz。VSCode 远程文件树展开或解压这类目录很慢，甚至看起来像卡死。
+
+正确做法是：
 
 ```bash
-ls -lh MultiEEAffordance/processed/annotation_batches/v0_1/packages/reviewer_b_annotation_package_v0_1.tar.gz
-tar -tzf MultiEEAffordance/processed/annotation_batches/v0_1/packages/reviewer_b_annotation_package_v0_1.tar.gz | head
+tar -tzf reviewer_b_annotation_package.tar.gz | head
 ```
 
-发给对方的就是这个压缩包。
-
-如果对方是 Windows，可以改成 zip。服务器上如果安装了 zip：
+先查看包内容；确实要解压时使用：
 
 ```bash
-cd /home/lzq/Multi-EE-3DAG/MultiEEAffordance/processed/annotation_batches/v0_1/packages/reviewer_b_package_staging
-zip -r ../reviewer_b_annotation_package_v0_1.zip .
+tar -xzf reviewer_b_annotation_package.tar.gz -C /path/to/Multi-EE-3DAG
 ```
 
-### 13.1 可以把 reviewer_x_samples.jsonl 直接放进仓库吗
+### 14.3 如何确认 reviewer_b 包是完整的
 
-可以，但要分清楚“能不能放”和“放了够不够”。
-
-`reviewer_x_samples.jsonl` 通常是小文本文件，理论上可以放进 GitHub 仓库，方便另一个人直接 pull。比如可以放到一个专门跟踪的小目录：
-
-```text
-MultiEEAffordance/annotation_tasks/v0_1/reviewer_b_samples.jsonl
-```
-
-但是当前 `.gitignore` 已经忽略：
-
-```text
-MultiEEAffordance/processed/annotation_batches/
-```
-
-所以如果你把文件放在：
-
-```text
-MultiEEAffordance/processed/annotation_batches/v0_1/reviewer_b_samples.jsonl
-```
-
-它默认不会被 Git 跟踪。你可以强行 `git add -f`，但不建议把 `processed/` 下面的批次输出长期作为代码仓库内容管理。
-
-更推荐的做法是：
-
-1. 仓库里只提交一个轻量任务索引副本：
-
-```text
-MultiEEAffordance/annotation_tasks/v0_1/reviewer_b_samples.jsonl
-```
-
-2. 数据包里仍然放网页实际读取的路径：
-
-```text
-MultiEEAffordance/processed/annotation_batches/v0_1/reviewer_b_samples.jsonl
-```
-
-3. 对方 pull 仓库后，再解压你给他的数据包。数据包会把 `processed/annotation_batches/v0_1/reviewer_b_samples.jsonl` 和它引用的数据文件放到正确位置。
-
-结论：
-
-```text
-只把 reviewer_b_samples.jsonl 放进仓库，不够。
-```
-
-因为它只是索引，不包含点云和候选文件。另一个人仍然需要数据包。你可以把 samples JSONL 的副本放进仓库用于透明分工，但真正运行网页仍以数据包里的 `processed/annotation_batches/v0_1/reviewer_b_samples.jsonl` 为准。
-
-## 14. 第十步：审查者本地怎么运行
-
-维护者给审查者的 README 中应明确告诉他们：
-
-`reviewer_a` 本地运行：
+在服务器上检查：
 
 ```bash
-python MultiEEAffordance/tools/serve_v2_annotation_app.py \
-  --dataset-root MultiEEAffordance \
-  --samples processed/annotation_batches/v0_1/reviewer_a_samples.jsonl \
-  --review-jsonl processed/annotation_batches/v0_1/reviewer_a_review_records.jsonl \
-  --output-mask-root processed/annotation_batches/v0_1/manual_refined_masks_reviewer_a \
-  --output-samples processed/annotation_batches/v0_1/reviewer_a_refined_samples.jsonl \
-  --port 8765 \
-  --top-k-candidates 8
+cat /home/lzq/data/MultiEEAffordance/processed/annotation_batches/v0_1_5tasks/batch_manifest.json
+
+tar -tzf /home/lzq/data/MultiEEAffordance/processed/annotation_batches/v0_1_5tasks/reviewer_b_annotation_package.tar.gz | head -50
 ```
 
-`reviewer_b` 本地运行：
+重点确认：
 
-```bash
-python MultiEEAffordance/tools/serve_v2_annotation_app.py \
-  --dataset-root MultiEEAffordance \
-  --samples processed/annotation_batches/v0_1/reviewer_b_samples.jsonl \
-  --review-jsonl processed/annotation_batches/v0_1/reviewer_b_review_records.jsonl \
-  --output-mask-root processed/annotation_batches/v0_1/manual_refined_masks_reviewer_b \
-  --output-samples processed/annotation_batches/v0_1/reviewer_b_refined_samples.jsonl \
-  --port 8765 \
-  --top-k-candidates 8
+```text
+missing_references 为空或数量很少且原因明确
+压缩包中有 reviewer_b_samples.jsonl
+压缩包中有 processed/vlm_candidate_v3/3d_candidates/
+压缩包中有 processed/vlm_candidate_v3/fused_masks/
+压缩包中有 processed/points/ 或对应点云文件
+压缩包中有 processed/masks/ 或对应 mask 文件
 ```
 
-审查者本地各跑各的，所以两个人都用 `8765` 没问题。只有在同一台机器上同时开两个审查网页时，才需要一个用 `8765`、另一个用 `8766`。
+### 14.4 reviewer_b 不需要登录服务器
+
+只要压缩包完整，`reviewer_b` 不需要登录服务器。其本地只需要：
+
+```text
+1. Multi-EE-3DAG 代码仓库；
+2. reviewer_b_annotation_package.tar.gz；
+3. 能运行 serve_v2_annotation_app.py 的 Python 环境。
+```
+
+解压数据包后，网页读取的都是本地 `MultiEEAffordance/processed/...` 下的相对路径。
 
 ## 15. 第十一步：审查者每天要交付什么
 
