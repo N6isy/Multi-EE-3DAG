@@ -400,15 +400,16 @@ test -f MultiEEAffordance/processed/annotation_batches/v0_2_5tasks/reviewer_b_sa
 Windows PowerShell：
 
 ```powershell
-python .\MultiEEAffordance\tools\serve_v2_annotation_app.py `
-  --dataset-root MultiEEAffordance `
-  --samples processed/annotation_batches/v0_2_5tasks/reviewer_a_samples.jsonl `
-  --review-jsonl processed/annotation_batches/v0_2_5tasks/reviewer_a_review_records.jsonl `
-  --output-mask-root processed/annotation_batches/v0_2_5tasks/manual_refined_masks_reviewer_a `
-  --output-samples processed/annotation_batches/v0_2_5tasks/reviewer_a_refined_samples.jsonl `
-  --port 8765 `
-  --top-k-candidates 8 `
-  --candidate-min-selected-votes 2
+cd /home/lzq/Multi-EE-3DAG
+
+python MultiEEAffordance/tools/serve_v2_annotation_app.py \
+  --dataset-root /home/lzq/data/MultiEEAffordance \
+  --samples processed/annotation_batches/v0_1_5tasks/reviewer_a_samples.jsonl \
+  --review-jsonl processed/annotation_batches/v0_1_5tasks/reviewer_a_review_records.jsonl \
+  --output-mask-root processed/annotation_batches/v0_1_5tasks/manual_refined_masks_reviewer_a \
+  --output-samples processed/annotation_batches/v0_1_5tasks/reviewer_a_refined_samples.jsonl \
+  --port 8765 \
+  --top-k-candidates 8
 ```
 
 Linux / macOS / Git Bash：
