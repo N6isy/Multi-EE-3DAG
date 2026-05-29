@@ -12,6 +12,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from utils.task_taxonomy import ALL_TASKS, LEGACY_DEFAULT_ACTIVE_TASKS
+
 
 DEFAULT_STAGES = ["views", "plan", "part_propose", "render", "part_select", "part_filter", "build"]
 GROUNDING_STAGES = ["views", "plan", "ground", "project", "grow", "render", "build"]
@@ -29,8 +33,8 @@ ALL_STAGES = [
     "coverage",
     "visualize",
 ]
-KNOWN_TASKS = ["pick_up", "lift_carry", "open_pull", "press_push"]
-DEFAULT_ACTIVE_TASKS = ["pick_up", "open_pull", "press_push"]
+KNOWN_TASKS = list(ALL_TASKS)
+DEFAULT_ACTIVE_TASKS = list(LEGACY_DEFAULT_ACTIVE_TASKS)
 EMPTY_DECISIONS = {"empty", "empty_review_required", "confirm_empty", "skip_vlm_empty"}
 DEFAULT_V3_OUTPUT_ROOT = "processed/vlm_candidate_v3"
 DEFAULT_FILTERED_PILOT_CSV = "processed/vlm_candidate_v3/pipeline_runs/filtered_pilot_rows_latest.csv"
@@ -54,7 +58,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--include-tasks",
         default=",".join(DEFAULT_ACTIVE_TASKS),
-        help="Comma-separated tasks to keep, or 'all'. Default excludes lift_carry.",
+        help=(
+            "Comma-separated tasks to keep, or 'all'. The v3 candidate-generation default "
+            "keeps legacy proposal tasks pick_up,open_pull,press_push and excludes lift_carry."
+        ),
     )
     parser.add_argument(
         "--exclude-tasks",

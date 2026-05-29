@@ -12,12 +12,14 @@ from typing import Any
 
 import numpy as np
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from path_utils import relative_to_dataset, resolve_portable_path
+from utils.task_taxonomy import ALL_TASKS, EXECUTOR_ORDER, LEGACY_DEFAULT_ACTIVE_TASKS
 
 
-EXECUTOR_ORDER = ["gripper", "suction", "hook", "dexterous_hand"]
-KNOWN_TASKS = {"pick_up", "lift_carry", "open_pull", "press_push"}
-DEFAULT_ACTIVE_TASKS = {"pick_up", "open_pull", "press_push"}
+KNOWN_TASKS = set(ALL_TASKS)
+DEFAULT_ACTIVE_TASKS = set(LEGACY_DEFAULT_ACTIVE_TASKS)
 
 
 def parse_args() -> argparse.Namespace:
@@ -44,7 +46,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--include-tasks",
         default=",".join(sorted(DEFAULT_ACTIVE_TASKS)),
-        help="Comma-separated tasks to keep, or 'all'. Default excludes lift_carry.",
+        help=(
+            "Comma-separated tasks to keep, or 'all'. The v3 candidate-mask default "
+            "keeps legacy proposal tasks pick_up,open_pull,press_push and excludes lift_carry."
+        ),
     )
     parser.add_argument(
         "--exclude-tasks",

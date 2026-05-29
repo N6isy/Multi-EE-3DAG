@@ -3,6 +3,7 @@
 
 Default mapping:
   pick_up    -> lift
+  lift_carry -> lift
   open_pull  -> open, pull
   press_push -> press, push
 
@@ -13,7 +14,7 @@ paths and creates duplicated annotation rows with task provenance fields.
 
 Important:
   - Do not feed the new-task JSONL back into scripts that still validate tasks
-    against pick_up/open_pull/press_push unless those scripts are updated.
+    only against legacy tasks unless those scripts are updated.
   - Use the output as annotation input or reviewer package input.
 """
 
@@ -24,34 +25,21 @@ import copy
 import json
 import re
 import sys
-from collections import Counter, defaultdict
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
-DEFAULT_TASK_MAP: dict[str, list[str]] = {
-    "pick_up": ["lift"],
-    "open_pull": ["open", "pull"],
-    "press_push": ["press", "push"],
-}
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-TASK_INSTRUCTIONS: dict[str, str] = {
-    "lift": "Lift the object from the supporting surface.",
-    "open": "Open the articulated part or openable component.",
-    "pull": "Pull the target handle, ring, part, or movable component.",
-    "press": "Press the target button, key, switch, or local pressable part.",
-    "push": "Push the target part, panel, surface, or movable component.",
-}
+from utils.task_taxonomy import (  # noqa: E402
+    LEGACY_TO_NEW_TASKS,
+    TASK_TAXONOMY_VERSION,
+    is_new_task,
+    task_display,
+    task_instruction,
+)
 
-TASK_DISPLAY: dict[str, str] = {
-    "lift": "Lift",
-    "open": "Open",
-    "pull": "Pull",
-    "press": "Press",
-    "push": "Push",
-}
-
-LEGACY_TASKS = set(DEFAULT_TASK_MAP)
-NEW_TASKS = {task for tasks in DEFAULT_TASK_MAP.values() for task in tasks}
+DEFAULT_TASK_MAP: dict[str, list[str]] = dict(LEGACY_TO_NEW_TASKS)
 
 
 def parse_args() -> argparse.Namespace:
@@ -75,7 +63,7 @@ def parse_args() -> argparse.Namespace:
         "--unknown-policy",
         choices=["keep", "skip", "error"],
         default="keep",
-        help="What to do with rows whose task is not pick_up/open_pull/press_push.",
+        help="What to do with rows whose task is not a known legacy or five-task task.",
     )
     parser.add_argument(
         "--id-style",
@@ -107,7 +95,7 @@ def parse_args() -> argparse.Namespace:
 
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
-    with path.open("r", encoding="utf-8") as f:
+    with path.open("r", encoding="utf-8-sig") as f:
         for line_no, line in enumerate(f, start=1):
             stripped = line.strip()
             if not stripped:
@@ -219,10 +207,10 @@ def expand_row(
         out["target_task"] = new_task
 
     out["sample_id"] = new_sample_id
-    out["task_display"] = TASK_DISPLAY.get(new_task, new_task)
-    out["task_instruction"] = TASK_INSTRUCTIONS.get(new_task, f"Perform task: {new_task}.")
-    out["task_taxonomy_version"] = "v0_2_split_tasks_from_v0_1"
-    out["task_split_source"] = old_task
+    out["task_display"] = task_display(new_task)
+    out["task_instruction"] = task_instruction(new_task)
+    out["task_taxonomy_version"] = TASK_TAXONOMY_VERSION
+    out["task_split_source"] = "legacy_task_expansion"
     out["source_task"] = old_task
     out["source_sample_id"] = original_sample_id
     if original_pilot_id:
@@ -237,6 +225,14 @@ def expand_row(
     out["task_instance_id"] = sanitize_id(task_instance_base)
     if args.set_review_id:
         out["review_id"] = make_unique(task_instance_base, seen_review_ids)
+    out["row_key"] = "|".join(
+        [
+            str(out.get("review_id") or out.get("pilot_id") or ""),
+            new_sample_id,
+            new_task,
+            executor,
+        ]
+    )
 
     # Keep original paths unchanged: point clouds, masks and candidate manifests are reused as proposals.
     out["task_split_note"] = (
@@ -277,6 +273,36 @@ def main() -> int:
     for row in rows:
         old_task = str(row.get("task") or "")
         new_tasks = DEFAULT_TASK_MAP.get(old_task)
+        if not new_tasks and is_new_task(old_task):
+            kept = copy.deepcopy(row)
+            original_sid = str(kept.get("sample_id") or f"task_{len(expanded)+1}")
+            sid = original_sid
+            kept["sample_id"] = make_unique(sid, seen_sample_ids)
+            if args.set_review_id:
+                rid = str(kept.get("review_id") or f"{kept['sample_id']}_{get_executor(kept)}")
+                kept["review_id"] = make_unique(rid, seen_review_ids)
+            kept["task_taxonomy_version"] = TASK_TAXONOMY_VERSION
+            kept.setdefault("task_display", task_display(old_task))
+            kept.setdefault("task_instruction", task_instruction(old_task))
+            kept.setdefault("task_split_source", "already_five_task")
+            kept.setdefault("source_task", old_task)
+            kept.setdefault("source_sample_id", original_sid)
+            kept.setdefault(
+                "row_key",
+                "|".join(
+                    [
+                        str(kept.get("review_id") or kept.get("pilot_id") or ""),
+                        str(kept.get("sample_id") or ""),
+                        old_task,
+                        get_executor(kept),
+                    ]
+                ),
+            )
+            expanded.append(kept)
+            counts_by_new_task[old_task] += 1
+            counts_by_executor[get_executor(kept)] += 1
+            counts_by_category[str(kept.get("object_category") or "unknown")] += 1
+            continue
         if not new_tasks:
             if args.unknown_policy == "error":
                 raise ValueError(
@@ -288,12 +314,29 @@ def main() -> int:
                 continue
             # keep unknown row unchanged, but ensure sample_id uniqueness.
             kept = copy.deepcopy(row)
-            sid = str(kept.get("sample_id") or f"unknown_{len(expanded)+1}")
+            original_sid = str(kept.get("sample_id") or f"unknown_{len(expanded)+1}")
+            sid = original_sid
             kept["sample_id"] = make_unique(sid, seen_sample_ids)
             if args.set_review_id:
                 rid = str(kept.get("review_id") or f"{kept['sample_id']}_{get_executor(kept)}")
                 kept["review_id"] = make_unique(rid, seen_review_ids)
-            kept["task_taxonomy_version"] = "v0_2_split_tasks_from_v0_1"
+            kept["task_taxonomy_version"] = TASK_TAXONOMY_VERSION
+            kept.setdefault("task_display", task_display(old_task))
+            kept.setdefault("task_instruction", task_instruction(old_task))
+            kept.setdefault("task_split_source", "kept_unknown_or_already_new")
+            kept.setdefault("source_task", old_task)
+            kept.setdefault("source_sample_id", original_sid)
+            kept.setdefault(
+                "row_key",
+                "|".join(
+                    [
+                        str(kept.get("review_id") or kept.get("pilot_id") or ""),
+                        str(kept.get("sample_id") or ""),
+                        str(kept.get("task") or kept.get("target_task") or ""),
+                        get_executor(kept),
+                    ]
+                ),
+            )
             expanded.append(kept)
             skipped[f"unknown_task_kept:{old_task}"] += 1
             continue
@@ -311,7 +354,7 @@ def main() -> int:
     summary = {
         "input": str(input_path),
         "output": str(output_path),
-        "task_taxonomy_version": "v0_2_split_tasks_from_v0_1",
+        "task_taxonomy_version": TASK_TAXONOMY_VERSION,
         "task_field_mode": args.task_field_mode,
         "rows_input": len(rows),
         "rows_output": len(expanded),

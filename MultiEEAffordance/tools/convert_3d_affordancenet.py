@@ -30,15 +30,10 @@ from typing import Any, Iterable
 
 import numpy as np
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from utils.task_taxonomy import EXECUTOR_ORDER, LEGACY_TASKS, task_instruction
 
-EXECUTOR_ORDER = ["gripper", "suction", "hook", "dexterous_hand"]
-TASKS = ["pick_up", "lift_carry", "open_pull", "press_push"]
-TASK_INSTRUCTIONS = {
-    "pick_up": "Pick up the object.",
-    "lift_carry": "Lift and carry the object.",
-    "open_pull": "Open or pull the articulated part.",
-    "press_push": "Press or push the target part.",
-}
+TASKS = list(LEGACY_TASKS)
 NEGATIVE_REASONS = {
     "gripper": "no_graspable_region",
     "suction": "no_flat_suction_surface",
@@ -65,7 +60,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--tasks",
         default="all",
-        help="Comma-separated tasks or 'all'. Choices: pick_up,lift_carry,open_pull,press_push.",
+        help=f"Comma-separated legacy tasks or 'all'. Choices: {','.join(TASKS)}.",
     )
     parser.add_argument("--categories", help="Optional comma-separated semantic classes to include.")
     parser.add_argument("--max-objects", type=int, help="Maximum number of objects to convert after filtering.")
@@ -450,7 +445,7 @@ def convert(args: argparse.Namespace) -> dict[str, Any]:
                     "source_dataset": "3d_affordancenet",
                     "object_category": category,
                     "task": task,
-                    "task_instruction": TASK_INSTRUCTIONS[task],
+                    "task_instruction": task_instruction(task),
                     "point_cloud_path": relative_to_root(point_path, root),
                     "multi_channel_mask_path": relative_to_root(mask_path, root),
                     "candidate_region_path": relative_to_root(candidate_path, root),

@@ -16,8 +16,11 @@ from typing import Any
 
 import numpy as np
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-EXECUTOR_ORDER = ["gripper", "suction", "hook", "dexterous_hand"]
+from utils.task_taxonomy import ALL_TASKS, EXECUTOR_ORDER
+
+KNOWN_TASKS = set(ALL_TASKS)
 
 
 def parse_args() -> argparse.Namespace:
@@ -288,7 +291,7 @@ def batch_export(args: argparse.Namespace) -> None:
     rows = read_samples(samples_path)
     sample_filter = set(args.sample_id or [])
     task_filter = set(args.task or [])
-    if task_filter and not task_filter.issubset({"pick_up", "lift_carry", "open_pull", "press_push"}):
+    if task_filter and not task_filter.issubset(KNOWN_TASKS):
         error(f"Unknown task filter values: {sorted(task_filter)}")
     selected: list[dict[str, Any]] = []
     for row in rows:

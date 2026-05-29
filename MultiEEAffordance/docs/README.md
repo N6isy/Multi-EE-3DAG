@@ -1,6 +1,24 @@
 # Multi-EE-3DAG 文档索引
 
-更新时间：2026-05-26
+更新时间：2026-05-29
+
+## 当前任务体系状态
+
+当前项目同时保留两条概念链路：
+
+1. 旧任务候选生成链路：`pick_up`、`open_pull`、`press_push`，以及历史兼容的 `lift_carry`。这些数据已经生成过，不能删除或覆盖。
+2. 五任务人工标注链路：`lift`、`open`、`pull`、`press`、`push`。这是后续人工审查和新数据版本的主线。
+
+旧任务到五任务的映射为：
+
+| 旧任务 | 五任务 |
+| --- | --- |
+| `pick_up` | `lift` |
+| `open_pull` | `open` + `pull` |
+| `press_push` | `press` + `push` |
+| `lift_carry` | `lift` |
+
+旧任务候选只能作为五任务人工标注的 proposal，不能直接当作五任务 ground truth。统一任务定义集中在 `MultiEEAffordance/utils/task_taxonomy.py`，当前版本号为 `v0_2_5tasks`。
 
 ## 当前推荐命令速查
 
@@ -8,23 +26,23 @@
 
 ## 当前双人协作标注版本
 
-当前建议把轻量自动候选 + 人工点级审查版本冻结为双人协作标注 v0.1：
+当前建议把轻量自动候选 + 人工点级审查版本冻结为双人协作标注 v0.2 五任务版：
 
 - 稳定标注分支：`annotation/mvp-v0.1`
 - 稳定标注标签：`annotation-mvp-v0.1`
 - 候选生成研发分支：`dev/high-recall-candidate-v0.2`
-- 双人协作输出目录：`processed/annotation_batches/v0_1/`
+- 双人协作输出目录：`processed/annotation_batches/v0_2_5tasks/`
 
 两位审查者统一使用中性身份 `reviewer_a` 和 `reviewer_b`。当前推荐 GitHub + 本地数据包协作：维护者生成候选并拆分数据包，审查者本地拉取仓库、解压自己的数据包、运行本地审查网页，最后把结果包回传给维护者合并。
 
 双人协作标注优先阅读：
 
-1. `双人协作标注README.md`
-2. `维护者协作标注README.md`
+1. `双人协作标注README_5tasks.md`
+2. `维护者协作标注README_5tasks.md`
 3. `标注版本冻结与研发分支说明.md`
 4. `大规模人工审查与已审查数据集可视化.md`
 
-其中 `双人协作标注README.md` 是审查者操作手册，包含本地环境、数据包解压、页面操作、保存检查和每日交付；`维护者协作标注README.md` 是维护者批次管理手册，包含原始 pkl/zip 数据说明、样本转换、队列生成、候选生成、拆包、收包和合并；`标注版本冻结与研发分支说明.md` 是版本管理手册，包含分支/tag、hotfix、批次目录和 v0.2 升级条件。
+其中 `双人协作标注README_5tasks.md` 是审查者操作手册，包含本地环境、数据包解压、页面操作、保存检查和每日交付；`维护者协作标注README_5tasks.md` 是维护者批次管理手册，包含原始 pkl/zip 数据说明、旧候选生成、五任务展开、分包、收包和合并；`标注版本冻结与研发分支说明.md` 是版本管理手册，包含分支/tag、hotfix、批次目录和后续研发隔离条件。
 
 ### 1. 先小批查看候选 overlay
 
@@ -71,14 +89,28 @@ CUDA_VISIBLE_DEVICES=1,2 python MultiEEAffordance/tools/run_v3_pipeline.py \
   --overwrite
 ```
 
-### 3. 启动人工审查系统
+### 3. 展开为五任务人工标注 samples
 
-单人调试或本地验证可以使用下面命令。正式双人协作标注请优先使用 `双人协作标注README.md` 中的 `reviewer_a/reviewer_b` 独立输出路径。
+旧任务候选生成完成后，不直接进入正式标注。先把旧任务候选 samples 展开成五任务 samples：
+
+```bash
+python MultiEEAffordance/tools/expand_legacy_tasks_to_5tasks.py \
+  --input MultiEEAffordance/processed/metadata/v3_candidate_samples_v0_1.jsonl \
+  --output MultiEEAffordance/processed/metadata/v3_candidate_samples_v0_2_5tasks.jsonl \
+  --summary-json MultiEEAffordance/processed/metadata/v3_candidate_samples_v0_2_5tasks_summary.json \
+  --overwrite
+```
+
+输出中的 `source_task/source_sample_id/task_taxonomy_version/task_split_source` 用于追溯旧任务候选来源。
+
+### 4. 启动人工审查系统
+
+单人调试或本地验证可以使用下面命令。正式双人协作标注请优先使用 `双人协作标注README_5tasks.md` 中的 `reviewer_a/reviewer_b` 独立输出路径，并在网页打开后选择当前 reviewer 身份。
 
 ```bash
 python MultiEEAffordance/tools/serve_v2_annotation_app.py \
   --dataset-root MultiEEAffordance \
-  --samples processed/metadata/v3_candidate_samples_v0_1.jsonl \
+  --samples processed/metadata/v3_candidate_samples_v0_2_5tasks.jsonl \
   --review-jsonl processed/metadata/v3_point_level_review_records.jsonl \
   --output-mask-root processed/vlm_candidate_v3/manual_refined_masks \
   --output-samples processed/metadata/v3_manual_refined_samples_v0_1.jsonl \
@@ -93,8 +125,8 @@ python MultiEEAffordance/tools/serve_v2_annotation_app.py \
 
 | 文档 | 用途 |
 | --- | --- |
-| `双人协作标注README.md` | 审查者本地操作流程：拉仓库、解压数据包、打开网页、点级审查、保存并回传结果 |
-| `维护者协作标注README.md` | 维护者批次管理流程：准备原始数据、转换样本、生成候选、拆包发包、收包合并 |
+| `双人协作标注README_5tasks.md` | 五任务审查者本地操作流程：拉仓库、解压数据包、打开网页、选择 reviewer 身份、点级审查、保存并回传结果 |
+| `维护者协作标注README_5tasks.md` | 五任务维护者批次管理流程：准备原始数据、旧候选生成、展开五任务、拆包发包、收包合并 |
 | `标注版本冻结与研发分支说明.md` | `annotation/mvp-v0.1` 稳定标注版本和 `dev/high-recall-candidate-v0.2` 研发分支约定 |
 | `v3自研高召回3D候选生成器说明.md` | 当前 v3 主线：自研高召回 3D part candidate generator、VLM 候选选择、人工审查 |
 | `大规模人工审查与已审查数据集可视化.md` | 大规模队列、审查系统、已审查数据集 release 和只读可视化 |

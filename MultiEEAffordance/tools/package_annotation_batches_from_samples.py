@@ -32,17 +32,13 @@ from collections import Counter, defaultdict, deque
 from pathlib import Path
 from typing import Any, Iterable
 
-LEGACY_AND_NEW_TASK_SUFFIXES = (
-    "_pick_up",
-    "_open_pull",
-    "_press_push",
-    "_lift_carry",
-    "_lift",
-    "_open",
-    "_pull",
-    "_press",
-    "_push",
-)
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from utils.task_taxonomy import TASK_SUFFIXES
+
+LEGACY_AND_NEW_TASK_SUFFIXES = TASK_SUFFIXES
 
 PATH_LIKE_KEY_RE = re.compile(
     r"(path|file|manifest|npz|npy|ply|mask|candidate|point|render|image|jsonl|json)$",
@@ -136,7 +132,7 @@ def resolve_path(root: Path, value: str | Path) -> Path:
 
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
-    with path.open("r", encoding="utf-8") as f:
+    with path.open("r", encoding="utf-8-sig") as f:
         for line_no, line in enumerate(f, 1):
             line = line.strip()
             if not line:
@@ -185,6 +181,38 @@ def sample_key(row: dict[str, Any]) -> str:
             str(row.get("target_executor") or row.get("executor") or ""),
         ]
     )
+
+
+def validate_input_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    row_keys: Counter[str] = Counter()
+    triplets: Counter[str] = Counter()
+    missing_row_key = 0
+    for row in rows:
+        explicit = str(row.get("row_key") or "").strip()
+        if not explicit:
+            missing_row_key += 1
+        key = explicit or sample_key(row)
+        row_keys[key] += 1
+        triplet = "|".join(
+            [
+                str(row.get("sample_id") or ""),
+                str(row.get("task") or row.get("target_task") or ""),
+                str(row.get("target_executor") or row.get("executor") or ""),
+            ]
+        )
+        triplets[triplet] += 1
+    duplicate_row_keys = {key: count for key, count in row_keys.items() if count > 1}
+    duplicate_triplets = {key: count for key, count in triplets.items() if count > 1}
+    if duplicate_row_keys:
+        raise ValueError(f"Duplicate row_key/sample keys in input: {duplicate_row_keys}")
+    if duplicate_triplets:
+        raise ValueError(f"Duplicate sample_id+task+executor rows in input: {duplicate_triplets}")
+    return {
+        "rows": len(rows),
+        "missing_row_key": missing_row_key,
+        "unique_row_keys": len(row_keys),
+        "unique_sample_task_executor": len(triplets),
+    }
 
 
 def split_by_object_groups(
@@ -258,6 +286,8 @@ def maybe_path_string(value: str) -> bool:
     if lowered.endswith(PATH_LIKE_SUFFIXES):
         return True
     if "/" in value and not value.startswith("http://") and not value.startswith("https://"):
+        if any(ch.isspace() for ch in value.strip()):
+            return False
         return True
     return False
 
@@ -421,6 +451,7 @@ def copy_or_rewrite_file(src: Path, dst: Path, root: Path, overwrite: bool) -> N
 
 
 def write_package_readme(path: Path, reviewer_id: str, sample_relpath: str) -> None:
+    sample_dir = Path(sample_relpath).parent.as_posix()
     text = f"""# MultiEEAffordance annotation package: {reviewer_id}
 
 This package contains only the samples assigned to `{reviewer_id}` and the files
@@ -440,7 +471,11 @@ npz files.
 python MultiEEAffordance/tools/serve_v2_annotation_app.py \\
   --dataset-root MultiEEAffordance \\
   --samples {sample_relpath} \\
-  --reviewer-id {reviewer_id}
+  --review-jsonl {sample_dir}/{reviewer_id}_review_records.jsonl \\
+  --output-mask-root {sample_dir}/manual_refined_masks_{reviewer_id} \\
+  --output-samples {sample_dir}/{reviewer_id}_refined_samples.jsonl \\
+  --port 8765 \\
+  --top-k-candidates 12
 ```
 
 If your local tool expects an absolute dataset root, use the absolute path to the
@@ -548,11 +583,11 @@ def package_reviewer(
                 "samples": reviewer_samples_rel,
                 "rows": len(normalized_rows),
                 "objects": len({object_key(row) for row in normalized_rows}),
-                "tasks": Counter(str(row.get("task", "")) for row in normalized_rows),
-                "executors": Counter(
+                "tasks": dict(Counter(str(row.get("task", "")) for row in normalized_rows)),
+                "executors": dict(Counter(
                     str(row.get("target_executor") or row.get("executor") or "")
                     for row in normalized_rows
-                ),
+                )),
                 "files_copied": len(copied_files),
                 "missing_references": missing,
                 "skipped_external_files": skipped_external,
@@ -605,6 +640,7 @@ def main() -> None:
         raise ValueError("At least one reviewer id is required.")
 
     rows = read_jsonl(input_path)
+    input_validation = validate_input_rows(rows)
     assignments, group_items = split_by_object_groups(rows, reviewer_ids, args.calibration_objects)
     batch_dir.mkdir(parents=True, exist_ok=True)
 
@@ -627,6 +663,7 @@ def main() -> None:
         "dataset_root": root.as_posix(),
         "batch_dir": batch_dir.as_posix(),
         "rows_total": len(rows),
+        "input_validation": input_validation,
         "object_groups_total": len(group_items),
         "reviewers": reviewer_summaries,
         "calibration_objects": args.calibration_objects,

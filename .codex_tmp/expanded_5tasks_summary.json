@@ -1,0 +1,43 @@
+{
+  "input": ".codex_tmp\\legacy_sample.jsonl",
+  "output": ".codex_tmp\\expanded_5tasks.jsonl",
+  "task_taxonomy_version": "v0_2_5tasks",
+  "task_field_mode": "replace",
+  "rows_input": 1,
+  "rows_output": 2,
+  "mapping": {
+    "pick_up": [
+      "lift"
+    ],
+    "open_pull": [
+      "open",
+      "pull"
+    ],
+    "press_push": [
+      "press",
+      "push"
+    ],
+    "lift_carry": [
+      "lift"
+    ]
+  },
+  "counts_by_source_task_after_expansion": {
+    "open_pull": 2
+  },
+  "counts_by_new_task": {
+    "open": 1,
+    "pull": 1
+  },
+  "counts_by_executor": {
+    "hook": 2
+  },
+  "counts_by_category": {
+    "Door": 2
+  },
+  "skipped": {},
+  "notes": [
+    "Candidate paths are reused; this script does not regenerate point clouds, masks, or 3D candidates.",
+    "Use this output for human annotation/reviewer packaging, not as final ground truth.",
+    "If downstream scripts reject lift/open/pull/press/push, rerun with --task-field-mode alias_only or update task validators."
+  ]
+}

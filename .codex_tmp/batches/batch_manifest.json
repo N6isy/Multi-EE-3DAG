@@ -1,0 +1,61 @@
+{
+  "input": "D:/VSCode/Multi-EE-3DAG/.codex_tmp/expanded_5tasks.jsonl",
+  "dataset_root": "D:/VSCode/Multi-EE-3DAG",
+  "batch_dir": "D:/VSCode/Multi-EE-3DAG/.codex_tmp/batches",
+  "rows_total": 2,
+  "input_validation": {
+    "rows": 2,
+    "missing_row_key": 0,
+    "unique_row_keys": 2,
+    "unique_sample_task_executor": 2
+  },
+  "object_groups_total": 1,
+  "reviewers": {
+    "reviewer_a": {
+      "samples": "D:/VSCode/Multi-EE-3DAG/.codex_tmp/batches/reviewer_a_samples.jsonl",
+      "rows": 2,
+      "objects": 1,
+      "tasks": {
+        "open": 1,
+        "pull": 1
+      },
+      "executors": {
+        "hook": 2
+      },
+      "dependencies_found": 0,
+      "missing_references": [
+        {
+          "value": "processed/points/obj.npy",
+          "source": "sample_row",
+          "reason": "not_found"
+        },
+        {
+          "value": "processed/vlm_candidate_v3/3d_candidates/p1/candidate_manifest.json",
+          "source": "sample_row",
+          "reason": "not_found"
+        },
+        {
+          "value": "processed/vlm_candidate_v3/3d_candidates/p1/candidates.npz",
+          "source": "sample_row",
+          "reason": "not_found"
+        }
+      ],
+      "archive": null,
+      "package_dir": "D:/VSCode/Multi-EE-3DAG/.codex_tmp/batches/reviewer_a_package_dir"
+    },
+    "reviewer_b": {
+      "samples": "D:/VSCode/Multi-EE-3DAG/.codex_tmp/batches/reviewer_b_samples.jsonl",
+      "rows": 0,
+      "objects": 0,
+      "tasks": {},
+      "executors": {},
+      "dependencies_found": 0,
+      "missing_references": [],
+      "archive": null,
+      "package_dir": "D:/VSCode/Multi-EE-3DAG/.codex_tmp/batches/reviewer_b_package_dir"
+    }
+  },
+  "calibration_objects": 0,
+  "archive_format": "none",
+  "dry_run": true
+}

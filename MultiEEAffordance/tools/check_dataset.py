@@ -12,9 +12,11 @@ from typing import Any
 
 import numpy as np
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-EXECUTOR_ORDER = ["gripper", "suction", "hook", "dexterous_hand"]
-TASKS = {"pick_up", "lift_carry", "open_pull", "press_push"}
+from utils.task_taxonomy import ALL_TASKS, EXECUTOR_ORDER
+
+TASKS = set(ALL_TASKS)
 SOURCE_DATASETS = {"3d_affordancenet", "partnet_mobility", "shapenet", "objaverse", "manual"}
 QUALITY_FLAGS = {"weak", "checked", "verified"}
 SPLITS = {"train", "val", "test", "contrast_test"}

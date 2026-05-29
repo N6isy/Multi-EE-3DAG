@@ -1,10 +1,12 @@
 # V3 语义目标-拒绝候选 Pipeline 设计与汇报
 
-更新时间：2026-05-21 +08:00
+更新时间：2026-05-29 +08:00
 
 > 当前状态：历史设计文档。本文记录的是旧的 `ground -> project -> grow` target/reject seed-growth 方案。当前推荐主线已经切换为 `candidate-source partseg` + `part-proposal-backend high_recall`，具体命令见 `v3自研高召回3D候选生成器说明.md` 和 `大规模人工审查与已审查数据集可视化.md`。
 
 > 标注版本说明：当前轻量自动候选 + 人工点级审查版本将冻结为 `annotation/mvp-v0.1`，用于双人协作标注。后续候选生成器改进进入 `dev/high-recall-candidate-v0.2`，不要在同一标注批次中混用不同候选生成版本。
+
+> 任务体系说明：本文中的 `pick_up/open_pull/press_push/lift_carry` 属于旧候选生成任务。当前人工审查主线使用五任务 `lift/open/pull/press/push`。旧候选通过 `expand_legacy_tasks_to_5tasks.py` 展开后只作为 proposal，不能作为五任务 GT。
 
 ## 1. 当前问题判断
 

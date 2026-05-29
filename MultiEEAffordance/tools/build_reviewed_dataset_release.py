@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
@@ -12,10 +13,13 @@ from typing import Any
 
 import numpy as np
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-EXECUTOR_ORDER = ["gripper", "suction", "hook", "dexterous_hand"]
-KNOWN_TASKS = {"pick_up", "lift_carry", "open_pull", "press_push"}
-DEFAULT_ACTIVE_TASKS = {"pick_up", "open_pull", "press_push"}
+from utils.task_taxonomy import ALL_TASKS, EXECUTOR_ORDER, NEW_DEFAULT_ACTIVE_TASKS
+
+
+KNOWN_TASKS = set(ALL_TASKS)
+DEFAULT_ACTIVE_TASKS = set(NEW_DEFAULT_ACTIVE_TASKS)
 
 
 def parse_args() -> argparse.Namespace:
@@ -46,8 +50,8 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--include-tasks",
-        default="pick_up,open_pull,press_push",
-        help="Comma-separated tasks to keep, or 'all'. Default excludes lift_carry.",
+        default=",".join(NEW_DEFAULT_ACTIVE_TASKS),
+        help="Comma-separated tasks to keep, or 'all'. Default is the five-task review taxonomy.",
     )
     parser.add_argument("--exclude-tasks", default="", help="Comma-separated tasks to drop after include filtering.")
     parser.add_argument(
@@ -248,7 +252,7 @@ def build_release(args: argparse.Namespace) -> dict[str, Any]:
             "created_at": datetime.now(timezone.utc).isoformat(),
             "source": "point_level_human_review",
             "target_positive_points": int(count or 0),
-            "task_policy": "lift_carry_excluded_by_default",
+            "task_policy": "five_task_review_default",
         }
         kept.append(release_row)
         if args.limit is not None and len(kept) >= args.limit:

@@ -8,7 +8,7 @@
 P, q -> [M_gripper, M_suction, M_hook, M_dexterous_hand]
 ```
 
-其中 `P` 表示单个物体的 3D 点云，`q` 表示任务，例如 `pick_up`、`lift_carry`、`open_pull`、`press_push`。输出是四通道点级 mask：
+其中 `P` 表示单个物体的 3D 点云，`q` 表示人工标注阶段采用的五任务之一：`lift`、`open`、`pull`、`press`、`push`。输出是四通道点级 mask：
 
 | 通道 | 执行器 | 含义 |
 | --- | --- | --- |
@@ -23,11 +23,22 @@ P, q -> [M_gripper, M_suction, M_hook, M_dexterous_hand]
 
 项目目前处于数据集原型和候选标注流程验证阶段，还不是最终可直接训练的大规模数据集。
 
+当前任务体系已经从旧候选生成任务切换到五任务人工标注体系：
+
+| 旧候选任务 | 五任务人工标注任务 | 说明 |
+| --- | --- | --- |
+| `pick_up` | `lift` | 旧候选继续作为 lift 的 proposal |
+| `open_pull` | `open` + `pull` | 一对多展开，不能直接重命名 |
+| `press_push` | `press` + `push` | 一对多展开，不能直接重命名 |
+| `lift_carry` | `lift` | 仅作为历史兼容任务 |
+
+旧任务生成的候选、mask 和 pipeline 输出不得删除或覆盖。它们只作为五任务人工审查的候选 proposal，最终标签以 `reviewer_a/reviewer_b` 在网页中按五任务语义审查后的 refined mask 为准。
+
 已经完成的内容包括：
 
 - 基于 3D AffordanceNet full-shape 数据构建了第一版物体级样本。
 - 完成了 61 条样本的网页端人工审查，并形成 cleaned v0.1 数据格式。
-- 明确了四类末端执行器、四类任务下的中文标注规范。
+- 明确了四类末端执行器和五任务人工标注规范。
 - 构建了候选区域生成、VLM 辅助筛选、规则过滤和网页人工审查流程。
 - 当前正在验证 v3 pipeline：让 VLM 先判断目标部件和应排除部件，再生成更适合人工审查的 3D 候选区域。
 
@@ -57,19 +68,23 @@ Multi-EE-3DAG/
 
 如果你是第一次看这个项目，建议按下面顺序阅读：
 
-1. `MultiEEAffordance/docs/异构末端执行器标注规范.md`
-   - 了解四类执行器和四类任务的标注标准。
-2. `MultiEEAffordance/docs/项目进度日志.md`
+1. `MultiEEAffordance/docs/双人协作标注README_5tasks.md`
+   - 审查者本地标注操作手册：拉仓库、解压数据包、启动网页、选择身份、保存结果。
+2. `MultiEEAffordance/docs/维护者协作标注README_5tasks.md`
+   - 维护者准备候选、展开五任务、分包、回收和合并结果。
+3. `MultiEEAffordance/docs/异构末端执行器标注规范.md`
+   - 了解四类执行器和五任务标注标准。
+4. `MultiEEAffordance/docs/项目进度日志.md`
    - 了解项目目前已经完成了什么、失败过什么、下一步做什么。
-3. `MultiEEAffordance/docs/V3语义目标拒绝候选Pipeline设计与汇报.md`
+5. `MultiEEAffordance/docs/V3语义目标拒绝候选Pipeline设计与汇报.md`
    - 了解当前最新 v3 pipeline 为什么这样设计。
-4. `MultiEEAffordance/tools/serve_v2_annotation_app.py`
+6. `MultiEEAffordance/tools/serve_v2_annotation_app.py`
    - 网页人工审查系统，支持候选组合选择和点级增删。
-5. `MultiEEAffordance/tools/run_v3_pipeline.py`
+7. `MultiEEAffordance/tools/run_v3_pipeline.py`
    - 当前推荐的一键式 v3 候选生成流程。
-6. `MultiEEAffordance/tools/run_v3_semantic_part_planner.py`
+8. `MultiEEAffordance/tools/run_v3_semantic_part_planner.py`
    - VLM 如何先输出目标部件和拒绝部件。
-7. `MultiEEAffordance/tools/grow_v3_reject_aware_candidates.py`
+9. `MultiEEAffordance/tools/grow_v3_reject_aware_candidates.py`
    - 如何从 target seed 生长候选，并用 reject veto 排除错误区域。
 
 ## 主要脚本说明
@@ -114,29 +129,48 @@ MultiEEAffordance/docs/Qwen3-VL+SAM2远程运行说明.md
 
 ## v3 pipeline 运行示例
 
-在远程服务器上，优先验证 10 条 pilot 样本：
+旧任务候选生成仍使用 `pick_up/open_pull/press_push`。如果只做当前人工审查输入，推荐轻量运行 `part_propose,build`：
 
 ```bash
 CUDA_VISIBLE_DEVICES=1,2 python MultiEEAffordance/tools/run_v3_pipeline.py \
   --dataset-root MultiEEAffordance \
   --config configs/qwen3vl_sam2_pilot.yaml \
-  --limit 10 \
-  --stages views,plan,ground,project,grow,render,build \
+  --pilot-csv processed/metadata/v3_large_scale_review_queue_v0_1.csv \
+  --samples processed/metadata/samples_v3_large_batch_v0_1.jsonl \
+  --include-tasks pick_up,open_pull,press_push \
+  --exclude-tasks lift_carry \
+  --include-decisions all \
+  --candidate-source partseg \
+  --part-proposal-backend high_recall \
+  --stages part_propose,build \
+  --proposal-max-candidates 64 \
+  --max-candidates 12 \
+  --part-top-k 5 \
   --allow-empty \
-  --overwrite \
-  --box-shrink-ratio 0.05 \
-  --max-target-box-area-fraction 0.30 \
-  --expand-hops 2
+  --overwrite
 ```
 
-生成候选样本后，启动网页审查系统：
+生成旧任务候选 samples 后，先展开为五任务人工审查 samples：
+
+```bash
+python MultiEEAffordance/tools/expand_legacy_tasks_to_5tasks.py \
+  --input MultiEEAffordance/processed/metadata/v3_candidate_samples_v0_1.jsonl \
+  --output MultiEEAffordance/processed/metadata/v3_candidate_samples_v0_2_5tasks.jsonl \
+  --summary-json MultiEEAffordance/processed/metadata/v3_candidate_samples_v0_2_5tasks_summary.json \
+  --overwrite
+```
+
+然后启动网页审查系统。网页打开后必须选择 `reviewer_a` 或 `reviewer_b`：
 
 ```bash
 python MultiEEAffordance/tools/serve_v2_annotation_app.py \
   --dataset-root MultiEEAffordance \
-  --samples processed/metadata/v3_candidate_samples_v0_1.jsonl \
+  --samples processed/metadata/v3_candidate_samples_v0_2_5tasks.jsonl \
+  --review-jsonl processed/metadata/v3_point_level_review_records.jsonl \
+  --output-mask-root processed/vlm_candidate_v3/manual_refined_masks \
+  --output-samples processed/metadata/v3_manual_refined_samples_v0_2_5tasks.jsonl \
   --port 8765 \
-  --top-k-candidates 0
+  --top-k-candidates 12
 ```
 
 打开：
@@ -177,6 +211,7 @@ http://127.0.0.1:8765/
 - `processed/` 中很多文件是中间结果或本地运行结果，GitHub 上不一定完整。
 - `external/`、大模型权重和原始数据通常不上传。
 - 当前 v3 pipeline 仍处于验证阶段，所有自动候选都需要人工审查。
+- 旧任务候选只能作为五任务人工审查 proposal。
 - 不要把 VLM/SAM2 或几何规则生成的 mask 直接作为最终标注。
 - 修改标注规范或 pipeline 逻辑时，需要同步更新 `docs/项目进度日志.md`。
 

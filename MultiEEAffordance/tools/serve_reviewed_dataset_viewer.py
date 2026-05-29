@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 import traceback
 from collections import Counter
 from http import HTTPStatus
@@ -15,9 +16,12 @@ from urllib.parse import parse_qs, urlparse
 
 import numpy as np
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-EXECUTOR_ORDER = ["gripper", "suction", "hook", "dexterous_hand"]
-DEFAULT_ACTIVE_TASKS = {"pick_up", "open_pull", "press_push"}
+from utils.task_taxonomy import EXECUTOR_ORDER, NEW_DEFAULT_ACTIVE_TASKS
+
+
+DEFAULT_ACTIVE_TASKS = set(NEW_DEFAULT_ACTIVE_TASKS)
 
 
 def parse_args() -> argparse.Namespace:
@@ -39,8 +43,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8780)
     parser.add_argument("--max-points", type=int, default=0, help="0 sends all points.")
-    parser.add_argument("--include-tasks", default="pick_up,open_pull,press_push", help="Comma-separated tasks or 'all'.")
-    parser.add_argument("--exclude-tasks", default="lift_carry", help="Comma-separated tasks to hide.")
+    parser.add_argument("--include-tasks", default=",".join(NEW_DEFAULT_ACTIVE_TASKS), help="Comma-separated tasks or 'all'.")
+    parser.add_argument("--exclude-tasks", default="", help="Comma-separated tasks to hide.")
     return parser.parse_args()
 
 
@@ -81,7 +85,8 @@ def sample_key(row: dict[str, Any]) -> str:
     point_edit = row.get("v2_point_edit", {}) if isinstance(row.get("v2_point_edit"), dict) else {}
     update = row.get("v2_candidate_update", {}) if isinstance(row.get("v2_candidate_update"), dict) else {}
     executor = str(point_edit.get("executor") or update.get("executor") or row.get("executor") or "").strip()
-    return "|".join(part for part in (str(row.get("pilot_id") or ""), str(row.get("sample_id") or ""), executor) if part)
+    task = str(row.get("task") or row.get("target_task") or "").strip()
+    return "|".join(part for part in (str(row.get("pilot_id") or ""), str(row.get("sample_id") or ""), task, executor) if part)
 
 
 def target_executor(row: dict[str, Any]) -> str:
@@ -403,7 +408,7 @@ function renderList() {
   const list = document.getElementById("sampleList");
   list.innerHTML = "";
   const filtered = samples.filter(s => `${s.sample_id} ${s.object_category} ${s.task} ${s.executor}`.toLowerCase().includes(q));
-  const objectKey = (s) => s.object_id || String(s.sample_id || "").replace(/_(pick_up|open_pull|press_push|lift_carry)$/,"");
+  const objectKey = (s) => s.object_id || String(s.sample_id || "").replace(/_(pick_up|open_pull|press_push|lift_carry|lift|open|pull|press|push)$/,"");
   const groups = new Map();
   filtered.forEach(s => {
     const key = objectKey(s);

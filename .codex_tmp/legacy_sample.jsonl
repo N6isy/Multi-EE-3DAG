@@ -1,0 +1,1 @@
+﻿{"sample_id":"obj_open_pull","pilot_id":"p1","review_id":"r1","object_id":"obj","object_category":"Door","task":"open_pull","target_executor":"hook","point_cloud_path":"processed/points/obj.npy","candidate_manifest":"processed/vlm_candidate_v3/3d_candidates/p1/candidate_manifest.json","candidate_npz":"processed/vlm_candidate_v3/3d_candidates/p1/candidates.npz"}

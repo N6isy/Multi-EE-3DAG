@@ -1,6 +1,6 @@
 # 维护者协作标注 README
 
-更新时间：2026-05-28
+更新时间：2026-05-29
 
 本文档只面向维护者。维护者负责准备数据、生成自动候选、拆分标注批次、发给两位审查者、收回结果、合并并发布已审查数据集。
 
@@ -963,7 +963,75 @@ Mug / pick_up / suction
 
 如果自动候选质量一般，也可以继续进入人工审查；但要保证网页里有足够候选可选，并且人工可以方便增删点。
 
-## 11. 第七步：划分审查样本并只打包 reviewer_b 本地数据包
+## 11. 第七步：展开五任务 samples 并划分审查批次
+
+**当前主流程以本节为准。** 旧版文档里曾经使用 `v0_1_5tasks` 和 `package_reviewer_b_only_annotation_batch_progress.py`，现在统一改为 `v0_2_5tasks` 和 `package_annotation_batches_from_samples.py`。旧任务候选仍然保留，只作为五任务人工审查 proposal。
+
+旧任务到五任务的展开关系：
+
+```text
+pick_up    -> lift
+open_pull  -> open + pull
+press_push -> press + push
+lift_carry -> lift
+```
+
+先把旧任务候选 samples 展开成五任务 samples：
+
+```bash
+python MultiEEAffordance/tools/expand_legacy_tasks_to_5tasks.py \
+  --input /home/lzq/data/MultiEEAffordance/processed/metadata/v3_candidate_samples_v0_1.jsonl \
+  --output /home/lzq/data/MultiEEAffordance/processed/metadata/v3_candidate_samples_v0_2_5tasks.jsonl \
+  --summary-json /home/lzq/data/MultiEEAffordance/processed/metadata/v3_candidate_samples_v0_2_5tasks_summary.json \
+  --overwrite
+```
+
+展开脚本只改 metadata，不重新生成点云、候选或 mask。输出必须包含 `row_key`、`task_display`、`source_task`、`source_sample_id`、`task_taxonomy_version`、`task_split_source`；其中 `task_taxonomy_version` 应为 `v0_2_5tasks`，`task_split_source` 应为 `legacy_task_expansion`。
+
+然后按 object 分组拆分 reviewer 批次并打包依赖：
+
+```bash
+python MultiEEAffordance/tools/package_annotation_batches_from_samples.py \
+  --dataset-root /home/lzq/data/MultiEEAffordance \
+  --input processed/metadata/v3_candidate_samples_v0_2_5tasks.jsonl \
+  --batch-dir processed/annotation_batches/v0_2_5tasks \
+  --reviewers reviewer_a,reviewer_b \
+  --calibration-objects 0 \
+  --archive-format tar.gz \
+  --dry-run \
+  --overwrite
+```
+
+dry-run 重点检查 `input_validation`、`missing_references` 和两位 reviewer 的样本数量。确认无关键依赖缺失后再正式打包：
+
+```bash
+python MultiEEAffordance/tools/package_annotation_batches_from_samples.py \
+  --dataset-root /home/lzq/data/MultiEEAffordance \
+  --input processed/metadata/v3_candidate_samples_v0_2_5tasks.jsonl \
+  --batch-dir processed/annotation_batches/v0_2_5tasks \
+  --reviewers reviewer_a,reviewer_b \
+  --calibration-objects 0 \
+  --archive-format tar.gz \
+  --overwrite
+```
+
+正式输出：
+
+```text
+/home/lzq/data/MultiEEAffordance/processed/annotation_batches/v0_2_5tasks/reviewer_a_samples.jsonl
+/home/lzq/data/MultiEEAffordance/processed/annotation_batches/v0_2_5tasks/reviewer_b_samples.jsonl
+/home/lzq/data/MultiEEAffordance/processed/annotation_batches/v0_2_5tasks/reviewer_a_annotation_package.tar.gz
+/home/lzq/data/MultiEEAffordance/processed/annotation_batches/v0_2_5tasks/reviewer_b_annotation_package.tar.gz
+/home/lzq/data/MultiEEAffordance/processed/annotation_batches/v0_2_5tasks/batch_manifest.json
+```
+
+如果维护者本人就是 `reviewer_a`，可以直接使用 `reviewer_a_samples.jsonl` 启动网页；另一位审查者使用自己的压缩包。两人的 samples 不应重叠，除非维护者显式设置了 `--calibration-objects` 做一致性校准。
+
+### 11.0 历史说明
+
+下面保留的旧说明仅用于追溯早期 `v0_1_5tasks` 打包方式。新批次不要再按旧脚本执行。
+
+## 11.old 历史：划分审查样本并只打包 reviewer_b 本地数据包
 
 当前采用 **v0.1_5tasks** 标注批次。这里的五任务文件不是重新跑 `run_v3_pipeline.py` 生成的，而是由旧三任务候选结果展开得到：
 

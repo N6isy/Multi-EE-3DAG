@@ -6,15 +6,17 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import sys
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from utils.task_taxonomy import EXECUTOR_ORDER, LEGACY_DEFAULT_ACTIVE_TASKS, LEGACY_TASKS
 
-EXECUTOR_ORDER = ["gripper", "suction", "hook", "dexterous_hand"]
-KNOWN_TASKS = {"pick_up", "lift_carry", "open_pull", "press_push"}
-DEFAULT_ACTIVE_TASKS = {"pick_up", "open_pull", "press_push"}
+KNOWN_TASKS = set(LEGACY_TASKS)
+DEFAULT_ACTIVE_TASKS = set(LEGACY_DEFAULT_ACTIVE_TASKS)
 FIELDNAMES = [
     "pilot_id",
     "sample_id",
@@ -43,7 +45,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-csv", default="processed/metadata/v3_large_scale_review_queue_v0_1.csv")
     parser.add_argument("--summary-json", default="processed/metadata/v3_large_scale_review_queue_summary_v0_1.json")
     parser.add_argument("--pilot-prefix", default="v3_review")
-    parser.add_argument("--include-tasks", default="pick_up,open_pull,press_push", help="Comma-separated tasks or 'all'.")
+    parser.add_argument(
+        "--include-tasks",
+        default=",".join(LEGACY_DEFAULT_ACTIVE_TASKS),
+        help="Comma-separated legacy candidate-generation tasks or 'all'.",
+    )
     parser.add_argument("--exclude-tasks", default="lift_carry", help="Comma-separated tasks to drop.")
     parser.add_argument(
         "--executor-scope",

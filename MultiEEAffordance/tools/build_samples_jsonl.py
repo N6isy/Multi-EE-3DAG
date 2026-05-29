@@ -13,9 +13,10 @@ from typing import Any
 
 import numpy as np
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from utils.task_taxonomy import EXECUTOR_ORDER, LEGACY_TASKS, task_instruction
 
-EXECUTOR_ORDER = ["gripper", "suction", "hook", "dexterous_hand"]
-TASKS = {"pick_up", "lift_carry", "open_pull", "press_push"}
+TASKS = set(LEGACY_TASKS)
 SOURCE_DATASETS = {"3d_affordancenet", "partnet_mobility", "shapenet", "objaverse", "manual"}
 QUALITY_FLAGS = {"weak", "checked", "verified"}
 SPLITS = {"train", "val", "test", "contrast_test"}
@@ -26,12 +27,6 @@ LABEL_SOURCES = {
     "manual_refinement",
     "mixed",
     "unavailable",
-}
-TASK_INSTRUCTIONS = {
-    "pick_up": "Pick up the object.",
-    "lift_carry": "Lift and carry the object.",
-    "open_pull": "Open or pull the articulated part.",
-    "press_push": "Press or push the target part.",
 }
 MISSING = object()
 
@@ -295,7 +290,7 @@ def normalize_sample(row: dict[str, Any], args: argparse.Namespace, dataset_root
         "source_dataset": source_dataset,
         "object_category": object_category,
         "task": task,
-        "task_instruction": row.get("task_instruction") or TASK_INSTRUCTIONS[task],
+        "task_instruction": row.get("task_instruction") or task_instruction(task),
         "point_cloud_path": point_cloud_path,
         "multi_channel_mask_path": str(mask_path),
         "executor_order": EXECUTOR_ORDER,
