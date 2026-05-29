@@ -396,9 +396,10 @@ class AnnotationStore:
     def load_masks(self, sample: dict[str, Any], executor: str, n_points: int) -> tuple[np.ndarray, str]:
         channel = EXECUTOR_ORDER.index(executor)
         candidates = [
+            sample.get("source_mask_path", ""),
             sample.get("multi_channel_mask_path", ""),
             sample.get("checked_mask_path", ""),
-            sample.get("source_mask_path", ""),
+            
         ]
         errors: list[str] = []
         for value in candidates:
@@ -630,9 +631,10 @@ APP_HTML = r"""<!doctype html>
     .reviewer-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
     .reviewer-options button { padding: 12px 10px; font-size: 14px; }
     .reviewer-note { margin-top: 12px; color: #b42318; font-size: 12px; min-height: 16px; }
-    .app { display: grid; grid-template-columns: 330px minmax(620px, 1fr) 380px; height: calc(100vh - 52px); }
+    .app { display: grid; grid-template-columns: 360px minmax(620px, 1fr) 380px; height: calc(100vh - 52px); }
     aside, .panel { overflow: auto; background: #fff; border-right: 1px solid #d7e5f6; }
-    aside { padding: 12px; }
+    aside { padding: 0; display: flex; flex-direction: column; overflow: hidden; }
+    .side-controls { position: sticky; top: 0; z-index: 6; background: #fff; padding: 12px; border-bottom: 1px solid #d7e5f6; box-shadow: 0 2px 10px rgba(15,47,87,.05); }
     .viewer { position: relative; background: radial-gradient(circle at 50% 42%, #ffffff 0, #f7fbff 48%, #eef6ff 100%); overflow: hidden; }
     .panel { border-right: 0; border-left: 1px solid #d7e5f6; padding: 14px; }
     input, select, textarea, button { font-family: inherit; font-size: 13px; }
@@ -646,8 +648,25 @@ APP_HTML = r"""<!doctype html>
     .sample-filter-tabs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 9px; }
     .sample-filter-tabs button { padding: 7px 5px; font-size: 12px; border-color: #d7e5f6; background: #fff; color: #1d5fbf; }
     .sample-filter-tabs button.active { background: #0f2f57; border-color: #0f2f57; color: #fff; }
-    .sample-list { display: flex; flex-direction: column; gap: 7px; margin-top: 10px; }
+    .sample-list { flex: 1; overflow: auto; display: flex; flex-direction: column; gap: 7px; margin-top: 0; padding: 10px 12px 12px; }
     .sample-section { margin: 12px 0 5px; padding: 6px 8px; border-radius: 999px; background: #eaf2ff; color: #0f2f57; font-size: 12px; font-weight: 700; display: flex; justify-content: space-between; }
+    .object-card { border: 1px solid #d7e5f6; border-radius: 10px; background: #fff; padding: 10px; }
+    .object-card.active { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,.13); }
+    .object-card-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+    .object-name { min-width: 0; font-size: 14px; font-weight: 800; color: #172033; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .object-count { flex: 0 0 auto; font-size: 11px; color: #64748b; background: #edf1f7; border-radius: 999px; padding: 2px 7px; }
+    .task-block { margin-top: 8px; }
+    .task-block:first-of-type { margin-top: 0; }
+    .task-title { font-size: 12px; font-weight: 750; color: #1d5fbf; margin: 0 0 5px 1px; }
+    .executor-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+    .executor-pill { border: 1px solid #d7e5f6; background: #f8fbff; color: #1e3a5f; border-radius: 999px; padding: 5px 9px; font-size: 12px; line-height: 1; cursor: pointer; }
+    .executor-pill:hover { border-color: #2563eb; background: #eff6ff; }
+    .executor-pill.active { border-color: #2563eb; background: #2563eb; color: white; box-shadow: 0 0 0 2px rgba(37,99,235,.14); }
+    .executor-pill.loading { border-color: #2563eb; background: #dbeafe; color: #1d4ed8; }
+    .executor-pill.checked { background: #dcfce7; border-color: #86efac; color: #166534; }
+    .executor-pill.refine_needed { background: #ffedd5; border-color: #fdba74; color: #9a3412; }
+    .executor-pill.reject { background: #fee2e2; border-color: #fca5a5; color: #991b1b; }
+    .executor-pill.pending { background: #f8fbff; color: #1e3a5f; }
     .sample { border: 1px solid #d7e5f6; border-radius: 8px; padding: 9px; cursor: pointer; }
     .sample.active { border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,.13); }
     .sample.loading { border-color: #2563eb; background: #eff6ff; }
@@ -679,7 +698,8 @@ APP_HTML = r"""<!doctype html>
     .field { margin-bottom: 11px; }
     .field label { display: block; color: #526070; font-size: 12px; margin-bottom: 5px; }
     .row { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
-    .savebar { position: sticky; bottom: -14px; background: #fff; border-top: 1px solid #d7e5f6; padding-top: 12px; display: flex; gap: 8px; }
+    .savebar { position: sticky; bottom: 0; z-index: 7; background: #fff; border-top: 1px solid #d7e5f6; padding: 12px 0 2px; display: grid; grid-template-columns: 1.35fr .82fr .82fr .82fr; gap: 8px; }
+    .savebar button { min-width: 0; padding-left: 8px; padding-right: 8px; white-space: nowrap; }
     .msg { margin-top: 8px; min-height: 18px; color: #0f766e; font-size: 12px; }
     code { color: #1d5fbf; }
   </style>
@@ -705,11 +725,13 @@ APP_HTML = r"""<!doctype html>
 </div>
 <div class="app">
   <aside>
-    <input id="search" placeholder="搜索 sample/category/task/executor" />
-    <div class="sample-filter-tabs">
-      <button id="filterPending" class="active">pending</button>
-      <button id="filterChecked">checked</button>
-      <button id="filterAll">all</button>
+    <div class="side-controls">
+      <input id="search" placeholder="搜索 物体 / 任务 / 执行器" />
+      <div class="sample-filter-tabs">
+        <button id="filterPending" class="active">pending</button>
+        <button id="filterChecked">checked</button>
+        <button id="filterAll">all</button>
+      </div>
     </div>
     <div class="sample-list" id="sampleList"></div>
   </aside>
@@ -787,6 +809,8 @@ APP_HTML = r"""<!doctype html>
     <div class="field"><label>notes</label><textarea id="notes" placeholder="例如：A 有 4 个 false positive 已删除；E 覆盖 handle 但混入包体边缘。"></textarea></div>
     <div class="savebar">
       <button id="saveBtn">保存 refined mask</button>
+      <button class="secondary" id="prevSampleBtn">上一个</button>
+      <button class="secondary" id="nextSampleBtn">下一个</button>
       <button class="secondary" id="reloadBtn">重新加载</button>
     </div>
     <div class="msg" id="message"></div>
@@ -827,6 +851,8 @@ let drawQueued = false;
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 const CANDIDATE_COLORS = ["#ff4848","#32dc78","#ffd240","#78a0ff","#ff70d2","#46e6eb","#ff9150","#be7dff","#aae65a","#ffffff","#ff7878","#78ffb4"];
+const TASK_ORDER = ["Lift", "Open", "Pull", "Press", "Push"];
+const EXECUTOR_ORDER_UI = ["gripper", "suction", "hook", "dexterous_hand"];
 
 function validReviewer(value) {
   return value === "reviewer_a" || value === "reviewer_b";
@@ -908,40 +934,90 @@ function setMode(next) {
   draw();
 }
 
-function renderList() {
+function sampleSearchText(s) {
+  return `${s.pilot_id || ""} ${s.sample_id || ""} ${s.object_id || ""} ${s.object_category || ""} ${s.task || ""} ${s.task_display || ""} ${s.target_task || ""} ${s.source_task || ""} ${s.executor || ""}`.toLowerCase();
+}
+
+function filteredSamplesForCurrentView() {
   const q = document.getElementById("search").value.toLowerCase();
-  const list = document.getElementById("sampleList");
-  list.innerHTML = "";
-
-  const searched = samples.filter(s =>
-    `${s.pilot_id || ""} ${s.sample_id || ""} ${s.object_category || ""} ${s.task || ""} ${s.task_display || ""} ${s.target_task || ""} ${s.source_task || ""} ${s.executor || ""}`
-      .toLowerCase()
-      .includes(q)
-  );
-
-  const pendingCount = samples.filter(s => reviewStatus(s) !== "checked").length;
-  const checkedCount = samples.filter(s => reviewStatus(s) === "checked").length;
-
-  const filtered = searched.filter(s => {
+  const searched = samples.filter(s => sampleSearchText(s).includes(q));
+  return searched.filter(s => {
     if (listFilter === "pending") return reviewStatus(s) !== "checked";
     if (listFilter === "checked") return reviewStatus(s) === "checked";
     return true;
   });
+}
+
+function sampleObjectName(s) {
+  return s.object_category || s.object_id || objectGroupKey(s) || "object";
+}
+
+function taskSortKey(taskName) {
+  const idx = TASK_ORDER.findIndex(x => x.toLowerCase() === String(taskName || "").toLowerCase());
+  return idx >= 0 ? idx : 999;
+}
+
+function executorSortKey(executorName) {
+  const idx = EXECUTOR_ORDER_UI.indexOf(String(executorName || ""));
+  return idx >= 0 ? idx : 999;
+}
+
+function compareVariantRows(a, b) {
+  const ta = displayTask(a);
+  const tb = displayTask(b);
+  const dt = taskSortKey(ta) - taskSortKey(tb);
+  if (dt !== 0) return dt;
+  const te = ta.localeCompare(tb);
+  if (te !== 0) return te;
+  const de = executorSortKey(a.executor) - executorSortKey(b.executor);
+  if (de !== 0) return de;
+  return String(a.sample_id || "").localeCompare(String(b.sample_id || ""));
+}
+
+function groupVisibleSamplesByObject(rows) {
+  const groups = new Map();
+  rows.forEach(s => {
+    const key = objectGroupKey(s);
+    if (!groups.has(key)) {
+      groups.set(key, {key, name: sampleObjectName(s), rows: []});
+    }
+    groups.get(key).rows.push(s);
+  });
+  return [...groups.values()];
+}
+
+function visibleSamplesInDisplayOrder() {
+  const groups = groupVisibleSamplesByObject(filteredSamplesForCurrentView());
+  const ordered = [];
+  groups.forEach(group => {
+    ordered.push(...group.rows.slice().sort(compareVariantRows));
+  });
+  return ordered;
+}
+
+function statusLabel(s) {
+  const status = reviewStatus(s);
+  if (status === "checked") return "✓";
+  if (status === "refine_needed") return "!";
+  if (status === "reject") return "×";
+  return "";
+}
+
+function renderList() {
+  const list = document.getElementById("sampleList");
+  list.innerHTML = "";
+
+  const pendingCount = samples.filter(s => reviewStatus(s) !== "checked").length;
+  const checkedCount = samples.filter(s => reviewStatus(s) === "checked").length;
+  const filtered = filteredSamplesForCurrentView();
+  const groups = groupVisibleSamplesByObject(filtered);
 
   document.getElementById("filterPending").textContent = `pending (${pendingCount})`;
   document.getElementById("filterChecked").textContent = `checked (${checkedCount})`;
   document.getElementById("filterAll").textContent = `all (${samples.length})`;
   document.getElementById("topStatus").textContent = `${samples.length} samples | ${listFilter} 显示 ${filtered.length}`;
 
-  const groups = new Map();
-  filtered.forEach(s => {
-    const key = objectGroupKey(s);
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(s);
-  });
-
-  const grouped = [...groups.entries()];
-  if (!grouped.length) {
+  if (!groups.length) {
     const empty = document.createElement("div");
     empty.className = "box";
     empty.textContent = "当前筛选条件下没有样本。";
@@ -949,57 +1025,64 @@ function renderList() {
     return;
   }
 
-  const header = document.createElement("div");
-  header.className = "sample-section";
-  header.innerHTML = `<span>${listFilter}</span><span>${grouped.length} objects</span>`;
-  list.appendChild(header);
-
-  grouped.forEach(([key, rows]) => {
-    rows.sort((a,b) =>
-      `${displayTask(a)} ${a.executor}`.localeCompare(`${displayTask(b)} ${b.executor}`)
-    );
-
-    const first = rows[0];
+  groups.forEach(group => {
+    const rows = group.rows.slice().sort(compareVariantRows);
     const active = current && rows.some(x => x.row_key === current.row_key);
+    const card = document.createElement("div");
+    card.className = "object-card" + (active ? " active" : "");
 
-    const div = document.createElement("div");
-    div.className = "sample" + (active ? " active" : "");
-    div.onclick = () => loadSample(rows[0].row_key);
+    const header = document.createElement("div");
+    header.className = "object-card-header";
+    header.innerHTML = `<div class="object-name" title="${group.key}">${group.name}</div><div class="object-count">${rows.length}</div>`;
+    card.appendChild(header);
 
-    div.innerHTML = `<div class="sample-id">${key}</div>
-      <div class="tags">
-        <span class="tag">${first.object_category || ""}</span>
-        <span class="tag">${rows.length} variants</span>
-      </div>`;
-
+    const byTask = new Map();
     rows.forEach(s => {
-      const v = document.createElement("div");
-      v.className = "variant-row"
-        + (current && current.row_key === s.row_key ? " active" : "")
-        + (activeLoadingId === s.row_key ? " loading" : "");
-
-      v.onclick = (event) => {
-        event.stopPropagation();
-        loadSample(s.row_key);
-      };
-
-      const sourceTaskTag = s.source_task ? `<span class="tag">src=${s.source_task}</span>` : "";
-      const taxonomyTag = s.task_taxonomy_version ? `<span class="tag">${s.task_taxonomy_version}</span>` : "";
-
-      v.innerHTML = `<div class="tags" style="margin-top:0">
-        <span class="tag">${s.pilot_id || ""}</span>
-        <span class="tag">${displayTask(s)}</span>
-        ${sourceTaskTag}
-        ${taxonomyTag}
-        <span class="tag">${s.executor || ""}</span>
-        <span class="tag ${reviewStatus(s)}">${reviewStatus(s)}</span>
-        <span class="tag">pos=${s.positive_points || ""}</span>
-      </div>`;
-
-      div.appendChild(v);
+      const taskName = displayTask(s) || "task";
+      if (!byTask.has(taskName)) byTask.set(taskName, []);
+      byTask.get(taskName).push(s);
     });
 
-    list.appendChild(div);
+    const taskEntries = [...byTask.entries()].sort((a, b) => {
+      const da = taskSortKey(a[0]);
+      const db = taskSortKey(b[0]);
+      if (da !== db) return da - db;
+      return a[0].localeCompare(b[0]);
+    });
+
+    taskEntries.forEach(([taskName, taskRows]) => {
+      const block = document.createElement("div");
+      block.className = "task-block";
+
+      const title = document.createElement("div");
+      title.className = "task-title";
+      title.textContent = taskName;
+      block.appendChild(title);
+
+      const grid = document.createElement("div");
+      grid.className = "executor-grid";
+
+      taskRows.slice().sort((a,b) => executorSortKey(a.executor) - executorSortKey(b.executor)).forEach(s => {
+        const btn = document.createElement("button");
+        const status = reviewStatus(s);
+        const activeRow = current && current.row_key === s.row_key;
+        const loading = activeLoadingId === s.row_key;
+        btn.type = "button";
+        btn.className = "executor-pill " + status + (activeRow ? " active" : "") + (loading ? " loading" : "");
+        btn.textContent = `${s.executor || "executor"}${statusLabel(s) ? " " + statusLabel(s) : ""}`;
+        btn.title = `${sampleObjectName(s)} | ${displayTask(s)} | ${s.executor || ""}\n${s.sample_id || ""}\n${s.row_key || ""}`;
+        btn.onclick = (event) => {
+          event.stopPropagation();
+          loadSample(s.row_key);
+        };
+        grid.appendChild(btn);
+      });
+
+      block.appendChild(grid);
+      card.appendChild(block);
+    });
+
+    list.appendChild(card);
   });
 }
 
@@ -1108,11 +1191,8 @@ function fillPanel() {
     document.getElementById("reviewDecision").value = "confirm_empty";
   }
 
-  const sourceTaskHtml = s.source_task ? `<span>src=${s.source_task}</span>` : "";
-  const taxonomyHtml = s.task_taxonomy_version ? `<span>${s.task_taxonomy_version}</span>` : "";
-
   document.getElementById("taskBanner").innerHTML =
-    `<div class="task-banner-inner">${s.object_category || ""}<span>${taskName}</span>${sourceTaskHtml}${taxonomyHtml}<span>${current.target_executor}</span><span>${reviewMode || "point_refine"}</span>positive=${positives.size}</div>`;
+    `<div class="task-banner-inner">${s.object_category || ""}<span>${taskName}</span><span>${current.target_executor}</span></div>`;
 
   document.getElementById("sampleId").value = s.sample_id;
   document.getElementById("category").value = s.object_category || "";
@@ -1534,6 +1614,34 @@ canvas.addEventListener("wheel", e => {
   draw();
 }, {passive:false});
 
+async function goRelativeSample(delta) {
+  const rows = visibleSamplesInDisplayOrder();
+  if (!rows.length) {
+    document.getElementById("message").textContent = "当前筛选条件下没有可切换的样本。";
+    return;
+  }
+
+  let idx = current ? rows.findIndex(s => s.row_key === current.row_key) : -1;
+  let nextIdx;
+  if (idx < 0 && current) {
+    const currentRawIdx = samples.findIndex(s => s.row_key === current.row_key);
+    if (currentRawIdx >= 0) {
+      const candidateIdx = rows.findIndex(s => samples.findIndex(x => x.row_key === s.row_key) > currentRawIdx);
+      nextIdx = delta > 0
+        ? (candidateIdx >= 0 ? candidateIdx : 0)
+        : Math.max(0, rows.length - 1);
+    } else {
+      nextIdx = delta > 0 ? 0 : rows.length - 1;
+    }
+  } else if (idx < 0) {
+    nextIdx = delta > 0 ? 0 : rows.length - 1;
+  } else {
+    nextIdx = (idx + delta + rows.length) % rows.length;
+  }
+
+  await loadSample(rows[nextIdx].row_key);
+}
+
 async function saveEdit() {
   if (!current) return;
   if (!validReviewer(currentReviewer)) {
@@ -1588,6 +1696,8 @@ document.getElementById("brushRadius").oninput = (event) => {
   draw();
 };
 document.getElementById("saveBtn").onclick = () => saveEdit().catch(err => alert(err.message));
+document.getElementById("prevSampleBtn").onclick = () => goRelativeSample(-1).catch(err => alert(err.message));
+document.getElementById("nextSampleBtn").onclick = () => goRelativeSample(1).catch(err => alert(err.message));
 document.getElementById("reloadBtn").onclick = () => {
   if (!current) return;
   sampleCache.delete(current.row_key);
