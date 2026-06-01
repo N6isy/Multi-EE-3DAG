@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PartNet-Mobility 数据集查看器</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header>
+    <div>
+      <h1>PartNet-Mobility 数据集查看器</h1>
+      <p>直接读取 zip：浏览类别、样本、meta/result JSON、URDF 关节结构、mesh 文件，并支持 OBJ 简单 3D 预览。</p>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel" id="statsPanel">
+      <h2>数据集概览</h2>
+      <div id="stats" class="grid two"></div>
+    </section>
+
+    <section class="layout">
+      <aside class="panel sidebar">
+        <h2>样本列表</h2>
+        <div class="controls">
+          <input id="searchInput" placeholder="搜索 object id / 类别 / 文件名" />
+          <select id="categorySelect"><option value="">全部类别</option></select>
+          <button id="searchBtn">搜索</button>
+        </div>
+        <div id="objectCount" class="muted"></div>
+        <div id="objectList" class="object-list"></div>
+        <div class="pager">
+          <button id="prevBtn">上一页</button>
+          <button id="nextBtn">下一页</button>
+        </div>
+      </aside>
+
+      <section class="panel detail">
+        <div id="emptyState" class="empty">从左侧选择一个 object id 查看具体数据样式。</div>
+        <div id="detailContent" class="hidden">
+          <div class="detail-head">
+            <div>
+              <h2 id="detailTitle"></h2>
+              <p id="detailSub" class="muted"></p>
+            </div>
+          </div>
+
+          <nav class="tabs">
+            <button class="tab active" data-tab="summaryTab">摘要</button>
+            <button class="tab" data-tab="jsonTab">JSON</button>
+            <button class="tab" data-tab="urdfTab">URDF / 关节</button>
+            <button class="tab" data-tab="meshTab">Mesh / 3D</button>
+            <button class="tab" data-tab="filesTab">文件树</button>
+          </nav>
+
+          <div id="summaryTab" class="tab-body active"></div>
+          <div id="jsonTab" class="tab-body"></div>
+          <div id="urdfTab" class="tab-body"></div>
+          <div id="meshTab" class="tab-body"></div>
+          <div id="filesTab" class="tab-body"></div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
