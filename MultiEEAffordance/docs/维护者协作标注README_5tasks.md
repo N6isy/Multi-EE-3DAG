@@ -1,6 +1,6 @@
 # 维护者协作标注 README
 
-更新时间：2026-05-29
+更新时间：2026-06-01
 
 本文档只面向维护者。维护者负责准备数据、生成自动候选、拆分标注批次、发给两位审查者、收回结果、合并并发布已审查数据集。
 
@@ -15,9 +15,10 @@
 
 ## 0.1 当前存储约定
 
-从本轮开始，维护者生成“网页人工审查所需输入文件”时，推荐把中间候选和待审查 samples 写到数据存储盘：
+从 2026-06-01 起，维护者生成“网页人工审查所需输入文件”时，中间候选、待审查 samples、五任务下采样批次和人工审查输出统一写到数据存储服务器：
 
 ```text
+服务器：10.24.1.11
 /home/lzq/data/MultiEEAffordance/
 ```
 
@@ -31,9 +32,10 @@
 
 这样做的好处是：
 
-1. 服务器中间文件不挤占项目仓库目录。
+1. 大规模中间文件不挤占项目仓库目录。
 2. `v3_candidate_samples_v0_1.jsonl` 里写入的是 `processed/...` 这种相对路径，审查者把数据包解压到本地项目下也能读取。
-3. 审查者的人工输出仍然写回当前项目下的 `processed/annotation_batches/v0_1/`，不要写进 `/home/lzq/data`。
+3. 正式五任务审查网页直接在 `10.24.1.11` 启动，人工输出写入 `/home/lzq/data/MultiEEAffordance/processed/annotation_batches/`。
+4. 本地解压审查包仍然保留为离线备用方案，不再是当前默认执行方式。
 
 服务器 IP 记录为：
 
@@ -41,7 +43,23 @@
 10.24.1.11
 ```
 
-如果维护者要把审查输入包发给审查者，打包时从 `/home/lzq/data/MultiEEAffordance/` 复制所需的 `processed/...` 文件，审查者解压到自己仓库的 `MultiEEAffordance/` 目录下即可。
+正式审查时，两位审查者访问 `10.24.1.11` 上启动的网页服务。只有需要离线标注时，才从 `/home/lzq/data/MultiEEAffordance/` 打包所需的 `processed/...` 文件，让审查者解压到自己仓库的 `MultiEEAffordance/` 目录下。
+
+## 0.1.1 当前 1.2w 数据规划
+
+当前目标数据规模统一按“五任务人工审查样本行”统计：
+
+```text
+3D AffordanceNet：8000+ 样本行
+PartNet-Mobility：4000+ 样本行
+总计：约 1.2w 样本行
+```
+
+PartNet-Mobility raw object 数和五任务审查样本行数不是同一个概念。原始 zip 解压、点云 surface sampling 和 URDF link 候选转换流程见：
+
+```text
+PartNet-Mobility数据解压与格式转换.md
+```
 
 
 ## 0.2 当前 train / val 双线运行记录与防覆盖规则

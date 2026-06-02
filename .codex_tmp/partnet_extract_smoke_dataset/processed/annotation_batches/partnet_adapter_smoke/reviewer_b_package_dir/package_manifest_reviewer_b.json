@@ -1,0 +1,12 @@
+{
+  "reviewer_id": "reviewer_b",
+  "samples": "processed/annotation_batches/partnet_adapter_smoke/reviewer_b_samples.jsonl",
+  "rows": 0,
+  "objects": 0,
+  "tasks": {},
+  "executors": {},
+  "files_copied": 0,
+  "missing_references": [],
+  "skipped_external_files": [],
+  "path_policy": "All paths under dataset-root are rewritten relative to MultiEEAffordance/."
+}

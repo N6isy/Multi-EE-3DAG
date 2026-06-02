@@ -1,0 +1,25 @@
+{
+  "version": "v0_1",
+  "pipeline": "partnet_mobility_extract_and_convert",
+  "proposal_only": true,
+  "dataset_root": "D:\\VSCode\\Multi-EE-3DAG\\.codex_tmp\\partnet_smoke_dataset",
+  "zip": "D:\\VSCode\\Multi-EE-3DAG\\.codex_tmp\\partnet_smoke_dataset\\raw\\partnet_mobility\\partnet-mobility-v0.zip",
+  "extract_dir": "D:\\VSCode\\Multi-EE-3DAG\\.codex_tmp\\partnet_smoke_dataset\\..\\partnet_fixture\\partnet-mobility-v0",
+  "stages": [
+    "convert"
+  ],
+  "dry_run": false,
+  "discovered_raw_objects": 1,
+  "selected_raw_objects": 1,
+  "converted_or_reused_objects": 1,
+  "skipped_objects": 0,
+  "total_part_candidates": 2,
+  "total_movable_parts": 1,
+  "categories": {
+    "Door": 1
+  },
+  "extract": {},
+  "manifest": "manifests/partnet_mobility_v0_objects_manifest.jsonl",
+  "skipped": [],
+  "notes": "Raw object count and downstream five-task sample-row count are different quantities. PartNet-Mobility link proposals are not final [N,4] affordance labels."
+}

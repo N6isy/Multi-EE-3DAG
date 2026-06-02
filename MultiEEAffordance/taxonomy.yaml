@@ -1,6 +1,7 @@
 dataset:
   name: Multi-EE Affordance Dataset
-  version: "0.1"
+  version: "0.2"
+  task_taxonomy_version: "v0_2_5tasks"
   level: object
   task_formulation: "P, q -> [M_gripper, M_suction, M_hook, M_dexterous_hand]"
   point_cloud:
@@ -28,6 +29,35 @@ dataset:
       1: suction
       2: hook
       3: dexterous_hand
+
+annotation_tasks:
+  lift:
+    display_name: lift
+    canonical_instruction: "Lift the object from the supporting surface."
+  open:
+    display_name: open
+    canonical_instruction: "Open an articulated or openable component."
+  pull:
+    display_name: pull
+    canonical_instruction: "Pull a handle, ring, lip, panel, or movable component along the pull direction."
+  press:
+    display_name: press
+    canonical_instruction: "Press a button, key, switch, or local pressable part."
+  push:
+    display_name: push
+    canonical_instruction: "Push a panel, surface, button, or movable component along the push direction."
+
+legacy_task_mapping:
+  pick_up:
+    - lift
+  lift_carry:
+    - lift
+  open_pull:
+    - open
+    - pull
+  press_push:
+    - press
+    - push
 
 executors:
   gripper:
@@ -100,6 +130,8 @@ executors:
       - ordinary_surface_without_task_meaning
     definition_note: "Do not label every touchable surface as positive. The positive area must support stable human-like grasping, pressing, or precise manipulation for the current task."
 
+# Historical coarse tasks kept for old candidate generation compatibility.
+# New manual annotation releases use annotation_tasks above.
 tasks:
   pick_up:
     display_name: pick up

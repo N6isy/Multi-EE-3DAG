@@ -59,6 +59,12 @@ PATH_LIKE_SUFFIXES = (
     ".webp",
     ".html",
 )
+IGNORED_PROVENANCE_PATH_KEYS = {
+    "mesh_refs",
+    "resolved_meshes",
+    "missing_meshes",
+    "missing_visual_mesh_refs",
+}
 
 
 def parse_args() -> argparse.Namespace:
@@ -297,6 +303,11 @@ def extract_path_like_values(obj: Any, parent_key: str = "") -> list[str]:
     if isinstance(obj, dict):
         for key, value in obj.items():
             key_str = str(key)
+            if key_str.lower() in IGNORED_PROVENANCE_PATH_KEYS:
+                # Raw PartNet OBJ references are useful provenance metadata but
+                # are not needed by the local annotation UI. Packaging them
+                # would make reviewer archives unnecessarily large.
+                continue
             if isinstance(value, str):
                 if PATH_LIKE_KEY_RE.search(key_str) or maybe_path_string(value):
                     values.append(value)

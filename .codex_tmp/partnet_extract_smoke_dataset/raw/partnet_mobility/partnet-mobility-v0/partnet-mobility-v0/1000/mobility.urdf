@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<robot name="fixture_door">
+  <link name="base">
+    <visual>
+      <geometry>
+        <mesh filename="textured_objs/base.obj"/>
+      </geometry>
+    </visual>
+  </link>
+  <link name="handle">
+    <visual>
+      <geometry>
+        <mesh filename="textured_objs/handle.obj"/>
+      </geometry>
+    </visual>
+  </link>
+  <joint name="handle_joint" type="revolute">
+    <parent link="base"/>
+    <child link="handle"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="0" upper="1.57"/>
+  </joint>
+</robot>

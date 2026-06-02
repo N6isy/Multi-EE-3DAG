@@ -338,6 +338,7 @@ class AnnotationStore:
             uncertain_votes = int(score.get("uncertain_votes", 0) or 0)
             rule_score = float(score.get("rule_score", 0.0) or 0.0)
             decision = str(score.get("decision", ""))
+            is_movable = bool(record.get("is_movable", False))
             if cid in default_selected_set:
                 rank_bucket = 0
             elif cid in accepted:
@@ -361,9 +362,13 @@ class AnnotationStore:
                     "uncertain_votes": uncertain_votes,
                     "rule_score": rule_score,
                     "decision": decision,
+                    "source_link": record.get("source_link", ""),
+                    "source_joint": record.get("source_joint", ""),
+                    "is_movable": is_movable,
+                    "need_review": bool(record.get("need_review", False)),
                     "auto_status": "selected" if cid in default_selected_set else ("accepted" if cid in accepted else ("uncertain" if cid in uncertain else "candidate")),
                     "default_checked": (cid in default_selected_set) if default_selected_set else (cid in accepted),
-                    "_rank": (rank_bucket, -selected_votes, -rule_score, cid),
+                    "_rank": (rank_bucket, -selected_votes, -int(is_movable), -rule_score, cid),
                 }
             )
         candidates.sort(key=lambda item: item["_rank"])
@@ -372,12 +377,18 @@ class AnnotationStore:
         total_candidates = len(candidates)
         if self.top_k_candidates > 0:
             pinned = [item for item in candidates if item["candidate_id"] in default_selected_set]
-            rest = [
-                item
-                for item in candidates
-                if item["candidate_id"] not in default_selected_set
-                and int(item.get("selected_votes", 0) or 0) >= self.candidate_min_selected_votes
-            ]
+            has_selection_metadata = bool(default_selected_set or accepted or uncertain or score_by_id)
+            if has_selection_metadata:
+                rest = [
+                    item
+                    for item in candidates
+                    if item["candidate_id"] not in default_selected_set
+                    and int(item.get("selected_votes", 0) or 0) >= self.candidate_min_selected_votes
+                ]
+            else:
+                # Pure rule/URDF proposals have no VLM vote metadata. Keep them
+                # visible for human review instead of hiding every candidate.
+                rest = [item for item in candidates if item["candidate_id"] not in default_selected_set]
             candidates = (pinned + rest)[: self.top_k_candidates]
         return {
             "available": True,
@@ -555,6 +566,19 @@ class AnnotationStore:
         refined_sample["source_sample_id"] = base_sample.get("source_sample_id", "")
         refined_sample["task_taxonomy_version"] = base_sample.get("task_taxonomy_version", "")
         refined_sample["task_split_source"] = base_sample.get("task_split_source", "")
+        feasibility = dict(refined_sample.get("feasibility", {})) if isinstance(refined_sample.get("feasibility"), dict) else {}
+        label_source = dict(refined_sample.get("label_source", {})) if isinstance(refined_sample.get("label_source"), dict) else {}
+        negative_reason = dict(refined_sample.get("negative_reason", {})) if isinstance(refined_sample.get("negative_reason"), dict) else {}
+        for executor_name in EXECUTOR_ORDER:
+            feasibility.setdefault(executor_name, False)
+            label_source.setdefault(executor_name, "unavailable")
+            negative_reason.setdefault(executor_name, f"no_{executor_name}_feasible_region")
+        feasibility[executor] = bool(new_positive)
+        label_source[executor] = "manual_refinement" if new_positive else "unavailable"
+        negative_reason[executor] = None if new_positive else "confirmed_empty_by_human_review"
+        refined_sample["feasibility"] = feasibility
+        refined_sample["label_source"] = label_source
+        refined_sample["negative_reason"] = negative_reason
         refined_sample["v2_point_edit"] = {
             "executor": executor,
             "source_mask_path": source_mask_path,
@@ -566,6 +590,7 @@ class AnnotationStore:
             "removed_points": sorted(old_positive - new_positive),
             "review_decision": str(payload.get("review_decision") or ""),
             "reviewer": reviewer,
+            "executor_feasible_after_review": bool(new_positive),
             "updated_at": now,
         }
         self.refined_by_key[key] = refined_sample
@@ -600,6 +625,7 @@ class AnnotationStore:
             "notes": str(payload.get("notes") or ""),
             "positive_points_before": len(old_positive),
             "positive_points_after": len(new_positive),
+            "executor_feasible_after_review": bool(new_positive),
             "selected_candidate_ids": [str(item).upper() for item in payload.get("selected_candidate_ids", [])],
             "added_points": sorted(new_positive - old_positive),
             "removed_points": sorted(old_positive - new_positive),

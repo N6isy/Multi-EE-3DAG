@@ -1,0 +1,51 @@
+{
+  "input": "D:/VSCode/Multi-EE-3DAG/.codex_tmp/partnet_extract_smoke_dataset/processed/metadata/partnet_adapter_smoke_5tasks.jsonl",
+  "dataset_root": "D:/VSCode/Multi-EE-3DAG/.codex_tmp/partnet_extract_smoke_dataset",
+  "batch_dir": "D:/VSCode/Multi-EE-3DAG/.codex_tmp/partnet_extract_smoke_dataset/processed/annotation_batches/partnet_adapter_smoke",
+  "rows_total": 20,
+  "input_validation": {
+    "rows": 20,
+    "missing_row_key": 0,
+    "unique_row_keys": 20,
+    "unique_sample_task_executor": 20
+  },
+  "object_groups_total": 1,
+  "reviewers": {
+    "reviewer_a": {
+      "samples": "D:/VSCode/Multi-EE-3DAG/.codex_tmp/partnet_extract_smoke_dataset/processed/annotation_batches/partnet_adapter_smoke/reviewer_a_samples.jsonl",
+      "rows": 20,
+      "objects": 1,
+      "tasks": {
+        "lift": 4,
+        "open": 4,
+        "pull": 4,
+        "press": 4,
+        "push": 4
+      },
+      "executors": {
+        "gripper": 5,
+        "suction": 5,
+        "hook": 5,
+        "dexterous_hand": 5
+      },
+      "dependencies_found": 4,
+      "missing_references": [],
+      "archive": null,
+      "package_dir": "D:/VSCode/Multi-EE-3DAG/.codex_tmp/partnet_extract_smoke_dataset/processed/annotation_batches/partnet_adapter_smoke/reviewer_a_package_dir"
+    },
+    "reviewer_b": {
+      "samples": "D:/VSCode/Multi-EE-3DAG/.codex_tmp/partnet_extract_smoke_dataset/processed/annotation_batches/partnet_adapter_smoke/reviewer_b_samples.jsonl",
+      "rows": 0,
+      "objects": 0,
+      "tasks": {},
+      "executors": {},
+      "dependencies_found": 0,
+      "missing_references": [],
+      "archive": null,
+      "package_dir": "D:/VSCode/Multi-EE-3DAG/.codex_tmp/partnet_extract_smoke_dataset/processed/annotation_batches/partnet_adapter_smoke/reviewer_b_package_dir"
+    }
+  },
+  "calibration_objects": 0,
+  "archive_format": "none",
+  "dry_run": false
+}

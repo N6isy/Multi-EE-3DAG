@@ -2,6 +2,33 @@
 
 面向异构末端执行器的多标签 3D Affordance Grounding 研究原型。
 
+## 当前数据服务器
+
+从 2026-06-01 起，大规模中间文件、五任务下采样批次和网页人工审查统一在数据存储服务器执行：
+
+```text
+服务器：10.24.1.11
+数据根目录：/home/lzq/data/MultiEEAffordance
+```
+
+GitHub 仓库只管理代码、文档和小型元数据。大规模 `.npy`、`.npz`、候选目录、人工 refined mask 和审查日志保存在数据服务器，不提交到普通 Git 仓库。
+
+当前规划的数据来源为：
+
+```text
+3D AffordanceNet：8000+ 五任务审查样本行
+PartNet-Mobility：4000+ 五任务审查样本行
+总计：约 1.2w 样本行
+```
+
+这里的数量是后续按任务和执行器组织的样本行目标，不等同于 raw object 数量。PartNet-Mobility 解压和转换流程见：
+
+```text
+MultiEEAffordance/docs/PartNet-Mobility数据解压与格式转换.md
+```
+
+PartNet-Mobility 当前只作为 3D AffordanceNet 的类别补充。转换脚本默认保留 `Box`、`Bucket`、`Cabinet`、`Camera`、`CoffeeMachine`、`Dispenser`、`Kettle`、`Lighter`、`Mouse`、`Oven`、`Phone`、`Pliers`、`Remote`、`Safe`、`Stapler`、`Suitcase`、`Switch`、`Toaster`、`Toilet`、`WashingMachine`、`Window` 共 21 类。
+
 当前项目目标是从物体点云和任务指令出发，构建不同末端执行器在同一任务下的可操作区域标注：
 
 ```text
@@ -42,7 +69,7 @@ P, q -> [M_gripper, M_suction, M_hook, M_dexterous_hand]
 - 构建了候选区域生成、VLM 辅助筛选、规则过滤和网页人工审查流程。
 - 当前正在验证 v3 pipeline：让 VLM 先判断目标部件和应排除部件，再生成更适合人工审查的 3D 候选区域。
 
-当前最重要的工作不是训练模型，而是把“候选区域生成 + 人工审查”这条数据构建链路跑稳定。如果小规模 pilot 样本效果较好，下一步会开始第一批正式数据标注。
+当前优先级仍然是把“候选区域生成 + 人工审查”链路跑稳定，并持续积累五任务人工标签。与此同时，独立训练目录已经开始搭建，可以使用已完成审查的数据并行验证 dataloader、object-disjoint split、空 mask 建模和最小 baseline。训练侧只接受 `lift/open/pull/press/push`，不会读取旧复合任务。
 
 ## 仓库结构
 
@@ -57,9 +84,16 @@ Multi-EE-3DAG/
     processed/                # 已处理点云、mask、metadata、候选结果
     raw/                      # 原始数据目录，本仓库通常不上传大数据
     splits/                   # train / val / test split
+    training/                 # 独立五任务训练 pipeline、配置和运行说明
     tools/                    # 主要脚本
     taxonomy.yaml             # 任务和执行器定义
     requirements-vlm.txt      # 远程 VLM 环境依赖参考
+```
+
+训练入口说明见：
+
+```text
+MultiEEAffordance/training/README.md
 ```
 
 大文件数据、模型权重和远程运行结果通常不放进 GitHub，需要在本地或服务器端单独准备。
@@ -91,6 +125,8 @@ Multi-EE-3DAG/
 
 | 脚本 | 作用 |
 | --- | --- |
+| `convert_partnet_mobility.py` | 解压 PartNet-Mobility，并转换为标准点云和 URDF link-level 部件 proposal |
+| `build_partnet_5task_review_samples.py` | 将 PartNet-Mobility 物体级 proposal 直接转换为五任务、四执行器人工审查样本 |
 | `render_vlm_friendly_views.py` | 生成多视角点云渲染图和 point-index map |
 | `run_v3_semantic_part_planner.py` | 用 Qwen3-VL 输出 target parts 和 reject parts |
 | `run_v3_target_reject_grounding.py` | 对 target/reject 进行 2D 粗定位 |

@@ -50,6 +50,8 @@ MultiEEAffordance/splits_v3_candidates/
 MultiEEAffordance/processed/mesh_surface_vlm/
 MultiEEAffordance/processed/natural_surface_vlm/
 MultiEEAffordance/processed/annotation_batches/
+MultiEEAffordance/processed/training/
+MultiEEAffordance/processed/training_runs/
 
 
 # Large model/data files

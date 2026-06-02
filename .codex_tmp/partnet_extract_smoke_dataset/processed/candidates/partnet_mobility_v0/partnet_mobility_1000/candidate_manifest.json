@@ -1,0 +1,77 @@
+{
+  "version": "v0_1",
+  "pipeline": "partnet_mobility_urdf_link_proposals",
+  "proposal_only": true,
+  "object_id": "partnet_mobility_1000",
+  "raw_model_id": "1000",
+  "source_dataset": "partnet_mobility",
+  "object_category": "Door",
+  "point_cloud_path": "processed/points/partnet_mobility_v0/partnet_mobility_1000.npy",
+  "candidate_npz": "processed/candidates/partnet_mobility_v0/partnet_mobility_1000/parts.npz",
+  "candidate_count": 2,
+  "point_count": 32,
+  "normalization": {
+    "mode": "unit_sphere",
+    "center": [
+      0.5473319888114929,
+      0.49234944581985474,
+      0.015625
+    ],
+    "scale": 0.6715758442878723
+  },
+  "joints": [
+    {
+      "name": "handle_joint",
+      "type": "revolute",
+      "parent": "base",
+      "child": "handle",
+      "origin_xyz": "",
+      "origin_rpy": "",
+      "axis_xyz": "0 0 1",
+      "limit_lower": "0",
+      "limit_upper": "1.57"
+    }
+  ],
+  "missing_visual_mesh_refs": [],
+  "candidates": [
+    {
+      "candidate_id": "part_000_base",
+      "candidate_name": "base",
+      "candidate_family": "partnet_mobility_urdf_link",
+      "source_link": "base",
+      "source_joint": "",
+      "is_movable": false,
+      "point_count": 27,
+      "point_fraction": 0.84375,
+      "mesh_refs": [
+        "textured_objs/base.obj"
+      ],
+      "resolved_meshes": [
+        "textured_objs/base.obj"
+      ],
+      "missing_meshes": [],
+      "provenance": "partnet_mobility_mobility_urdf_visual_link",
+      "need_review": true
+    },
+    {
+      "candidate_id": "part_001_handle",
+      "candidate_name": "handle",
+      "candidate_family": "partnet_mobility_urdf_link",
+      "source_link": "handle",
+      "source_joint": "handle_joint",
+      "is_movable": true,
+      "point_count": 5,
+      "point_fraction": 0.15625,
+      "mesh_refs": [
+        "textured_objs/handle.obj"
+      ],
+      "resolved_meshes": [
+        "textured_objs/handle.obj"
+      ],
+      "missing_meshes": [],
+      "provenance": "partnet_mobility_mobility_urdf_visual_link",
+      "need_review": true
+    }
+  ],
+  "notes": "URDF link masks are proposal regions only. They are not executor labels and must not be used as five-task ground truth without task-aware rule checks and human review."
+}

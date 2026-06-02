@@ -1,6 +1,29 @@
 # Multi-EE-3DAG 文档索引
 
-更新时间：2026-05-29
+更新时间：2026-06-01
+
+## 当前数据服务器与数据规模
+
+从 2026-06-01 起，五任务下采样、网页审查系统和人工输出统一在数据存储服务器执行：
+
+```text
+服务器：10.24.1.11
+数据根目录：/home/lzq/data/MultiEEAffordance
+```
+
+当前数据集目标口径：
+
+```text
+3D AffordanceNet：8000+ 五任务审查样本行
+PartNet-Mobility：4000+ 五任务审查样本行
+总计：约 1.2w 样本行
+```
+
+其中 PartNet-Mobility 的 `4000+` 是后续展开后的目标样本行，不是 raw object 数。解压、点云采样和 URDF link 候选转换流程见：
+
+```text
+PartNet-Mobility数据解压与格式转换.md
+```
 
 ## 当前任务体系状态
 
@@ -33,7 +56,7 @@
 - 候选生成研发分支：`dev/high-recall-candidate-v0.2`
 - 双人协作输出目录：`processed/annotation_batches/v0_2_5tasks/`
 
-两位审查者统一使用中性身份 `reviewer_a` 和 `reviewer_b`。当前推荐 GitHub + 本地数据包协作：维护者生成候选并拆分数据包，审查者本地拉取仓库、解压自己的数据包、运行本地审查网页，最后把结果包回传给维护者合并。
+两位审查者统一使用中性身份 `reviewer_a` 和 `reviewer_b`。当前默认模式是服务器网页协作：维护者在 `10.24.1.11` 生成候选、拆分五任务批次并启动两个独立网页端口，审查者通过浏览器完成标注，结果直接保存在 `/home/lzq/data/MultiEEAffordance/processed/annotation_batches/`。GitHub + 本地数据包方式仅作为离线备用。
 
 双人协作标注优先阅读：
 
@@ -125,8 +148,8 @@ python MultiEEAffordance/tools/serve_v2_annotation_app.py \
 
 | 文档 | 用途 |
 | --- | --- |
-| `双人协作标注README_5tasks.md` | 五任务审查者本地操作流程：拉仓库、解压数据包、打开网页、选择 reviewer 身份、点级审查、保存并回传结果 |
-| `维护者协作标注README_5tasks.md` | 五任务维护者批次管理流程：准备原始数据、旧候选生成、展开五任务、拆包发包、收包合并 |
+| `双人协作标注README_5tasks.md` | 五任务审查者操作流程：访问 `10.24.1.11` 网页、选择 reviewer 身份、点级审查、保存结果；本地数据包作为离线备用 |
+| `维护者协作标注README_5tasks.md` | 五任务维护者批次管理流程：准备原始数据、旧候选生成、展开五任务、服务器端下采样、启动网页、收包合并 |
 | `标注版本冻结与研发分支说明.md` | `annotation/mvp-v0.1` 稳定标注版本和 `dev/high-recall-candidate-v0.2` 研发分支约定 |
 | `v3自研高召回3D候选生成器说明.md` | 当前 v3 主线：自研高召回 3D part candidate generator、VLM 候选选择、人工审查 |
 | `大规模人工审查与已审查数据集可视化.md` | 大规模队列、审查系统、已审查数据集 release 和只读可视化 |
@@ -146,6 +169,7 @@ python MultiEEAffordance/tools/serve_v2_annotation_app.py \
 | 文档 | 用途 |
 | --- | --- |
 | `3D-AffordanceNet转换报告.md` | 3D AffordanceNet 转换过程和统计 |
+| `PartNet-Mobility数据解压与格式转换.md` | 在 `10.24.1.11` 解压 PartNet-Mobility，转换 URDF link-level proposal，并直接生成五任务双人审查批次 |
 | `可视化检查报告.md` | 数据和 mask 可视化检查记录 |
 | `人工审查表字段说明.md` | 人工审查字段含义 |
 | `v0.1人工审查总结.md` | 早期人工审查结论 |
@@ -158,6 +182,9 @@ python MultiEEAffordance/tools/serve_v2_annotation_app.py \
 | `V3语义目标拒绝候选Pipeline设计与汇报.md` | 旧 target/reject seed-growth 方案的历史设计说明 |
 | `VLM候选选择Pipeline_v2设计与汇报.md` | v2 候选选择方案和问题总结 |
 | `v2模块化Pipeline与点级审查系统设计.md` | 点级审查系统和 v2 模块化方案 |
+| `AAAI投稿导向模型训练Pipeline规划.md` | 训练侧研究计划：HeteroAffordanceFormer、数据 split、损失、指标、baseline 和消融 |
+| `AAAI投稿时间规划_2026-06-01.md` | 从 2026-06-01 开始的投稿排期：标注、训练、实验、论文写作、投稿材料和风险降级策略 |
+| `../training/README.md` | 独立五任务训练目录操作手册：数据合并、训练环境、服务器运行、baseline 训练和评估 |
 | `Qwen3-VL+SAM2候选标注流程图.md` | 早期 Qwen3-VL + SAM2 流程图 |
 | `Qwen3-VL+SAM2候选标注与标注规范汇报稿.md` | 汇报稿草案 |
 | `选题思路跟进报告.md` | 研究问题和选题思路跟进 |

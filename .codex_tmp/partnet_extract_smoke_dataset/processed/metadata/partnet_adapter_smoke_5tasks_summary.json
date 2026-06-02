@@ -1,0 +1,54 @@
+{
+  "version": "v0_1",
+  "pipeline": "partnet_mobility_direct_5task_review_samples",
+  "proposal_only": true,
+  "dataset_root": "D:\\VSCode\\Multi-EE-3DAG\\.codex_tmp\\partnet_extract_smoke_dataset",
+  "objects_manifest": "manifests/partnet_mobility_v0_objects_manifest.jsonl",
+  "output_samples": "processed/metadata/partnet_adapter_smoke_5tasks.jsonl",
+  "initial_mask_dir": "processed/masks/partnet_adapter_smoke_initial_empty",
+  "task_taxonomy_version": "v0_2_5tasks",
+  "task_policy": "all",
+  "selected_tasks": [
+    "lift",
+    "open",
+    "pull",
+    "press",
+    "push"
+  ],
+  "selected_executors": [
+    "gripper",
+    "suction",
+    "hook",
+    "dexterous_hand"
+  ],
+  "objects_read": 1,
+  "objects_emitted": 1,
+  "review_rows_written": 20,
+  "initial_masks": {
+    "written": 1
+  },
+  "counts_by_category": {
+    "Door": 1
+  },
+  "counts_by_task": {
+    "lift": 4,
+    "open": 4,
+    "press": 4,
+    "pull": 4,
+    "push": 4
+  },
+  "counts_by_executor": {
+    "dexterous_hand": 5,
+    "gripper": 5,
+    "hook": 5,
+    "suction": 5
+  },
+  "skipped_objects": 0,
+  "skipped": [],
+  "dry_run": false,
+  "notes": [
+    "Rows are direct five-task human-review inputs; do not run legacy task expansion on this file.",
+    "Initial [N,4] masks are empty. URDF-link candidate masks remain proposals only.",
+    "Each selected object-task pair emits one review row per executor so reviewers can confirm valid positives or empty labels."
+  ]
+}
