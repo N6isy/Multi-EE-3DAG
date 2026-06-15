@@ -54,21 +54,12 @@ python MultiEEAffordance/tools/serve_v2_annotation_app.py \
 
 ## 标注完成后的训练交接
 
-人工标注结束后，维护者需要把两位审查者的输出统一放在数据服务器：
+人工标注结束后，当前已经完成整理和合并。正式训练入口是最终清洗后的 row-level JSONL，而不是早期两位审查者的 refined samples：
 
 ```text
 server: 10.24.1.11
 dataset root: /home/lzq/data/MultiEEAffordance
-annotation dir: /home/lzq/data/MultiEEAffordance/processed/annotation_batches/v0_2_5tasks
-```
-
-必须存在：
-
-```text
-reviewer_a_refined_samples.jsonl
-reviewer_b_refined_samples.jsonl
-manual_refined_masks_reviewer_a/
-manual_refined_masks_reviewer_b/
+final jsonl: /home/lzq/data/MultiEEAffordance/processed/annotation_batches/final_5tasks/all_sources_5tasks_4exec_complete_aligned_posfixed.jsonl
 ```
 
 然后执行训练准备入口：
@@ -77,18 +68,19 @@ manual_refined_masks_reviewer_b/
 cd /home/lzq/Multi-EE-3DAG
 conda activate multiee-train
 
-python -m MultiEEAffordance.training.validate_reviewed_samples \
+python -m MultiEEAffordance.training.validate_final_5task_rows \
   --dataset-root /home/lzq/data/MultiEEAffordance \
-  --reviewed-samples processed/annotation_batches/v0_2_5tasks/reviewer_a_refined_samples.jsonl,processed/annotation_batches/v0_2_5tasks/reviewer_b_refined_samples.jsonl \
-  --output-json processed/training/v0_3_human_5tasks/reviewed_samples_validation.json
+  --final-samples processed/annotation_batches/final_5tasks/all_sources_5tasks_4exec_complete_aligned_posfixed.jsonl \
+  --output-json processed/training/v0_4_final_5tasks/final_rows_validation.json \
+  --fail-on-error \
+  --overwrite
 
-python -m MultiEEAffordance.training.prepare_training_dataset \
+python -m MultiEEAffordance.training.prepare_final_5task_training_dataset \
   --dataset-root /home/lzq/data/MultiEEAffordance \
-  --reviewed-samples processed/annotation_batches/v0_2_5tasks/reviewer_a_refined_samples.jsonl,processed/annotation_batches/v0_2_5tasks/reviewer_b_refined_samples.jsonl \
-  --output-root processed/training/v0_3_human_5tasks \
-  --dataset-version v0_3_human_5tasks \
+  --final-samples processed/annotation_batches/final_5tasks/all_sources_5tasks_4exec_complete_aligned_posfixed.jsonl \
+  --output-root processed/training/v0_4_final_5tasks \
+  --dataset-version v0_4_final_5tasks \
   --split-unit source_asset \
-  --min-reviewed-channels 4 \
   --overwrite
 ```
 
@@ -98,5 +90,6 @@ python -m MultiEEAffordance.training.prepare_training_dataset \
 
 ```text
 MultiEEAffordance/training/README.md
+MultiEEAffordance/docs/最终五任务训练数据接入README.md
 MultiEEAffordance/docs/AAAI投稿导向模型训练Pipeline规划.md
 ```

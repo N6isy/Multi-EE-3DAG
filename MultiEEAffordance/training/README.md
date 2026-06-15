@@ -1,94 +1,79 @@
-# 五任务训练实验 Pipeline README
+# 五任务训练 Pipeline README
 
-更新时间：2026-06-09
+更新时间：2026-06-15
 
-本文档说明标注完成后如何把人工审查结果整理成 AAAI 实验可用的训练集，并启动第一批 baseline。训练侧只接受五个独立任务：
+本文档说明如何把最终清洗后的五任务人工标注 JSONL 接入第一批 baseline 训练。当前训练侧只接受五个独立任务：
 
 ```text
 lift / open / pull / press / push
 ```
 
-旧任务 `pick_up/open_pull/press_push/lift_carry` 只能出现在候选生成和人工审查准备阶段。旧候选不是五任务真值；必须经过五任务人工审查后，才能进入本训练目录。
-
-## 1. 数据服务器和执行位置
-
-当前数据存储服务器：
+四类执行器顺序固定为：
 
 ```text
-server: 10.24.1.11
-code:   /home/lzq/Multi-EE-3DAG
-data:   /home/lzq/data/MultiEEAffordance
+gripper / suction / hook / dexterous_hand
 ```
 
-建议在 `10.24.1.11` 上执行训练数据准备、split 审计、人工一致性审计和实验表格汇总，因为这些步骤会读写大量点云和 mask 文件。
+mask shape 固定为 `[N, 4]`，通道顺序不能改。
 
-GPU 训练也可以放在 `10.24.1.11`，但需要先确认：
+## 1. 当前最终数据
+
+最终训练样本文件位于数据服务器：
+
+```text
+dataset_root = /home/lzq/data/MultiEEAffordance
+final_jsonl  = /home/lzq/data/MultiEEAffordance/processed/annotation_batches/final_5tasks/all_sources_5tasks_4exec_complete_aligned_posfixed.jsonl
+```
+
+这个 JSONL 的每一行是一个 `object_id + task + executor` 组合，不是一个完整物体，也不是一个完整 object-task。每个物体应该有：
+
+```text
+5 tasks * 4 executors = 20 rows
+```
+
+训练 dataloader 当前使用的是 object-task 格式，即一行对应：
+
+```text
+object_id + task -> [N,4] mask
+```
+
+因此训练前需要先执行 `prepare_final_5task_training_dataset.py`，把最终 JSONL 的 20 行/物体压缩成 5 行/物体。
+
+## 2. 每一步做什么
+
+训练前准备分为四步：
+
+| 步骤 | 脚本 | 目的 | 主要输出 |
+| --- | --- | --- | --- |
+| 1 | `validate_final_5task_rows.py` | 检查最终 JSONL 每一行是否合法 | `final_rows_validation.json` |
+| 2 | `prepare_final_5task_training_dataset.py` | 合并成训练 manifest，并按 CAD asset split | `manifests/train.jsonl` 等 |
+| 3 | `audit_splits.py` | 检查 train/val/test 是否有 object/asset 泄漏 | `split_audit.json` |
+| 4 | `train.py` / `evaluate.py` | 训练和评估第一批 baseline | `best.pt`、`test_metrics.json` |
+
+旧脚本 `prepare_training_dataset.py` 仍然保留，用于早期 `reviewer_a_refined_samples.jsonl`、`reviewer_b_refined_samples.jsonl` 格式。当前最终数据不要再走这个旧入口。
+
+## 3. 环境准备
+
+在服务器上执行：
 
 ```bash
-ssh lzq@10.24.1.11
-nvidia-smi
-
-python - <<'PY'
-import torch
-print(torch.__version__)
-print(torch.cuda.is_available())
-print(torch.cuda.device_count())
-PY
+cd /home/lzq/data
+conda activate multiee-train
 ```
 
-如果该服务器没有可用 GPU，就在 `10.24.1.11` 生成训练 manifest，然后把 `/home/lzq/data/MultiEEAffordance` 挂载或同步到 GPU 服务器训练。
-
-## 2. 训练数据契约
-
-训练输入不是 VLM 输出，也不是旧候选目录，而是网页人工审查后保存的 refined samples：
+当前 `10.24.1.11` 采用代码和数据同目录的布局：
 
 ```text
-/home/lzq/data/MultiEEAffordance/processed/annotation_batches/v0_2_5tasks/
-  reviewer_a_refined_samples.jsonl
-  reviewer_b_refined_samples.jsonl
-  manual_refined_masks_reviewer_a/
-  manual_refined_masks_reviewer_b/
+Python 包父目录：/home/lzq/data
+数据根目录：/home/lzq/data/MultiEEAffordance
+训练入口：/home/lzq/data/MultiEEAffordance/training/train.py
 ```
 
-每条 refined sample 至少需要：
+也就是说，执行 `python -m MultiEEAffordance.training.train` 时，应该从 `/home/lzq/data` 这个父目录启动。`MultiEEAffordance` 目录本身既是 Python package，也是 dataset root。
 
-```text
-object_id
-object_category
-source_dataset
-task
-executor
-point_cloud_path
-multi_channel_mask_path
-reviewer
-```
-
-训练准备脚本会补齐：
-
-```text
-source_asset_id
-asset_uid
-split_key
-split_unit
-annotation_source=human_review
-task_taxonomy_version=v0_2_5tasks
-executor_order=[gripper,suction,hook,dexterous_hand]
-```
-
-3D AffordanceNet 的 CAD asset 规则：
-
-```text
-如果只有 object_id = 3danet_full_xxx
-则 source_asset_id = object_id
-asset_uid = source_dataset + ":" + source_asset_id
-```
-
-同一个 `asset_uid` 派生出的所有 task、executor、empty mask、重复审查样本必须进入同一个 split。
-
-## 3. 安装训练环境
+如果还没有训练环境：
 
 ```bash
-cd /home/lzq/Multi-EE-3DAG
 conda create -n multiee-train python=3.11 -y
 conda activate multiee-train
 
@@ -96,62 +81,94 @@ python -m pip install torch torchvision --index-url https://download.pytorch.org
 python -m pip install -r MultiEEAffordance/training/requirements-training.txt
 ```
 
-如果服务器已有可用 PyTorch 环境，可以复用，但要保证能从 `/home/lzq/data/MultiEEAffordance` 读取数据。
+如果 `10.24.1.11` 没有 GPU，可以在该服务器上完成数据准备，再把 `/home/lzq/data/MultiEEAffordance` 挂载或同步到 GPU 服务器训练。配置文件里的 `dataset_root` 默认就是 `/home/lzq/data/MultiEEAffordance`。
 
-## 4. 标注完成后的完整操作
-
-以下命令默认在 `10.24.1.11` 上执行。
-
-### Step 1：确认人工标注输出存在
-
-当前在做什么：确认两位审查者的 refined samples 已经汇总到数据目录。
+如果需要把训练过程记录到 Weights & Biases，先在服务器登录一次：
 
 ```bash
-cd /home/lzq/Multi-EE-3DAG
-conda activate multiee-train
-
-ls /home/lzq/data/MultiEEAffordance/processed/annotation_batches/v0_2_5tasks/*_refined_samples.jsonl
+wandb login
 ```
 
-预期至少看到：
+如果服务器不能直接联网，可以先用离线模式跑：
+
+```bash
+export WANDB_MODE=offline
+```
+
+训练结束后再按 wandb 提示执行 `wandb sync` 上传离线日志。
+
+## 4. Step 1：校验最终 JSONL
+
+当前在做什么：检查每一行是否满足训练前提，包括五任务合法性、执行器合法性、点云和 mask 是否存在、`mask.shape == [N,4]`、`positive_points_after` 是否等于对应 executor 通道正点数。
+
+输入：
 
 ```text
-reviewer_a_refined_samples.jsonl
-reviewer_b_refined_samples.jsonl
+processed/annotation_batches/final_5tasks/all_sources_5tasks_4exec_complete_aligned_posfixed.jsonl
 ```
 
-### Step 2：检查 refined samples
-
-当前在做什么：检查五任务字段是否合法、reviewer 是否为空、点云和 mask 文件是否存在、mask shape 是否能和点云对齐。
+命令：
 
 ```bash
-python -m MultiEEAffordance.training.validate_reviewed_samples \
+python -m MultiEEAffordance.training.validate_final_5task_rows \
   --dataset-root /home/lzq/data/MultiEEAffordance \
-  --reviewed-samples processed/annotation_batches/v0_2_5tasks/reviewer_a_refined_samples.jsonl,processed/annotation_batches/v0_2_5tasks/reviewer_b_refined_samples.jsonl \
-  --output-json processed/training/v0_3_human_5tasks/reviewed_samples_validation.json
-```
-
-如果输出 `status=failed`，先修正 `errors` 中列出的样本，不要继续生成训练集。
-
-### Step 3：生成 canonical 训练集
-
-当前在做什么：把网页保存的 `object + task + executor` 单通道审查结果，合并成模型训练需要的 `object + task -> [N,4]` mask。
-
-```bash
-python -m MultiEEAffordance.training.prepare_training_dataset \
-  --dataset-root /home/lzq/data/MultiEEAffordance \
-  --reviewed-samples processed/annotation_batches/v0_2_5tasks/reviewer_a_refined_samples.jsonl,processed/annotation_batches/v0_2_5tasks/reviewer_b_refined_samples.jsonl \
-  --output-root processed/training/v0_3_human_5tasks \
-  --dataset-version v0_3_human_5tasks \
-  --split-unit source_asset \
-  --min-reviewed-channels 4 \
+  --final-samples processed/annotation_batches/final_5tasks/all_sources_5tasks_4exec_complete_aligned_posfixed.jsonl \
+  --output-json processed/training/v0_4_final_5tasks/final_rows_validation.json \
+  --fail-on-error \
   --overwrite
 ```
 
-输出目录：
+输出：
 
 ```text
-/home/lzq/data/MultiEEAffordance/processed/training/v0_3_human_5tasks/
+/home/lzq/data/MultiEEAffordance/processed/training/v0_4_final_5tasks/final_rows_validation.json
+```
+
+必须确认：
+
+```text
+status = ok
+error_count = 0
+coverage.incomplete_objects = 0
+coverage.duplicate_combination_count = 0
+```
+
+如果失败，不要训练。先看 `errors` 和 `coverage.missing_combinations`。
+
+## 5. Step 2：生成训练 manifest
+
+当前在做什么：把最终 JSONL 从 `object-task-executor` 行压缩成 `object-task` 行。每条训练行保留完整 `[N,4]` mask，并写入 `feasibility`、`positive_points`、`source_asset_id`、`asset_uid`、`split_key`。
+
+输入：
+
+```text
+processed/annotation_batches/final_5tasks/all_sources_5tasks_4exec_complete_aligned_posfixed.jsonl
+```
+
+命令：
+
+```bash
+python -m MultiEEAffordance.training.prepare_final_5task_training_dataset \
+  --dataset-root /home/lzq/data/MultiEEAffordance \
+  --final-samples processed/annotation_batches/final_5tasks/all_sources_5tasks_4exec_complete_aligned_posfixed.jsonl \
+  --output-root processed/training/v0_4_final_5tasks \
+  --dataset-version v0_4_final_5tasks \
+  --split-unit source_asset \
+  --overwrite
+```
+
+脚本会为每个 `object_id + task` 写出一个 canonical `[N,4]` mask：
+
+```text
+processed/training/v0_4_final_5tasks/masks/<object_id>_<task>.npy
+```
+
+原因是最终 JSONL 可能每个 executor 行都有自己的 refined mask 路径。训练需要四个 executor 通道在同一个 `[N,4]` 文件里，所以 prepare 阶段会逐行读取对应 executor 通道并合并。`--copy-masks` 仅作为兼容参数保留；当前真实数据形态下即使不传这个参数，也会自动写出合并后的 canonical mask。
+
+输出：
+
+```text
+/home/lzq/data/MultiEEAffordance/processed/training/v0_4_final_5tasks/
   masks/
     <object_id>_<task>.npy
   manifests/
@@ -159,24 +176,55 @@ python -m MultiEEAffordance.training.prepare_training_dataset \
     train.jsonl
     val.jsonl
     test.jsonl
-    rejected_rows.json
-    incomplete_rows.json
-    conflict_rows.json
   summary.json
+  final_rows_validation.json
+  validation_errors.json
+  object_task_coverage.json
+  object_task_conflicts.json
+  split_assignments.json
 ```
 
-其中 `rejected_rows.json`、`incomplete_rows.json`、`conflict_rows.json` 必须人工看一遍。正式实验建议 `--min-reviewed-channels 4`，确保每个 object-task 都有四个执行器通道的人工结论。
+每条 manifest 行对应一个 `object_id + task`，关键字段包括：
 
-### Step 4：审计 split
+```text
+point_cloud_path
+multi_channel_mask_path
+executor_order
+channel_supervision = [1,1,1,1]
+feasibility
+positive_points
+source_asset_id
+asset_uid
+split_key
+split
+```
 
-当前在做什么：检查同一个 CAD asset 是否泄漏到多个 split，并检查 task/executor/category/empty mask 分布。
+划分规则：
+
+```text
+优先按 split_key / asset_uid / source_asset_id
+如果 3D AffordanceNet 只有 object_id=3danet_full_xxx，则 source_asset_id=object_id
+同一个 CAD asset 派生的 20 行必须进入同一个 split
+```
+
+## 6. Step 3：审计 split
+
+当前在做什么：确认 train/val/test 之间没有同一物体或同一 CAD asset 泄漏，并检查 task、executor、category、empty mask 分布。
+
+命令：
 
 ```bash
 python -m MultiEEAffordance.training.audit_splits \
   --dataset-root /home/lzq/data/MultiEEAffordance \
-  --manifest processed/training/v0_3_human_5tasks/manifests/all.jsonl \
-  --output-json processed/training/v0_3_human_5tasks/split_audit.json \
+  --manifest processed/training/v0_4_final_5tasks/manifests/all.jsonl \
+  --output-json processed/training/v0_4_final_5tasks/split_audit.json \
   --fail-on-leakage
+```
+
+输出：
+
+```text
+/home/lzq/data/MultiEEAffordance/processed/training/v0_4_final_5tasks/split_audit.json
 ```
 
 必须确认：
@@ -187,29 +235,39 @@ object_leakage = {}
 missing_fields = []
 ```
 
-如果有 leakage，说明 split 规则或 source asset 字段有问题，不能开始训练。
+如果有 leakage，不能开始训练。
 
-### Step 5：审计双人一致性
+## 7. Step 4：训练第一批 baseline
 
-当前在做什么：对两位审查者都标过的 calibration subset 计算 point-level IoU、feasibility agreement 和 empty-mask agreement。
+当前在做什么：先训练轻量 PointNet 风格 baseline，验证数据、loss、metric 和训练闭环是否稳定。
 
-```bash
-python -m MultiEEAffordance.training.audit_annotation_consistency \
-  --dataset-root /home/lzq/data/MultiEEAffordance \
-  --reviewed-samples processed/annotation_batches/v0_2_5tasks/reviewer_a_refined_samples.jsonl,processed/annotation_batches/v0_2_5tasks/reviewer_b_refined_samples.jsonl \
-  --output-json processed/training/v0_3_human_5tasks/annotation_consistency.json \
-  --output-csv processed/training/v0_3_human_5tasks/annotation_disagreements.csv
+配置文件：
+
+```text
+MultiEEAffordance/training/configs/pointnet_shared4_5tasks.json
 ```
 
-如果 `reviewer_pairs=0`，说明没有双人重叠样本。建议补一个最小 consistency audit subset：至少 50 个 CAD asset，由两位审查者都标一遍，用于论文 appendix 的人工一致性统计。
+该配置已经指向：
 
-### Step 6：训练第一版 baseline
+```text
+processed/training/v0_4_final_5tasks/manifests/train.jsonl
+processed/training/v0_4_final_5tasks/manifests/val.jsonl
+processed/training/v0_4_final_5tasks/manifests/test.jsonl
+```
 
-当前在做什么：先训练可运行的 PointNet 风格轻量 baseline，用来验证数据闭环、loss、metrics 和 split 是否稳定。
+命令：
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 python -m MultiEEAffordance.training.train \
   --config MultiEEAffordance/training/configs/pointnet_shared4_5tasks.json
+```
+
+所有可运行训练配置都默认打开 wandb，包括 shared-4 baseline、single-EE baseline 和 executor-token/relation-loss 消融。每个配置会用自己的 `experiment_name` 作为 wandb run name，记录每个 epoch 的 `train/*`、`val/*`、`learning_rate` 和 `best_macro_iou`。如果这次训练临时不想连接 wandb，可以不改配置，直接加 `--no-wandb`：
+
+```bash
+CUDA_VISIBLE_DEVICES=0 python -m MultiEEAffordance.training.train \
+  --config MultiEEAffordance/training/configs/pointnet_shared4_5tasks.json \
+  --no-wandb
 ```
 
 输出：
@@ -222,23 +280,57 @@ CUDA_VISIBLE_DEVICES=0 python -m MultiEEAffordance.training.train \
   resolved_config.json
 ```
 
-### Step 7：评估并汇总论文表格
+第一批建议先跑：
+
+```text
+pointnet_shared4_5tasks.json
+single_ee_gripper_5tasks.json
+single_ee_suction_5tasks.json
+single_ee_hook_5tasks.json
+single_ee_dexterous_hand_5tasks.json
+```
+
+这样可以先回答一个关键审稿问题：联合四执行器预测是否优于四个独立 single-EE 模型。
+
+## 8. Step 5：评估和汇总
+
+评估单个模型：
 
 ```bash
 python -m MultiEEAffordance.training.evaluate \
   --config MultiEEAffordance/training/configs/pointnet_shared4_5tasks.json \
   --checkpoint /home/lzq/data/MultiEEAffordance/processed/training_runs/pointnet_shared4_5tasks/best.pt \
   --output-json processed/training_runs/pointnet_shared4_5tasks/test_metrics.json
-
-python -m MultiEEAffordance.training.collect_experiment_table \
-  --runs-root /home/lzq/data/MultiEEAffordance/processed/training_runs \
-  --output-csv /home/lzq/data/MultiEEAffordance/processed/training/v0_3_human_5tasks/aaai_main_table.csv \
-  --output-json /home/lzq/data/MultiEEAffordance/processed/training/v0_3_human_5tasks/aaai_main_table.json
 ```
 
-## 5. 当前可运行配置
+汇总实验表：
 
-当前代码实现的是轻量 `TaskExecutorPointNet`，用于验证训练闭环。已经提供：
+```bash
+python -m MultiEEAffordance.training.collect_experiment_table \
+  --runs-root /home/lzq/data/MultiEEAffordance/processed/training_runs \
+  --output-csv /home/lzq/data/MultiEEAffordance/processed/training/v0_4_final_5tasks/aaai_main_table.csv \
+  --output-json /home/lzq/data/MultiEEAffordance/processed/training/v0_4_final_5tasks/aaai_main_table.json
+```
+
+论文主表不能只报告 overall mIoU。至少需要关注：
+
+```text
+macro_iou
+macro_dice
+per_task_iou
+per_executor_iou
+task_executor_iou_5x4
+macro_feasibility_f1
+feasibility_auroc
+empty_mask_accuracy
+non_empty_recall
+small_part_recall
+executor_overlap_matrix_error
+```
+
+## 9. 可直接运行的配置
+
+当前已经实现的模型是轻量 `TaskExecutorPointNet`，用于建立第一批可运行 baseline 和消融：
 
 ```text
 pointnet_shared4_5tasks.json
@@ -254,48 +346,17 @@ single_ee_hook_5tasks.json
 single_ee_dexterous_hand_5tasks.json
 ```
 
-注意：PointNeXt、Point Transformer、真正 four-head model 和 HeteroAffordanceFormer 主模型还没有在当前代码中实现。不要用当前 PointNet 配置冒充这些强 baseline。后续实现新 backbone 后，再补对应配置和主表。
+PointNeXt、Point Transformer、PointNet++、真正 four-head model 和 HeteroAffordanceFormer 主模型还没有在当前代码中实现。不要把当前 PointNet 结果命名成这些强 baseline。
 
-配置目录的可运行/待实现边界见：
+## 10. 本地 smoke test
 
-```text
-MultiEEAffordance/training/configs/README.md
+不依赖 PyTorch 的最终 JSONL 准备测试：
+
+```bash
+python -m MultiEEAffordance.training.smoke_prepare_final_dataset
 ```
 
-## 6. Loss 和指标定义
-
-训练 loss：
-
-```text
-L = L_mask_positive + lambda_empty * L_empty_area + lambda_feas * L_feasibility + lambda_relation * L_relation
-```
-
-规则：
-
-- `F_gt=1` 的通道计算 Focal BCE + Dice。
-- `F_gt=0` 的通道不计算 Dice，只计算 empty area penalty 和 feasibility BCE。
-- relation loss 默认关闭；只作为 ablation，且只在双方 feasible 且 mask 足够大时计算。
-
-评估指标包括：
-
-```text
-macro_iou
-macro_dice
-task_executor_iou 5x4
-per_task
-per_executor
-macro_feasibility_f1
-feasibility_auroc
-empty_mask_accuracy
-small_part_recall
-executor_overlap_matrix_error
-```
-
-主表不要只报告 overall mIoU。论文主结果至少报告 macro mIoU、macro Dice、5x4 task-executor matrix、feasibility F1/AUROC、empty-mask 指标和 small-part recall。
-
-## 7. 本地 smoke test
-
-不依赖 PyTorch 的数据准备测试：
+旧 refined-samples 入口测试：
 
 ```bash
 python -m MultiEEAffordance.training.smoke_prepare_dataset
@@ -307,13 +368,51 @@ python -m MultiEEAffordance.training.smoke_prepare_dataset
 python -m MultiEEAffordance.training.smoke_test
 ```
 
-正常输出应包含：
+如果本地没有安装 torch，第三个测试会失败，这是环境问题；服务器训练环境需要通过。
+
+## 11. Git 和大文件约束
+
+Git 只提交代码、配置、文档和小型元数据。不要提交：
 
 ```text
-"status": "ok"
-"legacy_task_rejected": true
+.npy
+.npz
+.pt
+大规模 processed 数据目录
 ```
 
-## 8. Git 说明
+项目要求 Git 提交说明使用中文。
 
-本项目要求 Git 提交说明使用中文。大规模 `.npy/.npz/.pt` 不进入普通 Git 仓库，只保存在 `/home/lzq/data/MultiEEAffordance` 或实验服务器的数据目录。
+## 12. 常见训练启动错误
+
+### JSONDecodeError: Unexpected UTF-8 BOM
+
+如果训练启动时报错：
+
+```text
+json.decoder.JSONDecodeError: Unexpected UTF-8 BOM
+```
+
+含义是 JSON 配置文件开头带有 UTF-8 BOM。当前训练代码已经使用 `utf-8-sig` 读取配置，正常同步最新代码后可以直接重新运行训练命令。
+
+如果同步代码后仍然报同样错误，优先检查 Python 实际导入的是不是仓库代码，而不是数据目录里的旧副本：
+
+```bash
+cd /home/lzq/data
+export PYTHONPATH=/home/lzq/data:$PYTHONPATH
+python -c "import MultiEEAffordance.training.train as t; print(t.__file__)"
+```
+
+期望输出类似：
+
+```text
+/home/lzq/data/MultiEEAffordance/training/train.py
+```
+
+如果输出不是这个路径，例如仍然指向其他旧仓库目录：
+
+```text
+/home/lzq/Multi-EE-3DAG/MultiEEAffordance/training/train.py
+```
+
+说明当前运行到了另一份代码。需要把最新代码同步到 `/home/lzq/data/MultiEEAffordance`，或者明确切换到你希望使用的那份代码后再运行。

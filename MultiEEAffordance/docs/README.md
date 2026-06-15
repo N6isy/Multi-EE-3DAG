@@ -47,28 +47,34 @@ PartNet-Mobility数据解压与格式转换.md
 
 当前 v3 主线已经切换为自研高召回 3D part candidate generator。默认不要再跑旧的 `ground,project,grow` 候选生长链路，除非是在复现实验。
 
-## 标注完成后的训练实验入口
+## 最终五任务训练实验入口
 
-当前人工标注工作预计很快完成。标注完成后，训练实验准备统一在数据服务器执行：
+当前人工标注已经完成整理与合并。最终清洗后的训练样本文件为：
+
+```text
+/home/lzq/data/MultiEEAffordance/processed/annotation_batches/final_5tasks/all_sources_5tasks_4exec_complete_aligned_posfixed.jsonl
+```
+
+该 JSONL 每一行是 `object_id + task + executor`，训练前必须先压缩为 `object_id + task -> [N,4] mask` manifest。训练实验准备统一在数据服务器执行：
 
 ```text
 服务器：10.24.1.11
-代码目录：/home/lzq/Multi-EE-3DAG
-数据根目录：/home/lzq/data/MultiEEAffordance
+Python 包父目录：/home/lzq/data
+数据根目录 / 代码包目录：/home/lzq/data/MultiEEAffordance
 ```
 
 训练侧只接受五任务人工标注结果，不接受旧任务候选作为 GT。正式训练前必须先完成：
 
-1. `validate_reviewed_samples.py`：检查 refined samples 字段、路径、reviewer 和 mask shape。
-2. `prepare_training_dataset.py --split-unit source_asset`：合并成 canonical `[N,4]` mask，并按 CAD asset 划分 train/val/test。
+1. `validate_final_5task_rows.py`：检查最终 JSONL 的五任务字段、执行器字段、路径、mask shape 和 positive count。
+2. `prepare_final_5task_training_dataset.py --split-unit source_asset`：合并成 canonical object-task `[N,4]` manifest，并按 CAD asset 划分 train/val/test。
 3. `audit_splits.py --fail-on-leakage`：确认 `asset_uid/object_id` 无泄漏。
-4. `audit_annotation_consistency.py`：统计双人重叠样本一致性。
-5. `train.py/evaluate.py/collect_experiment_table.py`：训练、评估并汇总 AAAI 主表。
+4. `train.py/evaluate.py/collect_experiment_table.py`：训练、评估并汇总 AAAI 主表。
 
 完整可执行命令见：
 
 ```text
 ../training/README.md
+最终五任务训练数据接入README.md
 AAAI投稿导向模型训练Pipeline规划.md
 ```
 
@@ -210,6 +216,7 @@ python MultiEEAffordance/tools/serve_v2_annotation_app.py \
 | `VLM候选选择Pipeline_v2设计与汇报.md` | v2 候选选择方案和问题总结 |
 | `v2模块化Pipeline与点级审查系统设计.md` | 点级审查系统和 v2 模块化方案 |
 | `AAAI投稿导向模型训练Pipeline规划.md` | AAAI 训练实验计划：asset-level split、人工一致性、empty/feasibility 建模、baseline 和消融 |
+| `最终五任务训练数据接入README.md` | 标注合并完成后的最终 JSONL 接入训练：校验、manifest 生成、split 审计、baseline 训练和评估 |
 | `AAAI投稿时间规划_2026-06-01.md` | 从 2026-06-01 开始的投稿排期：标注、训练、实验、论文写作、投稿材料和风险降级策略 |
 | `../training/README.md` | 独立五任务训练目录操作手册：数据合并、训练环境、服务器运行、baseline 训练和评估 |
 | `Qwen3-VL+SAM2候选标注流程图.md` | 早期 Qwen3-VL + SAM2 流程图 |

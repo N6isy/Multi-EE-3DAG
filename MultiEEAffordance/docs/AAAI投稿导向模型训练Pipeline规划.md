@@ -1,6 +1,6 @@
 # AAAI 投稿导向模型训练 Pipeline 规划
 
-更新时间：2026-06-09
+更新时间：2026-06-15
 
 本文档定义五任务 Multi-EE Affordance Grounding 的实验路线。当前数据质量只有一种：人工标注/人工审查后的标注结果。训练 pipeline 不再区分 `weak/checked/verified` 层级，也不做质量加权。
 
@@ -49,13 +49,13 @@ task-conditioned heterogeneous end-effector affordance grounding
 - 同一 `asset_uid` 的所有 task、executor、empty mask、重复审查样本必须进入同一 split
 - 禁止按 sample row 随机划分
 
-已实现审计脚本：
+当前最终数据先由 `prepare_final_5task_training_dataset.py` 生成训练 manifest，再审计 split。已实现审计脚本：
 
 ```bash
 python -m MultiEEAffordance.training.audit_splits \
   --dataset-root /home/lzq/data/MultiEEAffordance \
-  --manifest processed/training/v0_3_human_5tasks/manifests/all.jsonl \
-  --output-json processed/training/v0_3_human_5tasks/split_audit.json \
+  --manifest processed/training/v0_4_final_5tasks/manifests/all.jsonl \
+  --output-json processed/training/v0_4_final_5tasks/split_audit.json \
   --fail-on-leakage
 ```
 
@@ -77,14 +77,14 @@ python -m MultiEEAffordance.training.audit_splits \
 - 两位 reviewer 都标注这批样本
 - 统计 point-level mask IoU、feasibility agreement、empty-mask agreement
 
-已实现审计脚本：
+如果保留了两位 reviewer 的原始 refined samples，可继续使用一致性审计脚本：
 
 ```bash
 python -m MultiEEAffordance.training.audit_annotation_consistency \
   --dataset-root /home/lzq/data/MultiEEAffordance \
   --reviewed-samples processed/annotation_batches/v0_2_5tasks/reviewer_a_refined_samples.jsonl,processed/annotation_batches/v0_2_5tasks/reviewer_b_refined_samples.jsonl \
-  --output-json processed/training/v0_3_human_5tasks/annotation_consistency.json \
-  --output-csv processed/training/v0_3_human_5tasks/annotation_disagreements.csv
+  --output-json processed/training/v0_4_final_5tasks/annotation_consistency.json \
+  --output-csv processed/training/v0_4_final_5tasks/annotation_disagreements.csv
 ```
 
 建议写入论文 appendix：
@@ -237,13 +237,27 @@ Overlap Matrix Error
 
 ## 10. 标注完成后实验顺序
 
-1. `validate_reviewed_samples.py`
-2. `prepare_training_dataset.py --split-unit source_asset`
-3. `audit_splits.py --fail-on-leakage`
-4. `audit_annotation_consistency.py`
-5. 跑 `pointnet_shared4_5tasks`
-6. 跑 token ablations 和 single-EE baselines
-7. 汇总 `collect_experiment_table.py`
-8. 再接入 PointNeXt / Point Transformer / HeteroAffordanceFormer
+当前最终输入不是旧 `reviewer_a_refined_samples.jsonl`，而是最终清洗后的 row-level JSONL：
 
-完整命令见 `MultiEEAffordance/training/README.md`。
+```text
+/home/lzq/data/MultiEEAffordance/processed/annotation_batches/final_5tasks/all_sources_5tasks_4exec_complete_aligned_posfixed.jsonl
+```
+
+实验顺序：
+
+1. `validate_final_5task_rows.py`
+2. `prepare_final_5task_training_dataset.py --split-unit source_asset`
+3. `audit_splits.py --fail-on-leakage`
+4. 可选：如果保留双人重叠原始记录，跑 `audit_annotation_consistency.py`
+5. 跑 `pointnet_shared4_5tasks`
+6. 跑 four single-EE baselines
+7. 跑 token ablations
+8. 汇总 `collect_experiment_table.py`
+9. 再接入 PointNeXt / Point Transformer / HeteroAffordanceFormer
+
+完整命令见：
+
+```text
+MultiEEAffordance/training/README.md
+MultiEEAffordance/docs/最终五任务训练数据接入README.md
+```

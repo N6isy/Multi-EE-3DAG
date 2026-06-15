@@ -34,7 +34,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def read_json(path: Path) -> dict[str, Any]:
-    with path.open("r", encoding="utf-8") as file:
+    with path.open("r", encoding="utf-8-sig") as file:
         value = json.load(file)
     if not isinstance(value, dict):
         raise ValueError(f"Expected object JSON: {path}")

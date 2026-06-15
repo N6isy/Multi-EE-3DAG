@@ -8,7 +8,8 @@
 
 ```text
 服务器：10.24.1.11
-数据根目录：/home/lzq/data/MultiEEAffordance
+Python 包父目录：/home/lzq/data
+数据根目录 / 代码包目录：/home/lzq/data/MultiEEAffordance
 ```
 
 GitHub 仓库只管理代码、文档和小型元数据。大规模 `.npy`、`.npz`、候选目录、人工 refined mask 和审查日志保存在数据服务器，不提交到普通 Git 仓库。
@@ -48,7 +49,13 @@ P, q -> [M_gripper, M_suction, M_hook, M_dexterous_hand]
 
 ## 当前阶段
 
-项目目前处于五任务人工标注收尾和 AAAI 实验准备阶段。候选生成与网页审查仍是数据构建主线；训练目录已经补齐标注完成后的数据检查、canonical `[N,4]` mask 生成、asset-level split 审计和第一批轻量 baseline。
+项目目前已经完成五任务人工标注整理与合并，进入 AAAI 第一批 baseline 实验准备阶段。当前最终训练样本文件为：
+
+```text
+/home/lzq/data/MultiEEAffordance/processed/annotation_batches/final_5tasks/all_sources_5tasks_4exec_complete_aligned_posfixed.jsonl
+```
+
+该文件每一行表示一个 `object_id + task + executor` 组合。训练前需要先用 `training/prepare_final_5task_training_dataset.py` 合并成 `object_id + task -> [N,4] mask` 的 canonical manifest，并按 CAD asset 做 train/val/test split。
 
 当前任务体系已经从旧候选生成任务切换到五任务人工标注体系：
 
@@ -69,13 +76,12 @@ P, q -> [M_gripper, M_suction, M_hook, M_dexterous_hand]
 - 构建了候选区域生成、VLM 辅助筛选、规则过滤和网页人工审查流程。
 - 当前正在验证 v3 pipeline：让 VLM 先判断目标部件和应排除部件，再生成更适合人工审查的 3D 候选区域。
 
-当前优先级是完成五任务人工标签，并在标注完成后立即执行训练前检查：
+当前优先级是执行最终训练数据接入和第一批 baseline：
 
 ```text
-validate refined samples
-prepare canonical [N,4] masks
+validate final 5task row-level JSONL
+prepare canonical object-task [N,4] manifests
 audit CAD asset-level split
-audit reviewer consistency
 train first PointNet baseline
 ```
 
@@ -146,7 +152,9 @@ MultiEEAffordance/training/README.md
 | `run_v3_pipeline.py` | 串联 v3 全流程 |
 | `serve_v2_annotation_app.py` | 网页端人工审查和点级精修工具 |
 | `training/validate_reviewed_samples.py` | 标注完成后检查 refined samples、路径、reviewer 和 mask shape |
-| `training/prepare_training_dataset.py` | 合并人工审查结果，生成训练用 canonical `[N,4]` mask 和 split |
+| `training/validate_final_5task_rows.py` | 检查最终清洗 JSONL 的 task、executor、路径、shape 和 positive count |
+| `training/prepare_final_5task_training_dataset.py` | 将最终 `object-task-executor` JSONL 合并为训练用 `object-task -> [N,4]` manifest |
+| `training/prepare_training_dataset.py` | 历史兼容入口：合并早期 reviewer refined samples，生成 canonical `[N,4]` mask 和 split |
 | `training/audit_splits.py` | 审计 train/val/test 是否存在 CAD asset 或 object 泄漏 |
 | `training/audit_annotation_consistency.py` | 统计双人重叠标注的一致性 |
 | `training/collect_experiment_table.py` | 汇总实验指标为论文主表 CSV/JSON |

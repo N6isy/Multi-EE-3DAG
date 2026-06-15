@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import random
 from pathlib import Path
 from typing import Any
@@ -26,11 +27,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dataset-root", default="", help="Override dataset_root from config.")
     parser.add_argument("--output-dir", default="", help="Override output_dir from config.")
     parser.add_argument("--device", default="", help="Override device, for example cuda:0 or cpu.")
+    parser.add_argument("--wandb", action="store_true", help="Enable Weights & Biases logging for this run.")
+    parser.add_argument("--no-wandb", action="store_true", help="Disable Weights & Biases logging for this run.")
     return parser.parse_args()
 
 
 def load_config(path: str | Path) -> dict[str, Any]:
-    with Path(path).open("r", encoding="utf-8") as file:
+    with Path(path).open("r", encoding="utf-8-sig") as file:
         config = json.load(file)
     if not isinstance(config, dict):
         raise ValueError("Training config must be a JSON object.")
@@ -48,6 +51,68 @@ def seed_everything(seed: int) -> None:
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
+
+
+def flatten_for_logging(prefix: str, values: dict[str, Any]) -> dict[str, float]:
+    flat: dict[str, float] = {}
+    for key, value in values.items():
+        name = f"{prefix}/{key}" if prefix else str(key)
+        if isinstance(value, bool):
+            flat[name] = float(value)
+        elif isinstance(value, (int, float)):
+            flat[name] = float(value)
+        elif isinstance(value, dict):
+            flat.update(flatten_for_logging(name, value))
+    return flat
+
+
+def wandb_enabled(config: dict[str, Any], args: argparse.Namespace) -> bool:
+    if args.no_wandb:
+        return False
+    if args.wandb:
+        return True
+    wandb_config = config.get("wandb", {})
+    if isinstance(wandb_config, dict):
+        return bool(wandb_config.get("enabled", False))
+    return bool(wandb_config)
+
+
+def init_wandb(
+    config: dict[str, Any],
+    args: argparse.Namespace,
+    *,
+    dataset_root: Path,
+    output_dir: Path,
+):
+    if not wandb_enabled(config, args):
+        return None
+    try:
+        import wandb
+    except ImportError as exc:
+        raise RuntimeError(
+            "Weights & Biases logging is enabled, but wandb is not installed. "
+            "Install it with: python -m pip install wandb"
+        ) from exc
+
+    wandb_config = config.get("wandb", {})
+    if not isinstance(wandb_config, dict):
+        wandb_config = {}
+    run_config = dict(config)
+    run_config["dataset_root_resolved"] = str(dataset_root)
+    run_config["output_dir_resolved"] = str(output_dir)
+    init_kwargs: dict[str, Any] = {
+        "project": wandb_config.get("project", "multiee-affordance"),
+        "name": wandb_config.get("name") or config.get("experiment_name"),
+        "config": run_config,
+        "dir": str(output_dir),
+        "mode": os.environ.get("WANDB_MODE") or wandb_config.get("mode", "online"),
+        "resume": wandb_config.get("resume", "allow"),
+    }
+    for optional_key in ("entity", "group", "job_type", "tags", "notes", "id"):
+        if wandb_config.get(optional_key):
+            init_kwargs[optional_key] = wandb_config[optional_key]
+    run = wandb.init(**init_kwargs)
+    return run
 
 
 def make_loader(
@@ -161,6 +226,7 @@ def main() -> int:
     output_dir.mkdir(parents=True, exist_ok=True)
     device = torch.device(args.device or config.get("device") or ("cuda" if torch.cuda.is_available() else "cpu"))
     seed_everything(int(config.get("seed", 2026)))
+    wandb_run = init_wandb(config, args, dataset_root=dataset_root, output_dir=output_dir)
 
     train_loader = make_loader(config, dataset_root, "train_manifest", train=True)
     val_loader = make_loader(config, dataset_root, "val_manifest", train=False)
@@ -175,6 +241,9 @@ def main() -> int:
         executor_mode=str(config.get("executor_mode", "learnable")),
         executor_token_permutation=config.get("executor_token_permutation"),
     ).to(device)
+    wandb_config = config.get("wandb", {})
+    if wandb_run is not None and isinstance(wandb_config, dict) and wandb_config.get("watch_model", False):
+        wandb_run.watch(model, log=str(wandb_config.get("watch_log", "gradients")), log_freq=int(wandb_config.get("watch_log_freq", 100)))
     optimizer = torch.optim.AdamW(
         model.parameters(),
         lr=float(config.get("learning_rate", 1e-3)),
@@ -198,6 +267,14 @@ def main() -> int:
         }
         history.append(record)
         print(json.dumps(record, ensure_ascii=False))
+        if wandb_run is not None:
+            log_payload: dict[str, float] = {
+                "epoch": float(epoch),
+                "learning_rate": float(optimizer.param_groups[0]["lr"]),
+            }
+            log_payload.update(flatten_for_logging("train", train_metrics))
+            log_payload.update(flatten_for_logging("val", val_metrics))
+            wandb_run.log(log_payload, step=epoch)
         checkpoint = {
             "epoch": epoch,
             "config": config,
@@ -215,6 +292,23 @@ def main() -> int:
         scheduler.step()
 
     save_json(output_dir / "resolved_config.json", config)
+    if wandb_run is not None:
+        wandb_run.summary["best_macro_iou"] = best_score
+        if isinstance(wandb_config, dict) and wandb_config.get("log_checkpoints", False):
+            import wandb
+
+            artifact = wandb.Artifact(f"{wandb_run.name}-checkpoint", type="model")
+            best_path = output_dir / "best.pt"
+            history_path = output_dir / "history.json"
+            config_path = output_dir / "resolved_config.json"
+            if best_path.exists():
+                artifact.add_file(str(best_path), name="best.pt")
+            if history_path.exists():
+                artifact.add_file(str(history_path), name="history.json")
+            if config_path.exists():
+                artifact.add_file(str(config_path), name="resolved_config.json")
+            wandb_run.log_artifact(artifact)
+        wandb_run.finish()
     print(f"Training complete. best_macro_iou={best_score:.6f} output_dir={output_dir}")
     return 0
 
