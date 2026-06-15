@@ -105,6 +105,8 @@ class MultiEEFiveTaskDataset(Dataset):
             "feasibility": torch.from_numpy(feasibility),
             "training_id": str(row.get("training_id") or ""),
             "object_id": str(row.get("object_id") or ""),
+            "source_asset_id": str(row.get("source_asset_id") or ""),
+            "asset_uid": str(row.get("asset_uid") or ""),
+            "split_key": str(row.get("split_key") or ""),
             "task": str(row["task"]),
         }
-

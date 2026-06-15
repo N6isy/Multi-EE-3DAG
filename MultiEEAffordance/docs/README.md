@@ -1,6 +1,6 @@
 # Multi-EE-3DAG 文档索引
 
-更新时间：2026-06-01
+更新时间：2026-06-09
 
 ## 当前数据服务器与数据规模
 
@@ -46,6 +46,33 @@ PartNet-Mobility数据解压与格式转换.md
 ## 当前推荐命令速查
 
 当前 v3 主线已经切换为自研高召回 3D part candidate generator。默认不要再跑旧的 `ground,project,grow` 候选生长链路，除非是在复现实验。
+
+## 标注完成后的训练实验入口
+
+当前人工标注工作预计很快完成。标注完成后，训练实验准备统一在数据服务器执行：
+
+```text
+服务器：10.24.1.11
+代码目录：/home/lzq/Multi-EE-3DAG
+数据根目录：/home/lzq/data/MultiEEAffordance
+```
+
+训练侧只接受五任务人工标注结果，不接受旧任务候选作为 GT。正式训练前必须先完成：
+
+1. `validate_reviewed_samples.py`：检查 refined samples 字段、路径、reviewer 和 mask shape。
+2. `prepare_training_dataset.py --split-unit source_asset`：合并成 canonical `[N,4]` mask，并按 CAD asset 划分 train/val/test。
+3. `audit_splits.py --fail-on-leakage`：确认 `asset_uid/object_id` 无泄漏。
+4. `audit_annotation_consistency.py`：统计双人重叠样本一致性。
+5. `train.py/evaluate.py/collect_experiment_table.py`：训练、评估并汇总 AAAI 主表。
+
+完整可执行命令见：
+
+```text
+../training/README.md
+AAAI投稿导向模型训练Pipeline规划.md
+```
+
+特别注意：3D AffordanceNet 中一个原始 object shape/model 就是一个 CAD asset。如果只有 `object_id=3danet_full_xxx`，则先把这个 `object_id` 作为 `source_asset_id`；同一 asset 派生出的所有 task、executor、mask 和重复标注样本必须进入同一个 split。
 
 ## 当前双人协作标注版本
 
@@ -182,7 +209,7 @@ python MultiEEAffordance/tools/serve_v2_annotation_app.py \
 | `V3语义目标拒绝候选Pipeline设计与汇报.md` | 旧 target/reject seed-growth 方案的历史设计说明 |
 | `VLM候选选择Pipeline_v2设计与汇报.md` | v2 候选选择方案和问题总结 |
 | `v2模块化Pipeline与点级审查系统设计.md` | 点级审查系统和 v2 模块化方案 |
-| `AAAI投稿导向模型训练Pipeline规划.md` | 训练侧研究计划：HeteroAffordanceFormer、数据 split、损失、指标、baseline 和消融 |
+| `AAAI投稿导向模型训练Pipeline规划.md` | AAAI 训练实验计划：asset-level split、人工一致性、empty/feasibility 建模、baseline 和消融 |
 | `AAAI投稿时间规划_2026-06-01.md` | 从 2026-06-01 开始的投稿排期：标注、训练、实验、论文写作、投稿材料和风险降级策略 |
 | `../training/README.md` | 独立五任务训练目录操作手册：数据合并、训练环境、服务器运行、baseline 训练和评估 |
 | `Qwen3-VL+SAM2候选标注流程图.md` | 早期 Qwen3-VL + SAM2 流程图 |

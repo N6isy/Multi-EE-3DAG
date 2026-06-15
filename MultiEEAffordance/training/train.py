@@ -17,6 +17,7 @@ from .dataset import MultiEEFiveTaskDataset
 from .losses import compute_loss
 from .metrics import MetricAccumulator
 from .model import TaskExecutorPointNet
+from .constants import EXECUTOR_TO_INDEX
 
 
 def parse_args() -> argparse.Namespace:
@@ -78,6 +79,19 @@ def make_loader(
     )
 
 
+def apply_enabled_executors(batch: dict[str, torch.Tensor], config: dict[str, Any]) -> None:
+    raw = config.get("enabled_executors")
+    if not raw:
+        return
+    enabled = [str(item).strip() for item in raw if str(item).strip()] if isinstance(raw, list) else [str(raw).strip()]
+    mask = torch.zeros_like(batch["channel_supervision"])
+    for executor in enabled:
+        if executor not in EXECUTOR_TO_INDEX:
+            raise ValueError(f"Unknown enabled executor {executor!r}.")
+        mask[:, EXECUTOR_TO_INDEX[executor]] = 1.0
+    batch["channel_supervision"] = batch["channel_supervision"] * mask
+
+
 def run_epoch(
     model: TaskExecutorPointNet,
     loader: DataLoader,
@@ -99,6 +113,7 @@ def run_epoch(
             "channel_supervision": batch["channel_supervision"].to(device),
             "feasibility": batch["feasibility"].to(device),
         }
+        apply_enabled_executors(tensor_batch, config)
         with torch.set_grad_enabled(train):
             outputs = model(points, task_id)
             losses = compute_loss(
@@ -106,7 +121,9 @@ def run_epoch(
                 tensor_batch,
                 lambda_dice=float(config.get("lambda_dice", 1.0)),
                 lambda_feasibility=float(config.get("lambda_feasibility", 0.5)),
-                lambda_relation=float(config.get("lambda_relation", 0.1)),
+                lambda_relation=float(config.get("lambda_relation", 0.0)),
+                lambda_empty_area=float(config.get("lambda_empty_area", 0.25)),
+                min_relation_points=float(config.get("min_relation_points", 4.0)),
             )
             if optimizer is not None:
                 optimizer.zero_grad(set_to_none=True)
@@ -121,6 +138,7 @@ def run_epoch(
             outputs["feasibility_logits"].detach(),
             tensor_batch["feasibility"],
             tensor_batch["channel_supervision"],
+            task_id,
         )
         steps += 1
     result = {f"loss_{name}": value / max(steps, 1) for name, value in loss_sums.items()}
@@ -154,6 +172,8 @@ def main() -> int:
         hidden_dim=int(config.get("hidden_dim", 128)),
         task_dim=int(config.get("task_dim", 64)),
         executor_dim=int(config.get("executor_dim", 64)),
+        executor_mode=str(config.get("executor_mode", "learnable")),
+        executor_token_permutation=config.get("executor_token_permutation"),
     ).to(device)
     optimizer = torch.optim.AdamW(
         model.parameters(),
@@ -201,4 +221,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

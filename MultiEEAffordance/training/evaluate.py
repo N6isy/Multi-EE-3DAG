@@ -39,6 +39,8 @@ def main() -> int:
         hidden_dim=int(config.get("hidden_dim", 128)),
         task_dim=int(config.get("task_dim", 64)),
         executor_dim=int(config.get("executor_dim", 64)),
+        executor_mode=str(config.get("executor_mode", "learnable")),
+        executor_token_permutation=config.get("executor_token_permutation"),
     ).to(device)
     checkpoint = torch.load(args.checkpoint, map_location=device)
     model.load_state_dict(checkpoint["model_state"])
@@ -51,4 +53,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

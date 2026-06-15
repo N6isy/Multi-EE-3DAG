@@ -1209,3 +1209,31 @@ reviewer_x_annotation_v0_2_5tasks_YYYYMMDD.zip = 审查者回传结果用
 [ ] hook/suction/dexterous_hand 的典型错误已抽查
 [ ] 合并后的 merged_refined_samples.jsonl 可正常读取
 ```
+
+---
+
+## 20. 标注结果会如何进入训练实验
+
+审查者完成的文件不会直接作为模型训练输入。维护者会先把结果放到数据服务器：
+
+```text
+10.24.1.11
+/home/lzq/data/MultiEEAffordance/processed/annotation_batches/v0_2_5tasks/
+```
+
+然后维护者会运行训练准备脚本，做三件事：
+
+```text
+1. 检查 refined samples 和 mask 文件是否完整。
+2. 把 object + task + executor 的审查结果合并成 object + task 的 [N,4] mask。
+3. 按 CAD asset 划分 train/val/test，避免同一个原始物体泄漏到多个 split。
+```
+
+对审查者最重要的是：保存时不要漏掉 reviewer 身份，也不要把不确定样本随便标成正例。空 mask 是有效标签，它表示当前 object-task-executor 组合不可行。训练阶段会显式学习这种 feasibility / empty-mask 关系。
+
+完整训练流程由维护者执行，文档见：
+
+```text
+MultiEEAffordance/training/README.md
+MultiEEAffordance/docs/AAAI投稿导向模型训练Pipeline规划.md
+```

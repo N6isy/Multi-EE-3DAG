@@ -1581,3 +1581,123 @@ external/
 ```
 
 这样后续无论是继续标注、训练模型，还是写论文实验部分，都能追溯这批数据是怎么来的。
+
+## 23. 标注完成后如何进入训练实验
+
+当五任务人工标注完成后，维护者不要直接把 `review_records.jsonl` 当训练集。训练入口只读取 refined samples 和 refined masks，并会重新合并 canonical `[N,4]` mask。
+
+### 23.1 先确认最终输出位置
+
+在数据服务器 `10.24.1.11` 上确认：
+
+```bash
+ls /home/lzq/data/MultiEEAffordance/processed/annotation_batches/v0_2_5tasks/*_refined_samples.jsonl
+ls /home/lzq/data/MultiEEAffordance/processed/annotation_batches/v0_2_5tasks/manual_refined_masks_reviewer_a
+ls /home/lzq/data/MultiEEAffordance/processed/annotation_batches/v0_2_5tasks/manual_refined_masks_reviewer_b
+```
+
+这一步是在确认“人工保存结果已经齐了”。如果 refined samples 不存在，说明网页保存输出没有收齐；如果 mask 目录为空，说明网页没有真正保存 refined mask。
+
+### 23.2 检查 refined samples 是否可训练
+
+```bash
+cd /home/lzq/Multi-EE-3DAG
+conda activate multiee-train
+
+python -m MultiEEAffordance.training.validate_reviewed_samples \
+  --dataset-root /home/lzq/data/MultiEEAffordance \
+  --reviewed-samples processed/annotation_batches/v0_2_5tasks/reviewer_a_refined_samples.jsonl,processed/annotation_batches/v0_2_5tasks/reviewer_b_refined_samples.jsonl \
+  --output-json processed/training/v0_3_human_5tasks/reviewed_samples_validation.json
+```
+
+这一步会检查：
+
+```text
+task 是否属于 lift/open/pull/press/push
+executor 是否属于四类执行器
+reviewer 是否为空
+point_cloud_path 是否存在
+multi_channel_mask_path 是否存在
+mask shape 是否为 [N,4] 或 [N]
+```
+
+如果 `status=failed`，先根据 `errors` 修正数据，不要继续训练。
+
+### 23.3 生成训练专用 canonical 数据
+
+```bash
+python -m MultiEEAffordance.training.prepare_training_dataset \
+  --dataset-root /home/lzq/data/MultiEEAffordance \
+  --reviewed-samples processed/annotation_batches/v0_2_5tasks/reviewer_a_refined_samples.jsonl,processed/annotation_batches/v0_2_5tasks/reviewer_b_refined_samples.jsonl \
+  --output-root processed/training/v0_3_human_5tasks \
+  --dataset-version v0_3_human_5tasks \
+  --split-unit source_asset \
+  --min-reviewed-channels 4 \
+  --overwrite
+```
+
+这一步会做四件事：
+
+```text
+1. 按 object_id + task 聚合四个 executor 通道
+2. 输出训练用 [N,4] mask
+3. 为每条 object-task 生成 feasibility=[4]
+4. 按 CAD asset 生成 train/val/test split
+```
+
+正式实验必须使用 `--split-unit source_asset`。3D AffordanceNet 的一个 `3danet_full_xxx` 原始 object shape/model 就是一个 CAD asset；如果没有其他 asset 字段，脚本会把 `object_id` 写成 `source_asset_id`。所有由这个 asset 派生出来的 task、executor、empty mask 和重复审查样本必须进入同一个 split。
+
+### 23.4 审计 split 防泄漏
+
+```bash
+python -m MultiEEAffordance.training.audit_splits \
+  --dataset-root /home/lzq/data/MultiEEAffordance \
+  --manifest processed/training/v0_3_human_5tasks/manifests/all.jsonl \
+  --output-json processed/training/v0_3_human_5tasks/split_audit.json \
+  --fail-on-leakage
+```
+
+必须确认：
+
+```text
+asset_leakage = {}
+object_leakage = {}
+missing_fields = []
+```
+
+如果有泄漏，训练结果不能用于论文。
+
+### 23.5 审计双人一致性
+
+```bash
+python -m MultiEEAffordance.training.audit_annotation_consistency \
+  --dataset-root /home/lzq/data/MultiEEAffordance \
+  --reviewed-samples processed/annotation_batches/v0_2_5tasks/reviewer_a_refined_samples.jsonl,processed/annotation_batches/v0_2_5tasks/reviewer_b_refined_samples.jsonl \
+  --output-json processed/training/v0_3_human_5tasks/annotation_consistency.json \
+  --output-csv processed/training/v0_3_human_5tasks/annotation_disagreements.csv
+```
+
+如果 `reviewer_pairs=0`，说明两位 reviewer 没有重叠标注。建议补一个最小 consistency audit subset：至少 50 个 CAD asset，两人都标，用于论文 appendix。
+
+### 23.6 开始第一版 baseline
+
+```bash
+CUDA_VISIBLE_DEVICES=0 python -m MultiEEAffordance.training.train \
+  --config MultiEEAffordance/training/configs/pointnet_shared4_5tasks.json
+```
+
+训练完成后：
+
+```bash
+python -m MultiEEAffordance.training.evaluate \
+  --config MultiEEAffordance/training/configs/pointnet_shared4_5tasks.json \
+  --checkpoint /home/lzq/data/MultiEEAffordance/processed/training_runs/pointnet_shared4_5tasks/best.pt \
+  --output-json processed/training_runs/pointnet_shared4_5tasks/test_metrics.json
+```
+
+更完整的训练说明见：
+
+```text
+MultiEEAffordance/training/README.md
+MultiEEAffordance/docs/AAAI投稿导向模型训练Pipeline规划.md
+```

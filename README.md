@@ -48,7 +48,7 @@ P, q -> [M_gripper, M_suction, M_hook, M_dexterous_hand]
 
 ## 当前阶段
 
-项目目前处于数据集原型和候选标注流程验证阶段，还不是最终可直接训练的大规模数据集。
+项目目前处于五任务人工标注收尾和 AAAI 实验准备阶段。候选生成与网页审查仍是数据构建主线；训练目录已经补齐标注完成后的数据检查、canonical `[N,4]` mask 生成、asset-level split 审计和第一批轻量 baseline。
 
 当前任务体系已经从旧候选生成任务切换到五任务人工标注体系：
 
@@ -69,7 +69,17 @@ P, q -> [M_gripper, M_suction, M_hook, M_dexterous_hand]
 - 构建了候选区域生成、VLM 辅助筛选、规则过滤和网页人工审查流程。
 - 当前正在验证 v3 pipeline：让 VLM 先判断目标部件和应排除部件，再生成更适合人工审查的 3D 候选区域。
 
-当前优先级仍然是把“候选区域生成 + 人工审查”链路跑稳定，并持续积累五任务人工标签。与此同时，独立训练目录已经开始搭建，可以使用已完成审查的数据并行验证 dataloader、object-disjoint split、空 mask 建模和最小 baseline。训练侧只接受 `lift/open/pull/press/push`，不会读取旧复合任务。
+当前优先级是完成五任务人工标签，并在标注完成后立即执行训练前检查：
+
+```text
+validate refined samples
+prepare canonical [N,4] masks
+audit CAD asset-level split
+audit reviewer consistency
+train first PointNet baseline
+```
+
+训练侧只接受 `lift/open/pull/press/push`，不会读取旧复合任务。正式 split 以 CAD asset 为单位：3D AffordanceNet 中一个 `3danet_full_xxx` 原始 object shape/model 就是一个 CAD asset；如果没有额外 asset 字段，则 `source_asset_id=object_id`。同一 asset 派生出的所有 task、executor、mask 和重复标注样本必须进入同一个 split。
 
 ## 仓库结构
 
@@ -135,6 +145,11 @@ MultiEEAffordance/training/README.md
 | `build_v3_candidate_masks.py` | 构建待人工审查的四通道 candidate mask |
 | `run_v3_pipeline.py` | 串联 v3 全流程 |
 | `serve_v2_annotation_app.py` | 网页端人工审查和点级精修工具 |
+| `training/validate_reviewed_samples.py` | 标注完成后检查 refined samples、路径、reviewer 和 mask shape |
+| `training/prepare_training_dataset.py` | 合并人工审查结果，生成训练用 canonical `[N,4]` mask 和 split |
+| `training/audit_splits.py` | 审计 train/val/test 是否存在 CAD asset 或 object 泄漏 |
+| `training/audit_annotation_consistency.py` | 统计双人重叠标注的一致性 |
+| `training/collect_experiment_table.py` | 汇总实验指标为论文主表 CSV/JSON |
 
 ## 本地环境
 

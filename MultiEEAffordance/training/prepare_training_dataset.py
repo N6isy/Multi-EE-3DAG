@@ -25,6 +25,9 @@ from .constants import (
     TASKS,
     TASK_TAXONOMY_VERSION,
     TASK_TO_INDEX,
+    infer_source_asset_id,
+    infer_source_dataset,
+    make_asset_uid,
     require_executor,
     require_five_task,
 )
@@ -47,6 +50,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--dataset-version", default="v0_2_5tasks")
     parser.add_argument("--split-seed", default="multi-ee-affordance-v0_2")
+    parser.add_argument(
+        "--split-unit",
+        choices=["source_asset", "object"],
+        default="source_asset",
+        help="Use source_asset for CAD-asset-disjoint splits; object is kept only for debugging.",
+    )
     parser.add_argument("--train-ratio", type=float, default=0.8)
     parser.add_argument("--val-ratio", type=float, default=0.1)
     parser.add_argument(
@@ -55,16 +64,7 @@ def parse_args() -> argparse.Namespace:
         default=1,
         help="Minimum reviewed executor channels required for a training row. Use 4 for fully reviewed releases.",
     )
-    parser.add_argument(
-        "--allowed-quality-flags",
-        default="checked,verified",
-        help="Comma-separated quality flags accepted for supervised training.",
-    )
-    parser.add_argument(
-        "--allowed-review-statuses",
-        default="checked,verified",
-        help="Comma-separated point_review_status values accepted for supervised training.",
-    )
+    parser.add_argument("--allow-missing-reviewer", action="store_true")
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args()
 
@@ -160,8 +160,8 @@ def load_reviewed_channel(path: Path, executor_index: int, point_count: int) -> 
     return (np.asarray(channel) > 0).astype(np.uint8)
 
 
-def deterministic_split(object_id: str, seed: str, train_ratio: float, val_ratio: float) -> str:
-    digest = hashlib.sha256(f"{seed}|{object_id}".encode("utf-8")).digest()
+def deterministic_split(split_key: str, seed: str, train_ratio: float, val_ratio: float) -> str:
+    digest = hashlib.sha256(f"{seed}|{split_key}".encode("utf-8")).digest()
     value = int.from_bytes(digest[:8], "big") / float(2**64)
     if value < train_ratio:
         return "train"
@@ -169,10 +169,8 @@ def deterministic_split(object_id: str, seed: str, train_ratio: float, val_ratio
         return "val"
     return "test"
 
-
-def derive_quality(rows: list[dict[str, Any]]) -> str:
-    values = {str(row.get("quality_flag") or "") for row in rows}
-    return "verified" if values == {"verified"} else "checked"
+def reviewed_reviewer(row: dict[str, Any]) -> str:
+    return str(row.get("reviewer") or row.get("point_review_reviewer") or row.get("reviewer_id") or "").strip()
 
 
 def prepare(args: argparse.Namespace) -> dict[str, Any]:
@@ -185,8 +183,8 @@ def prepare(args: argparse.Namespace) -> dict[str, Any]:
     output_root = resolve(root, args.output_root)
     masks_root = output_root / "masks"
     manifests_root = output_root / "manifests"
-    allowed_quality = set(parse_csv(args.allowed_quality_flags))
-    allowed_status = set(parse_csv(args.allowed_review_statuses))
+    split_unit = str(getattr(args, "split_unit", "source_asset") or "source_asset")
+    allow_missing_reviewer = bool(getattr(args, "allow_missing_reviewer", False))
 
     input_paths = [resolve(root, item) for item in parse_csv(args.reviewed_samples)]
     missing_inputs = [str(path) for path in input_paths if not path.exists()]
@@ -203,12 +201,9 @@ def prepare(args: argparse.Namespace) -> dict[str, Any]:
         try:
             task = require_five_task(str(row.get("task") or ""))
             require_executor(reviewed_executor(row))
-            status = str(row.get("point_review_status") or "").strip()
-            quality = str(row.get("quality_flag") or "").strip()
-            if status not in allowed_status:
-                raise ValueError(f"point_review_status={status!r} is not accepted")
-            if quality not in allowed_quality:
-                raise ValueError(f"quality_flag={quality!r} is not accepted")
+            reviewer = reviewed_reviewer(row)
+            if not reviewer and not allow_missing_reviewer:
+                raise ValueError("missing reviewer; training rows must come from human review outputs")
             object_id = str(row.get("object_id") or "").strip()
             if not object_id:
                 raise ValueError("missing object_id")
@@ -246,6 +241,20 @@ def prepare(args: argparse.Namespace) -> dict[str, Any]:
             conflict_rows.append({"object_id": object_id, "task": task, "reason": str(exc)})
             continue
 
+        source_datasets = {infer_source_dataset(row) for row in rows}
+        source_asset_ids = {infer_source_asset_id(row) for row in rows}
+        if len(source_datasets) != 1 or len(source_asset_ids) != 1:
+            conflict_rows.append(
+                {
+                    "object_id": object_id,
+                    "task": task,
+                    "reason": "inconsistent source_dataset/source_asset_id within object-task group",
+                    "source_datasets": sorted(source_datasets),
+                    "source_asset_ids": sorted(source_asset_ids),
+                }
+            )
+            continue
+
         merged = np.zeros((points.shape[0], len(EXECUTORS)), dtype=np.uint8)
         supervision = np.zeros(len(EXECUTORS), dtype=np.uint8)
         channel_sources: dict[str, dict[str, Any]] = {}
@@ -281,9 +290,11 @@ def prepare(args: argparse.Namespace) -> dict[str, Any]:
             merged[:, executor_index] = channel
             supervision[executor_index] = 1
             channel_sources[executor] = {
-                "reviewer": str(row.get("reviewer") or row.get("point_review_reviewer") or ""),
+                "reviewer": reviewed_reviewer(row),
                 "source_mask_path": mask_path_value,
                 "positive_points": int(channel.sum()),
+                "point_review_status": str(row.get("point_review_status") or ""),
+                "review_mode": str(row.get("review_mode") or row.get("point_review_mode") or ""),
             }
 
         if group_conflict:
@@ -308,12 +319,20 @@ def prepare(args: argparse.Namespace) -> dict[str, Any]:
         output_mask.parent.mkdir(parents=True, exist_ok=True)
         np.save(output_mask, merged)
 
-        split = deterministic_split(object_id, args.split_seed, args.train_ratio, args.val_ratio)
         base = rows[0]
+        source_dataset = infer_source_dataset(base)
+        source_asset_id = infer_source_asset_id(base)
+        asset_uid = make_asset_uid(base)
+        split_key = asset_uid if split_unit == "source_asset" else object_id
+        split = deterministic_split(split_key, args.split_seed, args.train_ratio, args.val_ratio)
         output_row = {
             "training_id": training_id,
             "object_id": object_id,
-            "source_dataset": str(base.get("source_dataset") or ""),
+            "source_dataset": source_dataset,
+            "source_asset_id": source_asset_id,
+            "asset_uid": asset_uid,
+            "split_key": split_key,
+            "split_unit": split_unit,
             "object_category": str(base.get("object_category") or ""),
             "task": task,
             "task_id": TASK_TO_INDEX[task],
@@ -324,7 +343,9 @@ def prepare(args: argparse.Namespace) -> dict[str, Any]:
             "channel_supervision": supervision.tolist(),
             "feasibility": (merged.sum(axis=0) > 0).astype(np.uint8).tolist(),
             "positive_points": merged.sum(axis=0).astype(int).tolist(),
-            "quality_flag": derive_quality(rows),
+            "annotation_source": "human_review",
+            "quality_flag": "human_review",
+            "point_review_statuses": sorted({str(row.get("point_review_status") or "") for row in rows}),
             "human_review_only": True,
             "split": split,
             "channel_sources": channel_sources,
@@ -354,6 +375,14 @@ def prepare(args: argparse.Namespace) -> dict[str, Any]:
             "legacy_tasks_accepted": False,
         },
         "executor_order": list(EXECUTORS),
+        "split_policy": {
+            "split_unit": split_unit,
+            "split_seed": args.split_seed,
+            "train_ratio": args.train_ratio,
+            "val_ratio": args.val_ratio,
+            "test_ratio": 1.0 - args.train_ratio - args.val_ratio,
+            "source_asset_rule": "3D AffordanceNet rows without an explicit asset id use object_id as source_asset_id.",
+        },
         "input_files": [relative_to(root, path) for path in input_paths],
         "output_root": relative_to(root, output_root),
         "input_rows": len(input_rows),
@@ -380,4 +409,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

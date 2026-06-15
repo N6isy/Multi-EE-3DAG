@@ -1,10 +1,10 @@
 {
-  "experiment_name": "baseline_task_executor_pointnet_5tasks_v0_3",
+  "experiment_name": "pointnet_shared_executor_token_5tasks",
   "dataset_root": "/home/lzq/data/MultiEEAffordance",
   "train_manifest": "processed/training/v0_3_human_5tasks/manifests/train.jsonl",
   "val_manifest": "processed/training/v0_3_human_5tasks/manifests/val.jsonl",
   "test_manifest": "processed/training/v0_3_human_5tasks/manifests/test.jsonl",
-  "output_dir": "processed/training_runs/baseline_task_executor_pointnet_5tasks_v0_3",
+  "output_dir": "processed/training_runs/pointnet_shared_executor_token_5tasks",
   "seed": 2026,
   "sample_size": 2048,
   "input_channels": 3,
@@ -17,10 +17,9 @@
   "hidden_dim": 128,
   "task_dim": 64,
   "executor_dim": 64,
-  "executor_mode": "learnable",
+  "executor_mode": "shared",
   "lambda_dice": 1.0,
   "lambda_feasibility": 0.5,
   "lambda_empty_area": 0.25,
-  "lambda_relation": 0.0,
-  "min_relation_points": 4.0
+  "lambda_relation": 0.0
 }

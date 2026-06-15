@@ -42,15 +42,14 @@ def main() -> int:
             rows.append(
                 {
                     "sample_id": "fixture_lift",
-                    "object_id": "fixture",
-                    "source_dataset": "synthetic",
+                    "object_id": "3danet_full_fixture",
+                    "source_dataset": "3d_affordancenet",
                     "object_category": "fixture",
                     "task": "lift",
                     "point_cloud_path": "points.npy",
                     "multi_channel_mask_path": channel_mask.name,
                     "executor": executor,
-                    "quality_flag": "verified",
-                    "point_review_status": "verified",
+                    "point_review_status": "checked",
                     "reviewer": "smoke",
                 }
             )
@@ -63,11 +62,11 @@ def main() -> int:
                 output_root="processed/training/v0_2_5tasks",
                 dataset_version="smoke",
                 split_seed="smoke",
+                split_unit="source_asset",
                 train_ratio=0.8,
                 val_ratio=0.1,
                 min_reviewed_channels=4,
-                allowed_quality_flags="checked,verified",
-                allowed_review_statuses="checked,verified",
+                allow_missing_reviewer=False,
                 overwrite=True,
             )
         )
@@ -82,7 +81,9 @@ def main() -> int:
             batch,
             lambda_dice=1.0,
             lambda_feasibility=0.5,
-            lambda_relation=0.1,
+            lambda_relation=0.0,
+            lambda_empty_area=0.25,
+            min_relation_points=4.0,
         )
         losses["total"].backward()
         try:
@@ -110,4 +111,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

@@ -51,3 +51,52 @@ python MultiEEAffordance/tools/serve_v2_annotation_app.py \
   --port 8765 \
   --top-k-candidates 12
 ```
+
+## 标注完成后的训练交接
+
+人工标注结束后，维护者需要把两位审查者的输出统一放在数据服务器：
+
+```text
+server: 10.24.1.11
+dataset root: /home/lzq/data/MultiEEAffordance
+annotation dir: /home/lzq/data/MultiEEAffordance/processed/annotation_batches/v0_2_5tasks
+```
+
+必须存在：
+
+```text
+reviewer_a_refined_samples.jsonl
+reviewer_b_refined_samples.jsonl
+manual_refined_masks_reviewer_a/
+manual_refined_masks_reviewer_b/
+```
+
+然后执行训练准备入口：
+
+```bash
+cd /home/lzq/Multi-EE-3DAG
+conda activate multiee-train
+
+python -m MultiEEAffordance.training.validate_reviewed_samples \
+  --dataset-root /home/lzq/data/MultiEEAffordance \
+  --reviewed-samples processed/annotation_batches/v0_2_5tasks/reviewer_a_refined_samples.jsonl,processed/annotation_batches/v0_2_5tasks/reviewer_b_refined_samples.jsonl \
+  --output-json processed/training/v0_3_human_5tasks/reviewed_samples_validation.json
+
+python -m MultiEEAffordance.training.prepare_training_dataset \
+  --dataset-root /home/lzq/data/MultiEEAffordance \
+  --reviewed-samples processed/annotation_batches/v0_2_5tasks/reviewer_a_refined_samples.jsonl,processed/annotation_batches/v0_2_5tasks/reviewer_b_refined_samples.jsonl \
+  --output-root processed/training/v0_3_human_5tasks \
+  --dataset-version v0_3_human_5tasks \
+  --split-unit source_asset \
+  --min-reviewed-channels 4 \
+  --overwrite
+```
+
+这里的 `--split-unit source_asset` 是正式实验必须项。3D AffordanceNet 中一个 `3danet_full_xxx` 原始 object shape/model 视为一个 CAD asset；如果没有额外 asset 字段，就把 `object_id` 作为 `source_asset_id`。同一 asset 派生出的所有 task、executor、mask 和重复审查样本不能跨 split。
+
+完整训练与审计命令见：
+
+```text
+MultiEEAffordance/training/README.md
+MultiEEAffordance/docs/AAAI投稿导向模型训练Pipeline规划.md
+```

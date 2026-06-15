@@ -28,15 +28,14 @@ def main() -> int:
             rows.append(
                 {
                     "sample_id": "fixture_lift",
-                    "object_id": "fixture",
-                    "source_dataset": "synthetic",
+                    "object_id": "3danet_full_fixture",
+                    "source_dataset": "3d_affordancenet",
                     "object_category": "fixture",
                     "task": "lift",
                     "point_cloud_path": "points.npy",
                     "multi_channel_mask_path": path.name,
                     "executor": executor,
-                    "quality_flag": "verified",
-                    "point_review_status": "verified",
+                    "point_review_status": "checked",
                     "reviewer": "smoke",
                 }
             )
@@ -49,15 +48,15 @@ def main() -> int:
                 output_root="processed/training/v0_2_5tasks",
                 dataset_version="smoke",
                 split_seed="smoke",
+                split_unit="source_asset",
                 train_ratio=0.8,
                 val_ratio=0.1,
                 min_reviewed_channels=4,
-                allowed_quality_flags="checked,verified",
-                allowed_review_statuses="checked,verified",
+                allow_missing_reviewer=False,
                 overwrite=True,
             )
         )
-        canonical = np.load(root / "processed/training/v0_2_5tasks/masks/fixture_lift.npy", allow_pickle=False)
+        canonical = np.load(root / "processed/training/v0_2_5tasks/masks/3danet_full_fixture_lift.npy", allow_pickle=False)
         try:
             require_five_task("open_pull")
         except ValueError:
@@ -65,6 +64,10 @@ def main() -> int:
         else:
             legacy_rejected = False
         assert summary["training_rows"] == 1
+        manifest_line = (root / "processed/training/v0_2_5tasks/manifests/all.jsonl").read_text(encoding="utf-8").strip()
+        manifest_row = json.loads(manifest_line)
+        assert manifest_row["source_asset_id"] == "3danet_full_fixture"
+        assert manifest_row["asset_uid"] == "3d_affordancenet:3danet_full_fixture"
         assert canonical.shape == (32, len(EXECUTORS))
         assert canonical.sum(axis=0).tolist() == [4, 4, 4, 4]
         assert legacy_rejected
