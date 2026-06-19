@@ -1,20 +1,49 @@
-"""Initial task-conditioned multi-executor point model."""
+"""Task-conditioned multi-executor affordance models."""
 
 from __future__ import annotations
+
+from typing import Any
 
 import torch
 from torch import nn
 
+from .backbones import PointMLPBackbone, PointNeXtBackbone
 from .constants import EXECUTORS, TASKS
+from .executor_conditioning import ExecutorConditionEncoder
 
 
-class TaskExecutorPointNet(nn.Module):
-    """Small baseline with explicit task and executor queries.
+def build_backbone(
+    backbone_name: str,
+    *,
+    input_channels: int,
+    hidden_dim: int,
+    config: dict[str, Any] | None = None,
+) -> nn.Module:
+    """Builds a point backbone that returns `[B, N, C]` features."""
 
-    This is intentionally lightweight. It is suitable for validating the data
-    contract before replacing the point encoder with PointNeXt or a Point
-    Transformer backbone.
-    """
+    config = config or {}
+    name = str(backbone_name or "pointnet_mlp").lower()
+    if name in {"pointnet", "pointnet_mlp", "mlp"}:
+        return PointMLPBackbone(input_channels=input_channels, hidden_dim=hidden_dim)
+    if name in {"pointnext", "pointnext_s"}:
+        return PointNeXtBackbone(
+            input_channels=input_channels,
+            pointnext_root=config.get("pointnext_root") or config.get("backbone_external_root"),
+            width=int(config.get("pointnext_width", 32)),
+            blocks=list(config.get("pointnext_blocks", [1, 1, 1, 1, 1])),
+            strides=list(config.get("pointnext_strides", [1, 2, 2, 2, 2])),
+            nsample=config.get("pointnext_nsample", 32),
+            radius=config.get("pointnext_radius", 0.1),
+            decoder_layers=int(config.get("pointnext_decoder_layers", 2)),
+            decoder_stages=int(config.get("pointnext_decoder_stages", 4)),
+            sa_layers=int(config.get("pointnext_sa_layers", 1)),
+            sa_use_res=bool(config.get("pointnext_sa_use_res", False)),
+        )
+    raise ValueError(f"Unknown backbone_name {backbone_name!r}.")
+
+
+class TaskExecutorAffordanceModel(nn.Module):
+    """Shared four-executor task-conditioned mask + feasibility predictor."""
 
     def __init__(
         self,
@@ -23,49 +52,41 @@ class TaskExecutorPointNet(nn.Module):
         hidden_dim: int = 128,
         task_dim: int = 64,
         executor_dim: int = 64,
-        executor_mode: str = "learnable",
+        backbone_name: str = "pointnet_mlp",
+        executor_condition_mode: str = "learnable_id",
+        executor_spec_path: str | None = None,
+        executor_id_dropout: float = 0.0,
         executor_token_permutation: list[int] | None = None,
+        pointnext_root: str | None = None,
+        backbone_config: dict[str, Any] | None = None,
     ) -> None:
         super().__init__()
         self.input_channels = int(input_channels)
         self.hidden_dim = int(hidden_dim)
-        self.executor_mode = str(executor_mode or "learnable")
-        if self.executor_mode not in {"learnable", "no_token", "shared", "one_hot", "random_frozen", "swap"}:
-            raise ValueError(
-                "executor_mode must be one of learnable/no_token/shared/one_hot/random_frozen/swap; "
-                f"got {self.executor_mode!r}."
-            )
-        self.point_encoder = nn.Sequential(
-            nn.Linear(self.input_channels, 64),
-            nn.ReLU(inplace=True),
-            nn.Linear(64, 128),
-            nn.ReLU(inplace=True),
-            nn.Linear(128, self.hidden_dim),
-            nn.ReLU(inplace=True),
+        merged_backbone_config = dict(backbone_config or {})
+        if pointnext_root:
+            merged_backbone_config["pointnext_root"] = pointnext_root
+        self.backbone_name = str(backbone_name or "pointnet_mlp")
+        self.point_encoder = build_backbone(
+            self.backbone_name,
+            input_channels=self.input_channels,
+            hidden_dim=self.hidden_dim,
+            config=merged_backbone_config,
         )
-        self.task_embedding = nn.Embedding(len(TASKS), task_dim)
-        if self.executor_mode == "one_hot":
-            self.executor_embedding = None
-            effective_executor_dim = len(EXECUTORS)
-        else:
-            executor_embedding_count = 1 if self.executor_mode == "shared" else len(EXECUTORS)
-            self.executor_embedding = nn.Embedding(executor_embedding_count, executor_dim)
-            if self.executor_mode == "random_frozen":
-                self.executor_embedding.weight.requires_grad_(False)
-            effective_executor_dim = executor_dim
-        self.task_query = nn.Linear(task_dim, self.hidden_dim)
-        self.executor_query = nn.Linear(effective_executor_dim, self.hidden_dim)
-        if self.executor_mode == "swap":
-            if executor_token_permutation is None:
-                executor_token_permutation = list(reversed(range(len(EXECUTORS))))
-            if sorted(int(item) for item in executor_token_permutation) != list(range(len(EXECUTORS))):
-                raise ValueError("executor_token_permutation must be a permutation of executor indices 0..3.")
-            self.register_buffer(
-                "executor_token_permutation",
-                torch.tensor([int(item) for item in executor_token_permutation], dtype=torch.long),
-            )
-        else:
-            self.executor_token_permutation = None
+        backbone_out = int(getattr(self.point_encoder, "out_channels", self.hidden_dim))
+        self.backbone_projection = (
+            nn.Identity() if backbone_out == self.hidden_dim else nn.Linear(backbone_out, self.hidden_dim)
+        )
+        self.task_embedding = nn.Embedding(len(TASKS), int(task_dim))
+        self.task_query = nn.Linear(int(task_dim), self.hidden_dim)
+        self.executor_condition = ExecutorConditionEncoder(
+            mode=executor_condition_mode,
+            executor_dim=int(executor_dim),
+            hidden_dim=self.hidden_dim,
+            executor_spec_path=executor_spec_path,
+            executor_id_dropout=float(executor_id_dropout),
+            executor_token_permutation=executor_token_permutation,
+        )
         self.point_projection = nn.Linear(self.hidden_dim, self.hidden_dim)
         self.global_projection = nn.Linear(self.hidden_dim, self.hidden_dim)
         self.mask_bias = nn.Parameter(torch.zeros(len(EXECUTORS)))
@@ -74,30 +95,36 @@ class TaskExecutorPointNet(nn.Module):
             nn.ReLU(inplace=True),
             nn.Linear(self.hidden_dim, 1),
         )
+        self.cross_attention: nn.MultiheadAttention | None = None
+        if self.executor_condition.use_cross_attention:
+            heads = max(1, min(4, self.hidden_dim // 32))
+            self.cross_attention = nn.MultiheadAttention(self.hidden_dim, heads, batch_first=True)
+
+    def _conditioned_mask_logits(
+        self,
+        mask_features: torch.Tensor,
+        queries: torch.Tensor,
+        film: tuple[torch.Tensor, torch.Tensor] | None,
+    ) -> torch.Tensor:
+        if film is None:
+            return torch.einsum("bnh,beh->bne", mask_features, queries) / (self.hidden_dim**0.5)
+        gamma, beta = film
+        conditioned = mask_features[:, None, :, :] * (1.0 + gamma[None, :, None, :]) + beta[None, :, None, :]
+        return torch.einsum("benh,beh->bne", conditioned, queries) / (self.hidden_dim**0.5)
 
     def forward(self, points: torch.Tensor, task_id: torch.Tensor) -> dict[str, torch.Tensor]:
-        point_features = self.point_encoder(points)
+        point_features = self.backbone_projection(self.point_encoder(points))
         global_features = point_features.max(dim=1).values
         task_features = self.task_query(self.task_embedding(task_id))
-        if self.executor_mode == "no_token":
-            executor_features = torch.zeros(len(EXECUTORS), self.hidden_dim, device=points.device)
-        elif self.executor_mode == "one_hot":
-            executor_one_hot = torch.eye(len(EXECUTORS), device=points.device)
-            executor_features = self.executor_query(executor_one_hot)
-        elif self.executor_mode == "shared":
-            shared_id = torch.zeros(len(EXECUTORS), dtype=torch.long, device=points.device)
-            executor_features = self.executor_query(self.executor_embedding(shared_id))
-        else:
-            executor_ids = torch.arange(len(EXECUTORS), device=points.device)
-            if self.executor_mode == "swap":
-                executor_ids = self.executor_token_permutation.to(points.device)
-            executor_features = self.executor_query(self.executor_embedding(executor_ids))
+        executor_features, film = self.executor_condition(points.device)
         queries = torch.tanh(task_features[:, None, :] + executor_features[None, :, :])
         mask_features = torch.tanh(
             self.point_projection(point_features) + self.global_projection(global_features)[:, None, :]
         )
-        mask_logits = torch.einsum("bnh,beh->bne", mask_features, queries) / (self.hidden_dim**0.5)
-        mask_logits = mask_logits + self.mask_bias
+        if self.cross_attention is not None:
+            attended, _ = self.cross_attention(queries, mask_features, mask_features, need_weights=False)
+            queries = torch.tanh(queries + attended)
+        mask_logits = self._conditioned_mask_logits(mask_features, queries, film) + self.mask_bias
         feasibility_features = torch.cat(
             [
                 global_features[:, None, :].expand(-1, len(EXECUTORS), -1),
@@ -110,3 +137,27 @@ class TaskExecutorPointNet(nn.Module):
             "mask_logits": mask_logits,
             "feasibility_logits": feasibility_logits,
         }
+
+
+class TaskExecutorPointNet(TaskExecutorAffordanceModel):
+    """Backward-compatible name for the original point-wise MLP baseline."""
+
+    def __init__(
+        self,
+        *,
+        input_channels: int = 3,
+        hidden_dim: int = 128,
+        task_dim: int = 64,
+        executor_dim: int = 64,
+        executor_mode: str = "learnable",
+        executor_token_permutation: list[int] | None = None,
+    ) -> None:
+        super().__init__(
+            input_channels=input_channels,
+            hidden_dim=hidden_dim,
+            task_dim=task_dim,
+            executor_dim=executor_dim,
+            backbone_name="pointnet_mlp",
+            executor_condition_mode=executor_mode,
+            executor_token_permutation=executor_token_permutation,
+        )

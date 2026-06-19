@@ -346,7 +346,7 @@ single_ee_hook_5tasks.json
 single_ee_dexterous_hand_5tasks.json
 ```
 
-PointNeXt、Point Transformer、PointNet++、真正 four-head model 和 HeteroAffordanceFormer 主模型还没有在当前代码中实现。不要把当前 PointNet 结果命名成这些强 baseline。
+当前已经新增 `model_factory`、PointNeXt adapter 和执行器属性条件模块。PointNeXt shared-4 可以作为下一批正式 baseline；Point Transformer、PointNet++、真正 four-head model 和 HeteroAffordanceFormer 主模型仍未接入。不要把当前 PointNet 或 PointNeXt shared-4 结果命名成尚未实现的主模型结果。
 
 ## 10. 本地 smoke test
 
@@ -416,3 +416,177 @@ python -c "import MultiEEAffordance.training.train as t; print(t.__file__)"
 ```
 
 说明当前运行到了另一份代码。需要把最新代码同步到 `/home/lzq/data/MultiEEAffordance`，或者明确切换到你希望使用的那份代码后再运行。
+
+## 13. 补充评估：阈值校准、gated mask 和 5×4 矩阵
+
+当前 `evaluate.py` 使用固定 `0.5` 阈值评估。第一版结果里 feasibility AUROC 较高，但 feasibility F1 和 empty-mask accuracy 偏低，因此需要补充 threshold calibration。
+
+阈值校准做的事情：
+
+```text
+validation split 上选择每个 executor 的 mask_threshold 和 feasibility_threshold
+test split 上用这些阈值重新评估
+可选开启 feasibility-gated mask
+```
+
+### 13.1 calibrated + gated 评估
+
+输入：
+
+```text
+config:     MultiEEAffordance/training/configs/pointnet_shared4_5tasks.json
+checkpoint: processed/training_runs/pointnet_shared4_5tasks/best.pt
+val/test:   config 中的 v0_4_final_5tasks manifests
+```
+
+命令：
+
+```bash
+python -m MultiEEAffordance.training.evaluate_calibrated \
+  --config MultiEEAffordance/training/configs/pointnet_shared4_5tasks.json \
+  --checkpoint /home/lzq/data/MultiEEAffordance/processed/training_runs/pointnet_shared4_5tasks/best.pt \
+  --dataset-root /home/lzq/data/MultiEEAffordance \
+  --output-json /home/lzq/data/MultiEEAffordance/processed/training_runs/pointnet_shared4_5tasks/test_metrics_calibrated_gated.json \
+  --thresholds-json /home/lzq/data/MultiEEAffordance/processed/training_runs/pointnet_shared4_5tasks/thresholds_val.json \
+  --feasibility-gate
+```
+
+输出：
+
+```text
+test_metrics_calibrated_gated.json
+test_metrics_calibrated_gated_task_executor_matrix.csv
+thresholds_val.json
+```
+
+### 13.2 calibrated 但不 gate
+
+这一步用于判断“阈值本身”带来的提升，不混入 gate 的影响。
+
+```bash
+python -m MultiEEAffordance.training.evaluate_calibrated \
+  --config MultiEEAffordance/training/configs/pointnet_shared4_5tasks.json \
+  --checkpoint /home/lzq/data/MultiEEAffordance/processed/training_runs/pointnet_shared4_5tasks/best.pt \
+  --dataset-root /home/lzq/data/MultiEEAffordance \
+  --output-json /home/lzq/data/MultiEEAffordance/processed/training_runs/pointnet_shared4_5tasks/test_metrics_calibrated_no_gate.json \
+  --thresholds-json /home/lzq/data/MultiEEAffordance/processed/training_runs/pointnet_shared4_5tasks/thresholds_val.json
+```
+
+### 13.3 导出 5×4 task-executor 矩阵
+
+从普通 metrics 导出：
+
+```bash
+python -m MultiEEAffordance.training.export_task_executor_matrix \
+  --metrics-json /home/lzq/data/MultiEEAffordance/processed/training_runs/pointnet_shared4_5tasks/test_metrics.json \
+  --output-csv /home/lzq/data/MultiEEAffordance/processed/training_runs/pointnet_shared4_5tasks/test_task_executor_matrix.csv
+```
+
+从 calibrated/gated metrics 导出：
+
+```bash
+python -m MultiEEAffordance.training.export_task_executor_matrix \
+  --metrics-json /home/lzq/data/MultiEEAffordance/processed/training_runs/pointnet_shared4_5tasks/test_metrics_calibrated_gated.json \
+  --output-csv /home/lzq/data/MultiEEAffordance/processed/training_runs/pointnet_shared4_5tasks/test_task_executor_matrix_calibrated_gated.csv
+```
+
+### 13.4 汇总 single-EE ensemble
+
+输入：
+
+```text
+processed/training_runs/single_ee_gripper_5tasks/test_metrics.json
+processed/training_runs/single_ee_suction_5tasks/test_metrics.json
+processed/training_runs/single_ee_hook_5tasks/test_metrics.json
+processed/training_runs/single_ee_dexterous_hand_5tasks/test_metrics.json
+```
+
+命令：
+
+```bash
+python -m MultiEEAffordance.training.summarize_single_ee_ensemble \
+  --runs-root /home/lzq/data/MultiEEAffordance/processed/training_runs \
+  --output-json /home/lzq/data/MultiEEAffordance/processed/training_runs/single_ee_ensemble_5tasks/summary.json \
+  --output-csv /home/lzq/data/MultiEEAffordance/processed/training_runs/single_ee_ensemble_5tasks/per_executor.csv \
+  --output-matrix-csv /home/lzq/data/MultiEEAffordance/processed/training_runs/single_ee_ensemble_5tasks/task_executor_matrix.csv
+```
+
+输出：
+
+```text
+single_ee_ensemble_5tasks/summary.json
+single_ee_ensemble_5tasks/per_executor.csv
+single_ee_ensemble_5tasks/task_executor_matrix.csv
+```
+
+详细参数解释见：
+
+```text
+MultiEEAffordance/docs/训练评估参数通俗说明.md
+```
+
+## 14. PointNeXt / Point Transformer 接入
+
+当前代码已经正式接入 PointNeXt adapter，并新增 PointNeXt shared-4 与执行器属性条件配置。Point Transformer 仍是后续扩展项。
+
+外部代码建议放在：
+
+```text
+/home/lzq/data/MultiEEAffordance/external/backbones/
+```
+
+如果服务器上还没有 PointNeXt，先下载：
+
+```bash
+mkdir -p /home/lzq/data/MultiEEAffordance/external/backbones
+cd /home/lzq/data/MultiEEAffordance/external/backbones
+git clone https://github.com/guochengqian/PointNeXt.git
+```
+
+记录版本：
+
+```bash
+cd /home/lzq/data/MultiEEAffordance/external/backbones/PointNeXt
+git rev-parse HEAD
+python -V
+python -c "import torch; print(torch.__version__)"
+```
+
+先做 backbone smoke test：
+
+```bash
+python -m MultiEEAffordance.training.smoke_test_backbone \
+  --backbone pointnext \
+  --pointnext-root /home/lzq/data/MultiEEAffordance/external/backbones/PointNeXt-master \
+  --batch-size 2 \
+  --sample-size 512 \
+  --input-channels 3
+```
+
+然后跑 debug 训练：
+
+```bash
+CUDA_VISIBLE_DEVICES=0 python -m MultiEEAffordance.training.train \
+  --config MultiEEAffordance/training/configs/pointnext_shared4_5tasks_debug.json
+```
+
+debug 通过后跑正式 PointNeXt baseline：
+
+```bash
+CUDA_VISIBLE_DEVICES=0 python -m MultiEEAffordance.training.train \
+  --config MultiEEAffordance/training/configs/pointnext_shared4_5tasks.json
+```
+
+执行器属性条件版本：
+
+```bash
+CUDA_VISIBLE_DEVICES=0 python -m MultiEEAffordance.training.train \
+  --config MultiEEAffordance/training/configs/pointnext_id_attr_film_5tasks.json
+```
+
+详细接入步骤见：
+
+```text
+MultiEEAffordance/docs/PointNeXt与PointTransformer接入步骤.md
+MultiEEAffordance/docs/执行器属性条件建模方法说明.md
+```

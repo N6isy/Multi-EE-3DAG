@@ -17,7 +17,7 @@ from torch.utils.data import DataLoader
 from .dataset import MultiEEFiveTaskDataset
 from .losses import compute_loss
 from .metrics import MetricAccumulator
-from .model import TaskExecutorPointNet
+from .model_factory import build_model
 from .constants import EXECUTOR_TO_INDEX
 
 
@@ -158,7 +158,7 @@ def apply_enabled_executors(batch: dict[str, torch.Tensor], config: dict[str, An
 
 
 def run_epoch(
-    model: TaskExecutorPointNet,
+    model: torch.nn.Module,
     loader: DataLoader,
     *,
     device: torch.device,
@@ -233,14 +233,7 @@ def main() -> int:
     if train_loader is None:
         raise ValueError("Training manifest contains no rows.")
 
-    model = TaskExecutorPointNet(
-        input_channels=int(config.get("input_channels", 3)),
-        hidden_dim=int(config.get("hidden_dim", 128)),
-        task_dim=int(config.get("task_dim", 64)),
-        executor_dim=int(config.get("executor_dim", 64)),
-        executor_mode=str(config.get("executor_mode", "learnable")),
-        executor_token_permutation=config.get("executor_token_permutation"),
-    ).to(device)
+    model = build_model(config).to(device)
     wandb_config = config.get("wandb", {})
     if wandb_run is not None and isinstance(wandb_config, dict) and wandb_config.get("watch_model", False):
         wandb_run.watch(model, log=str(wandb_config.get("watch_log", "gradients")), log_freq=int(wandb_config.get("watch_log_freq", 100)))

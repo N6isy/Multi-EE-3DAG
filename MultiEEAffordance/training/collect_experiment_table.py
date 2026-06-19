@@ -30,6 +30,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--runs-root", required=True)
     parser.add_argument("--output-csv", required=True)
     parser.add_argument("--output-json", default="")
+    parser.add_argument(
+        "--metric-pattern",
+        action="append",
+        default=[],
+        help="Glob pattern relative to runs-root. Can be repeated. Defaults to */test_metrics.json and */metrics.json.",
+    )
     return parser.parse_args()
 
 
@@ -41,13 +47,29 @@ def read_json(path: Path) -> dict[str, Any]:
     return value
 
 
-def find_metric_files(root: Path) -> list[Path]:
-    candidates = list(root.glob("*/test_metrics.json")) + list(root.glob("*/metrics.json"))
+def find_metric_files(root: Path, patterns: list[str]) -> list[Path]:
+    if not patterns:
+        patterns = ["*/test_metrics.json", "*/metrics.json"]
+    candidates: list[Path] = []
+    for pattern in patterns:
+        candidates.extend(root.glob(pattern))
     return sorted({path.resolve() for path in candidates})
 
 
-def row_from_metrics(path: Path, metrics: dict[str, Any]) -> dict[str, Any]:
+def extract_metrics(payload: dict[str, Any]) -> dict[str, Any]:
+    nested = payload.get("metrics")
+    if isinstance(nested, dict) and "macro_iou" in nested:
+        return nested
+    return payload
+
+
+def row_from_metrics(path: Path, payload: dict[str, Any]) -> dict[str, Any]:
+    metrics = extract_metrics(payload)
     experiment = path.parent.name
+    if path.stem not in {"test_metrics", "metrics", "summary"}:
+        experiment = f"{experiment}:{path.stem}"
+    if payload.get("experiment"):
+        experiment = str(payload["experiment"])
     config_path = path.parent / "resolved_config.json"
     params = metrics.get("params")
     flops = metrics.get("flops")
@@ -77,7 +99,7 @@ def row_from_metrics(path: Path, metrics: dict[str, Any]) -> dict[str, Any]:
 def main() -> int:
     args = parse_args()
     runs_root = Path(args.runs_root).resolve()
-    rows = [row_from_metrics(path, read_json(path)) for path in find_metric_files(runs_root)]
+    rows = [row_from_metrics(path, read_json(path)) for path in find_metric_files(runs_root, args.metric_pattern)]
     output_csv = Path(args.output_csv).resolve()
     output_csv.parent.mkdir(parents=True, exist_ok=True)
     with output_csv.open("w", encoding="utf-8", newline="") as file:

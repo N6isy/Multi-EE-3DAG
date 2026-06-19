@@ -38,6 +38,9 @@ class MetricAccumulator:
     """Accumulates mask, feasibility, empty-mask, and overlap metrics."""
 
     small_part_max_fraction: float = 0.02
+    mask_thresholds: list[float] | None = None
+    feasibility_thresholds: list[float] | None = None
+    feasibility_gate: bool = False
     intersection: torch.Tensor = field(default_factory=lambda: _zeros(len(TASKS), len(EXECUTORS)))
     union: torch.Tensor = field(default_factory=lambda: _zeros(len(TASKS), len(EXECUTORS)))
     prediction_sum: torch.Tensor = field(default_factory=lambda: _zeros(len(TASKS), len(EXECUTORS)))
@@ -57,6 +60,20 @@ class MetricAccumulator:
     feasibility_scores: list[float] = field(default_factory=list)
     feasibility_labels: list[int] = field(default_factory=list)
 
+    def _threshold_tensor(
+        self,
+        values: list[float] | None,
+        *,
+        device: torch.device,
+        point_dim: bool,
+    ) -> torch.Tensor:
+        if values is None:
+            values = [0.5] * len(EXECUTORS)
+        if len(values) != len(EXECUTORS):
+            raise ValueError(f"Expected {len(EXECUTORS)} thresholds, got {len(values)}.")
+        tensor = torch.as_tensor(values, dtype=torch.float32, device=device)
+        return tensor.view(1, 1, -1) if point_dim else tensor.view(1, -1)
+
     def update(
         self,
         mask_logits: torch.Tensor,
@@ -67,10 +84,18 @@ class MetricAccumulator:
         task_id: torch.Tensor,
     ) -> None:
         probabilities = torch.sigmoid(mask_logits)
-        predictions = probabilities >= 0.5
+        mask_thresholds = self._threshold_tensor(self.mask_thresholds, device=mask_logits.device, point_dim=True)
+        feasibility_thresholds = self._threshold_tensor(
+            self.feasibility_thresholds,
+            device=mask_logits.device,
+            point_dim=False,
+        )
+        predictions = probabilities >= mask_thresholds
         targets = masks >= 0.5
         supervised = channel_supervision >= 0.5
-        feasibility_prediction = torch.sigmoid(feasibility_logits) >= 0.5
+        feasibility_prediction = torch.sigmoid(feasibility_logits) >= feasibility_thresholds
+        if self.feasibility_gate:
+            predictions = predictions & feasibility_prediction[:, None, :]
         feasibility_target = feasibility >= 0.5
         feasible_supervised = supervised & feasibility_target
 

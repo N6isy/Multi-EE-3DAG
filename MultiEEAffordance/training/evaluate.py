@@ -9,7 +9,7 @@ from pathlib import Path
 
 import torch
 
-from .model import TaskExecutorPointNet
+from .model_factory import build_model, load_model_state
 from .train import load_config, make_loader, resolve, run_epoch, save_json
 
 
@@ -34,16 +34,10 @@ def main() -> int:
     if loader is None:
         raise ValueError("Test manifest contains no rows.")
     device = torch.device(args.device or config.get("device") or ("cuda" if torch.cuda.is_available() else "cpu"))
-    model = TaskExecutorPointNet(
-        input_channels=int(config.get("input_channels", 3)),
-        hidden_dim=int(config.get("hidden_dim", 128)),
-        task_dim=int(config.get("task_dim", 64)),
-        executor_dim=int(config.get("executor_dim", 64)),
-        executor_mode=str(config.get("executor_mode", "learnable")),
-        executor_token_permutation=config.get("executor_token_permutation"),
-    ).to(device)
+    model = build_model(config).to(device)
     checkpoint = torch.load(args.checkpoint, map_location=device)
-    model.load_state_dict(checkpoint["model_state"])
+    state = checkpoint.get("model_state", checkpoint) if isinstance(checkpoint, dict) else checkpoint
+    load_model_state(model, state)
     metrics = run_epoch(model, loader, device=device, config=config, optimizer=None)
     print(json.dumps(metrics, ensure_ascii=False, indent=2))
     if args.output_json:

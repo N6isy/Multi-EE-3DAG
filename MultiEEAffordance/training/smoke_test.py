@@ -15,7 +15,7 @@ from torch.utils.data import DataLoader
 from .constants import EXECUTORS, require_five_task
 from .dataset import MultiEEFiveTaskDataset
 from .losses import compute_loss
-from .model import TaskExecutorPointNet
+from .model_factory import build_model
 from .prepare_training_dataset import prepare
 
 
@@ -74,7 +74,16 @@ def main() -> int:
         manifest = root / "processed/training/v0_2_5tasks/manifests/all.jsonl"
         dataset = MultiEEFiveTaskDataset(root, manifest, sample_size=32, train=True)
         batch = next(iter(DataLoader(dataset, batch_size=1)))
-        model = TaskExecutorPointNet()
+        model = build_model(
+            {
+                "input_channels": 3,
+                "hidden_dim": 128,
+                "task_dim": 64,
+                "executor_dim": 64,
+                "backbone_name": "pointnet_mlp",
+                "executor_condition_mode": "learnable_id",
+            }
+        )
         outputs = model(batch["points"], batch["task_id"])
         losses = compute_loss(
             outputs,

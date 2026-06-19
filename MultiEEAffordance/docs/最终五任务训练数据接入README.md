@@ -253,9 +253,13 @@ processed/training_runs/pointnet_shared4_5tasks/
 4. single_ee_hook_5tasks
 5. single_ee_dexterous_hand_5tasks
 6. executor token ablations
+7. pointnext_shared4_5tasks_debug
+8. pointnext_shared4_5tasks
+9. pointnet_id_attr_film_5tasks
+10. pointnext_id_attr_film_5tasks
 ```
 
-这样可以先建立论文中最基本的公平对照：联合四执行器预测 vs 四个独立 single-EE 模型。
+这样可以先建立论文中最基本的公平对照：联合四执行器预测 vs 四个独立 single-EE 模型。PointNeXt 和执行器属性条件的详细命令见 `PointNeXt与PointTransformer接入步骤.md` 和 `执行器属性条件建模方法说明.md`。
 
 ## 8. 第五步：评估和汇总表格
 

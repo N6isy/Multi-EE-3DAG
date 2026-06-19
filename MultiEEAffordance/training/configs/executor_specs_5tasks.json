@@ -1,0 +1,66 @@
+{
+  "version": "v0_1_executor_attributes",
+  "description": "Task-agnostic executor attributes for conditioning and ablation. Values are coarse normalized descriptors, not label rules.",
+  "executors": {
+    "gripper": {
+      "contact_mode": "pinch_or_clamp",
+      "contact_geometry": "bilateral_edge_or_handle",
+      "force_pattern": "normal_clamp_plus_motion",
+      "compliance": "low",
+      "contact_area": 0.35,
+      "requires_enclosure": 0.15,
+      "requires_flatness": 0.05,
+      "requires_inner_boundary": 0.20,
+      "requires_bilateral_contact": 1.00,
+      "requires_fingertip_precision": 0.45,
+      "can_press": 0.35,
+      "can_pull": 0.90,
+      "can_lift": 0.95
+    },
+    "suction": {
+      "contact_mode": "surface_attachment",
+      "contact_geometry": "smooth_flat_or_low_curvature_patch",
+      "force_pattern": "normal_attachment_plus_motion",
+      "compliance": "medium",
+      "contact_area": 0.90,
+      "requires_enclosure": 0.00,
+      "requires_flatness": 1.00,
+      "requires_inner_boundary": 0.00,
+      "requires_bilateral_contact": 0.00,
+      "requires_fingertip_precision": 0.05,
+      "can_press": 0.70,
+      "can_pull": 0.65,
+      "can_lift": 0.70
+    },
+    "hook": {
+      "contact_mode": "interlock",
+      "contact_geometry": "inner_boundary_loop_or_lip",
+      "force_pattern": "tension_pull_or_lift",
+      "compliance": "low",
+      "contact_area": 0.20,
+      "requires_enclosure": 0.70,
+      "requires_flatness": 0.00,
+      "requires_inner_boundary": 1.00,
+      "requires_bilateral_contact": 0.00,
+      "requires_fingertip_precision": 0.35,
+      "can_press": 0.05,
+      "can_pull": 0.95,
+      "can_lift": 0.95
+    },
+    "dexterous_hand": {
+      "contact_mode": "multi_contact_manipulation",
+      "contact_geometry": "small_control_or_complex_handle",
+      "force_pattern": "multi_finger_force_and_torque",
+      "compliance": "high",
+      "contact_area": 0.55,
+      "requires_enclosure": 0.45,
+      "requires_flatness": 0.15,
+      "requires_inner_boundary": 0.35,
+      "requires_bilateral_contact": 0.55,
+      "requires_fingertip_precision": 1.00,
+      "can_press": 1.00,
+      "can_pull": 0.90,
+      "can_lift": 0.90
+    }
+  }
+}
